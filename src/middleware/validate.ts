@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { type AnyZodObject, ZodError } from 'zod';
 
 /**
@@ -6,8 +6,11 @@ import { type AnyZodObject, ZodError } from 'zod';
  * @param schema O schema Zod a ser usado para validação
  * @param source A propriedade da requisição onde os dados estão (body, query, params)
  */
-export const validate = (schema: AnyZodObject, source: 'body' | 'query' | 'params' = 'body') => 
-  async (req: Request, res: Response, next: NextFunction) => {
+export const validate = (
+  schema: AnyZodObject, 
+  source: 'body' | 'query' | 'params' = 'body'
+): RequestHandler => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Valida e transforma os dados com o schema fornecido
       const data = await schema.parseAsync(req[source]);
@@ -15,11 +18,11 @@ export const validate = (schema: AnyZodObject, source: 'body' | 'query' | 'param
       // Substitui os dados originais com os dados validados e transformados
       req[source] = data;
       
-      return next();
+      next();
     } catch (error) {
       // Se for um erro de validação do Zod, retorna uma resposta formatada
       if (error instanceof ZodError) {
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'Erro de validação',
           errors: error.errors.map(err => ({
@@ -27,9 +30,11 @@ export const validate = (schema: AnyZodObject, source: 'body' | 'query' | 'param
             message: err.message
           }))
         });
+        return;
       }
       
       // Para outros tipos de erro, passa para o próximo middleware de erro
-      return next(error);
+      next(error);
     }
   };
+};

@@ -2,14 +2,44 @@ import express from 'express'
 import dotenv from 'dotenv'
 import { connectToDatabase } from './config/db'
 import morgan from 'morgan'
+import disciplinaRoutes from './routes/disciplina.routes'
 
 dotenv.config()
 
 const app = express()
 app.use(morgan('dev'))
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 6199
 
+// Middleware para parsear JSON
 app.use(express.json())
+
+// Rotas da API
+app.use('/api/disciplinas', disciplinaRoutes)
+
+// Rota básica para verificar se o servidor está rodando
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API Eureka - Sistema de Preparação para Exames',
+    status: 'online'
+  })
+})
+
+// Middleware para tratar erros
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err)
+  res.status(err.status || 500).json({
+    status: 'error',
+    message: err.message || 'Erro interno do servidor'
+  })
+})
+
+// Middleware para tratar rotas não encontradas
+app.use((req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: 'Rota não encontrada'
+  })
+})
 
 app.listen(PORT, async () => {
     await connectToDatabase()
