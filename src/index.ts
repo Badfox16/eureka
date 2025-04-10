@@ -5,6 +5,7 @@ import morgan from 'morgan'
 import disciplinaRoutes from './routes/disciplina.routes'
 import estudanteRoutes from './routes/estudante.routes'
 import quizRoutes from './routes/quiz.routes'
+import questaoRoutes from './routes/questao.routes'
 
 dotenv.config()
 
@@ -19,6 +20,7 @@ app.use(express.json())
 app.use('/api/disciplinas', disciplinaRoutes)
 app.use('/api/estudantes', estudanteRoutes)
 app.use('/api/quizzes', quizRoutes)
+app.use('/api/questoes', questaoRoutes)
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {
