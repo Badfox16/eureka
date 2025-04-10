@@ -4,6 +4,7 @@ import { connectToDatabase } from './config/db'
 import morgan from 'morgan'
 import disciplinaRoutes from './routes/disciplina.routes'
 import estudanteRoutes from './routes/estudante.routes'
+import quizRoutes from './routes/quiz.routes'
 
 dotenv.config()
 
@@ -17,6 +18,7 @@ app.use(express.json())
 // Rotas da API
 app.use('/api/disciplinas', disciplinaRoutes)
 app.use('/api/estudantes', estudanteRoutes)
+app.use('/api/quizzes', quizRoutes)
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {

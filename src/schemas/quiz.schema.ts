@@ -1,14 +1,12 @@
 import { z } from 'zod';
-import { baseResourceSchema, classeSchema, objectIdSchema } from './common.schema';
+import { baseResourceSchema, objectIdSchema } from './common.schema';
 
 // Schema para validar criação de quiz
 export const createQuizSchema = z.object({
   titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
   descricao: z.string().optional(),
-  disciplina: objectIdSchema,
-  classe: classeSchema,
-  questoes: z.array(objectIdSchema).default([]),
-  tempoLimite: z.number().positive().optional(),
+  avaliacao: objectIdSchema,
+  tempoLimite: z.number().positive('Tempo limite deve ser um valor positivo').optional(),
   ativo: z.boolean().default(true),
 });
 
