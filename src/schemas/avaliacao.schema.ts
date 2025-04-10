@@ -1,33 +1,42 @@
 import { z } from 'zod';
 import { baseResourceSchema, classeSchema, objectIdSchema } from './common.schema';
+import { TipoAvaliacao, Trimestre, Epoca } from '../models/avaliacao';
 
-// Enums baseados nos modelos existentes (usando valores simples)
-export const tipoAvaliacaoSchema = z.enum(['AP', 'EXAME']);
+// Usando os enums do modelo
+export const tipoAvaliacaoSchema = z.nativeEnum(TipoAvaliacao, {
+  errorMap: () => ({ message: 'Tipo de avaliação inválido' })
+});
 
-// Usando valores mais simples para evitar problemas com caracteres especiais
-export const trimestreSchema = z.enum(['1', '2', '3']).transform(val => `${val}º` as const);
-export const epocaSchema = z.enum(['1', '2']).transform(val => `${val}ª` as const);
+export const trimestreSchema = z.nativeEnum(Trimestre, {
+  errorMap: () => ({ message: 'Trimestre inválido' })
+});
+
+export const epocaSchema = z.nativeEnum(Epoca, {
+  errorMap: () => ({ message: 'Época inválida' })
+});
 
 // Schema base para avaliação
 const avaliacaoBaseSchema = z.object({
   tipo: tipoAvaliacaoSchema,
-  ano: z.number().int().min(2000).max(new Date().getFullYear()),
+  ano: z.number().int().min(2000, 'Ano deve ser pelo menos 2000').max(new Date().getFullYear(), 'Ano não pode ser futuro'),
   disciplina: objectIdSchema,
   classe: classeSchema,
 });
 
 // Schema específico para AP
 const apSchema = avaliacaoBaseSchema.extend({
-  tipo: z.literal('AP'),
+  tipo: z.literal(TipoAvaliacao.AP),
   trimestre: trimestreSchema,
   epoca: z.undefined().optional(),
+  questoes: z.array(objectIdSchema).optional(),
 });
 
 // Schema específico para EXAME
 const exameSchema = avaliacaoBaseSchema.extend({
-  tipo: z.literal('EXAME'),
+  tipo: z.literal(TipoAvaliacao.EXAME),
   epoca: epocaSchema,
   trimestre: z.undefined().optional(),
+  questoes: z.array(objectIdSchema).optional(),
 });
 
 // Schema para validar criação de avaliação (união discriminada)
@@ -44,16 +53,22 @@ export const updateAvaliacaoSchema = z.object({
   classe: classeSchema.optional(),
   trimestre: trimestreSchema.optional(),
   epoca: epocaSchema.optional(),
+  questoes: z.array(objectIdSchema).optional(),
 }).refine(
   (data) => {
-    // Se estiver atualizando o tipo para AP, trimestre deve estar presente
-    if (data.tipo === 'AP' && data.trimestre === undefined && data.epoca !== undefined) {
+    // Se não estiver atualizando o tipo, não precisa validar mais nada
+    if (!data.tipo) return true;
+    
+    // Se estiver atualizando para AP, deve fornecer trimestre ou não fornecer época
+    if (data.tipo === TipoAvaliacao.AP && data.epoca !== undefined) {
       return false;
     }
-    // Se estiver atualizando o tipo para EXAME, epoca deve estar presente
-    if (data.tipo === 'EXAME' && data.epoca === undefined && data.trimestre !== undefined) {
+    
+    // Se estiver atualizando para EXAME, deve fornecer época ou não fornecer trimestre
+    if (data.tipo === TipoAvaliacao.EXAME && data.trimestre !== undefined) {
       return false;
     }
+    
     return true;
   },
   {
@@ -75,8 +90,8 @@ export const avaliacaoSchema = baseResourceSchema.merge(
   })
 ).refine(
   (data) => {
-    if (data.tipo === 'AP') return !!data.trimestre && !data.epoca;
-    if (data.tipo === 'EXAME') return !!data.epoca && !data.trimestre;
+    if (data.tipo === TipoAvaliacao.AP) return !!data.trimestre && !data.epoca;
+    if (data.tipo === TipoAvaliacao.EXAME) return !!data.epoca && !data.trimestre;
     return true;
   },
   {

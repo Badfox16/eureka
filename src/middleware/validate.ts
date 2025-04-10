@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { type AnyZodObject, ZodError } from 'zod';
+import { type AnyZodObject, ZodError, z } from 'zod';
 
 /**
  * Middleware para validar dados de requisição usando schemas Zod
@@ -7,7 +7,7 @@ import { type AnyZodObject, ZodError } from 'zod';
  * @param source A propriedade da requisição onde os dados estão (body, query, params)
  */
 export const validate = (
-  schema: AnyZodObject, 
+  schema: z.ZodType<any, any, any>, 
   source: 'body' | 'query' | 'params' = 'body'
 ): RequestHandler => {
   return async (req: Request, res: Response, next: NextFunction) => {
