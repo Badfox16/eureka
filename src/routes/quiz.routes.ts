@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import * as quizController from '../controllers/quiz.controller';
-import { validate } from '../middleware/validate';
+import { validate } from '../middlewares/validate';
 import { createQuizSchema, updateQuizSchema } from '../schemas/quiz.schema';
-import { validateId } from '../middleware/validateId';
+import { validateId } from '../middlewares/validateId';
 
 const router = Router();
 

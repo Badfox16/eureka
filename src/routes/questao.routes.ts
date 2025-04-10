@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import * as questaoController from '../controllers/questao.controller';
-import { validate } from '../middleware/validate';
+import { validate } from '../middlewares/validate';
 import { createQuestaoSchema, updateQuestaoSchema } from '../schemas/questao.schema';
-import { validateId } from '../middleware/validateId';
+import { validateId } from '../middlewares/validateId';
 
 const router = Router();
 

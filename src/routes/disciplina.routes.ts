@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import * as disciplinaController from '../controllers/disciplina.controller';
-import { validate } from '../middleware/validate';
+import { validate } from '../middlewares/validate';
 import { createDisciplinaSchema, updateDisciplinaSchema } from '../schemas/disciplina.schema';
-import { validateId } from '../middleware/validateId';
+import { validateId } from '../middlewares/validateId';
 
 const router = Router();
 

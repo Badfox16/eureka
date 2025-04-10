@@ -8,10 +8,11 @@ import quizRoutes from './routes/quiz.routes'
 import questaoRoutes from './routes/questao.routes'
 import respostaRoutes from './routes/resposta.routes'
 import avaliacaoRoutes from './routes/avaliacao.routes'
+import usuarioRoutes from './routes/usuario.routes'
 
 dotenv.config()
 
-const app = express()
+export const app = express()
 app.use(morgan('dev'))
 const PORT = process.env.PORT || 6199
 
@@ -25,6 +26,7 @@ app.use('/api/quizzes', quizRoutes)
 app.use('/api/questoes', questaoRoutes)
 app.use('/api/respostas', respostaRoutes)
 app.use('/api/avaliacoes', avaliacaoRoutes)
+app.use('/api/usuarios', usuarioRoutes)
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {

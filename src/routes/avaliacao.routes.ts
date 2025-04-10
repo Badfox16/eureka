@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import * as avaliacaoController from '../controllers/avaliacao.controller';
-import { validate } from '../middleware/validate';
+import { validate } from '../middlewares/validate';
 import { createAvaliacaoSchema, updateAvaliacaoSchema } from '../schemas/avaliacao.schema';
-import { validateId } from '../middleware/validateId';
+import { validateId } from '../middlewares/validateId';
 
 const router = Router();
 
