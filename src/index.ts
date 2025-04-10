@@ -6,6 +6,7 @@ import disciplinaRoutes from './routes/disciplina.routes'
 import estudanteRoutes from './routes/estudante.routes'
 import quizRoutes from './routes/quiz.routes'
 import questaoRoutes from './routes/questao.routes'
+import respostaRoutes from './routes/resposta.routes'
 
 dotenv.config()
 
@@ -21,6 +22,7 @@ app.use('/api/disciplinas', disciplinaRoutes)
 app.use('/api/estudantes', estudanteRoutes)
 app.use('/api/quizzes', quizRoutes)
 app.use('/api/questoes', questaoRoutes)
+app.use('/api/respostas', respostaRoutes)
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {
@@ -31,7 +33,7 @@ app.get('/', (req, res) => {
 })
 
 // Middleware para tratar erros
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err)
   res.status(err.status || 500).json({
     status: 'error',
