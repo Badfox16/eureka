@@ -1,6 +1,7 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IDisciplina extends Document {
+    _id: Types.ObjectId;
     nome: string;
     codigo: string;
     descricao?: string;

@@ -1,6 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface IQuiz extends Document {
+    _id: Types.ObjectId;
     titulo: string;
     descricao?: string;
     avaliacao: Types.ObjectId; // Referência para uma avaliação

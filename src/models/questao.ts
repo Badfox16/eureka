@@ -1,6 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface IQuestao extends Document {
+    _id: Types.ObjectId;
     numero: number;
     enunciado: string;
     alternativas: {

@@ -1,6 +1,7 @@
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface IResposta extends Document {
+    _id: Types.ObjectId;
     estudante: Types.ObjectId;
     questao: Types.ObjectId;
     alternativaSelecionada: string;

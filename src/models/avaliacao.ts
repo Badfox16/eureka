@@ -17,6 +17,7 @@ export enum Epoca {
 }
 
 export interface IAvaliacao extends Document {
+    _id: Types.ObjectId;
     tipo: TipoAvaliacao;
     ano: number;
     disciplina: Types.ObjectId;
