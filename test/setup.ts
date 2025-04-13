@@ -1,5 +1,12 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import { config } from 'dotenv';
+
+// Carregar variáveis de ambiente do arquivo .env.test se existir
+config({ path: '.env.test' });
+
+// Sobrescrever a variável JWT_SECRET para testes
+process.env.JWT_SECRET = 'test_secret_key';
 
 let mongoServer: MongoMemoryServer;
 
