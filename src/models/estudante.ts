@@ -7,6 +7,7 @@ export interface IEstudante extends Document {
     classe: number
     escola?: string
     provincia?: string
+    ativo: boolean;
     createdAt: Date
     updatedAt: Date
 }
@@ -22,6 +23,10 @@ const estudanteSchema = new Schema<IEstudante>(
         },
         escola: { type: String },
         provincia: { type: String },
+        ativo: {
+            type: Boolean,
+            default: true
+        }
     },
     {
         timestamps: true,
