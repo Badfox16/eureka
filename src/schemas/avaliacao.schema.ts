@@ -27,6 +27,7 @@ const avaliacaoBaseSchema = z.object({
 const apSchema = avaliacaoBaseSchema.extend({
   tipo: z.literal(TipoAvaliacao.AP),
   trimestre: trimestreSchema,
+  provincia: z.string().min(2, 'Provincia deve ter pelo menos 2 caracteres'), // Nova validação
   epoca: z.undefined().optional(),
   questoes: z.array(objectIdSchema).optional(),
 });
@@ -36,6 +37,7 @@ const exameSchema = avaliacaoBaseSchema.extend({
   tipo: z.literal(TipoAvaliacao.EXAME),
   epoca: epocaSchema,
   trimestre: z.undefined().optional(),
+  provincia: z.undefined().optional(),
   questoes: z.array(objectIdSchema).optional(),
 });
 
@@ -52,6 +54,7 @@ export const updateAvaliacaoSchema = z.object({
   disciplina: objectIdSchema.optional(),
   classe: classeSchema.optional(),
   trimestre: trimestreSchema.optional(),
+  provincia: z.string().min(2, 'Provincia deve ter pelo menos 2 caracteres').optional(), // Nova validação
   epoca: epocaSchema.optional(),
   questoes: z.array(objectIdSchema).optional(),
 }).refine(
@@ -85,17 +88,18 @@ export const avaliacaoSchema = baseResourceSchema.merge(
     disciplina: objectIdSchema,
     classe: classeSchema,
     trimestre: trimestreSchema.optional(),
+    provincia: z.string().min(4, 'Provincia deve ter pelo menos 4 caracteres').optional(), 
     epoca: epocaSchema.optional(),
     questoes: z.array(objectIdSchema).default([]),
   })
 ).refine(
   (data) => {
-    if (data.tipo === TipoAvaliacao.AP) return !!data.trimestre && !data.epoca;
-    if (data.tipo === TipoAvaliacao.EXAME) return !!data.epoca && !data.trimestre;
+    if (data.tipo === TipoAvaliacao.AP) return !!data.trimestre && !data.epoca && !!data.provincia;
+    if (data.tipo === TipoAvaliacao.EXAME) return !!data.epoca && !data.trimestre && !data.provincia;
     return true;
   },
   {
-    message: "AP requer apenas trimestre e EXAME requer apenas época",
+    message: "AP requer trimestre e provincia, EXAME requer apenas época",
     path: ["tipo"],
   }
 );

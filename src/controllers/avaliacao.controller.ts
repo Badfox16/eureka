@@ -30,8 +30,8 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
     
     // Verificar campos específicos com base no tipo
     if (avaliacaoData.tipo === TipoAvaliacao.AP) {
-      if (!avaliacaoData.trimestre) {
-        throw createError('O campo trimestre é obrigatório para avaliações provinciais (AP)', 400);
+      if (!avaliacaoData.trimestre || !avaliacaoData.provincia) {
+        throw createError('Os campos trimestre e provincia são obrigatórios para avaliações provinciais (AP)', 400);
       }
     } else if (avaliacaoData.tipo === TipoAvaliacao.EXAME) {
       if (!avaliacaoData.epoca) {
@@ -47,8 +47,9 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
       classe: avaliacaoData.classe
     };
     
-    if (avaliacaoData.tipo === TipoAvaliacao.AP && avaliacaoData.trimestre) {
-      queryFiltro.trimestre = avaliacaoData.trimestre;
+    if (avaliacaoData.tipo === TipoAvaliacao.AP) {
+      if (avaliacaoData.trimestre) queryFiltro.trimestre = avaliacaoData.trimestre;
+      if (avaliacaoData.provincia) queryFiltro.provincia = avaliacaoData.provincia;
     }
     
     if (avaliacaoData.tipo === TipoAvaliacao.EXAME && avaliacaoData.epoca) {
@@ -116,6 +117,11 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
     // Filtrar por trimestre (para AP)
     if (req.query.trimestre && Object.values(Trimestre).includes(req.query.trimestre as Trimestre)) {
       filtro.trimestre = req.query.trimestre;
+    }
+    
+    // Filtrar por provincia (para AP)
+    if (req.query.provincia && typeof req.query.provincia === 'string') {
+      filtro.provincia = req.query.provincia;
     }
     
     // Filtrar por época (para exames)
@@ -202,6 +208,9 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       if (!updateData.trimestre && !avaliacao.trimestre) {
         throw createError('O campo trimestre é obrigatório para avaliações provinciais (AP)', 400);
       }
+      if (!updateData.provincia && !avaliacao.provincia) {
+        throw createError('O campo provincia é obrigatório para avaliações provinciais (AP)', 400);
+      }
     } else if (tipo === TipoAvaliacao.EXAME) {
       if (!updateData.epoca && !avaliacao.epoca) {
         throw createError('O campo época é obrigatório para exames', 400);
@@ -210,7 +219,7 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
     
     // Verificar se já existe uma avaliação similar (exceto esta)
     if (updateData.tipo || updateData.disciplina || updateData.ano || 
-        updateData.classe || updateData.trimestre || updateData.epoca) {
+        updateData.classe || updateData.trimestre || updateData.epoca || updateData.provincia) {
       
       const queryFiltro: any = {
         _id: { $ne: id }
@@ -231,6 +240,8 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       if (tipo === TipoAvaliacao.AP) {
         if (updateData.trimestre) queryFiltro.trimestre = updateData.trimestre;
         else if (avaliacao.trimestre) queryFiltro.trimestre = avaliacao.trimestre;
+        if (updateData.provincia) queryFiltro.provincia = updateData.provincia;
+        else if (avaliacao.provincia) queryFiltro.provincia = avaliacao.provincia;
       }
       
       if (tipo === TipoAvaliacao.EXAME) {

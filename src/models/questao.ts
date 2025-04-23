@@ -11,6 +11,7 @@ export interface IQuestao extends Document {
     }[];
     explicacao?: string;
     avaliacao: Types.ObjectId;
+    valor?: number; 
     createdAt: Date;
     updatedAt: Date;
 }
@@ -39,6 +40,11 @@ const questaoSchema = new Schema<IQuestao>(
             type: Schema.Types.ObjectId,
             ref: "Avaliacao",
             required: true
+        },
+        valor: { 
+            type: Number,
+            min: 0,
+            default: 0.5 // Valor padrão
         }
     },
     {

@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import { connectToDatabase } from './config/db'
 import morgan from 'morgan'
+import errorHandler from './middlewares/errorHandler'
 import disciplinaRoutes from './routes/disciplina.routes'
 import estudanteRoutes from './routes/estudante.routes'
 import quizRoutes from './routes/quiz.routes'
@@ -18,6 +19,9 @@ const PORT = process.env.PORT || 6199
 
 // Middleware para parsear JSON
 app.use(express.json())
+
+// Middleware para tratamento de erros
+app.use(errorHandler);
 
 // Rotas da API
 app.use('/api/disciplinas', disciplinaRoutes)
