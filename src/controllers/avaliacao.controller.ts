@@ -4,6 +4,16 @@ import { Disciplina } from '../models/disciplina';
 import { Questao } from '../models/questao';
 import type { CreateAvaliacaoInput, UpdateAvaliacaoInput } from '../schemas/avaliacao.schema';
 import { paginationSchema } from '../schemas/common.schema';
+import { Error as MongooseError } from 'mongoose';
+
+// Função auxiliar para criar erros personalizados
+function createError(message: string, statusCode: number, code?: string, errors?: any[]) {
+  const error = new Error(message) as any;
+  error.statusCode = statusCode;
+  if (code) error.code = code;
+  if (errors) error.errors = errors;
+  return error;
+}
 
 /**
  * Cria uma nova avaliação
@@ -15,29 +25,17 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a disciplina existe
     const disciplina = await Disciplina.findById(avaliacaoData.disciplina);
     if (!disciplina) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Disciplina não encontrada'
-      });
-      return;
+      throw createError('Disciplina não encontrada', 404);
     }
     
     // Verificar campos específicos com base no tipo
     if (avaliacaoData.tipo === TipoAvaliacao.AP) {
       if (!avaliacaoData.trimestre) {
-        res.status(400).json({
-          status: 'error',
-          message: 'O campo trimestre é obrigatório para avaliações provinciais (AP)'
-        });
-        return;
+        throw createError('O campo trimestre é obrigatório para avaliações provinciais (AP)', 400);
       }
     } else if (avaliacaoData.tipo === TipoAvaliacao.EXAME) {
       if (!avaliacaoData.epoca) {
-        res.status(400).json({
-          status: 'error',
-          message: 'O campo época é obrigatório para exames'
-        });
-        return;
+        throw createError('O campo época é obrigatório para exames', 400);
       }
     }
     
@@ -57,13 +55,17 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
       queryFiltro.epoca = avaliacaoData.epoca;
     }
     
-    const exists = await Avaliacao.findOne(queryFiltro);
-    if (exists) {
-      res.status(409).json({
-        status: 'error',
-        message: 'Já existe uma avaliação com as mesmas características'
-      });
-      return;
+    try {
+      const exists = await Avaliacao.findOne(queryFiltro);
+      if (exists) {
+        throw createError('Já existe uma avaliação com as mesmas características', 409, 'DUPLICATE_RESOURCE');
+      }
+    } catch (error: any) {
+      if (error instanceof MongooseError.ValidationError) {
+        // Tratar erros de validação do Mongoose
+        return next(error);
+      }
+      throw error; // Re-lançar outros erros
     }
     
     // Criar a avaliação
@@ -74,11 +76,7 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
       data: avaliacao
     });
   } catch (error) {
-    console.error('Erro ao criar avaliação:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao criar avaliação'
-    });
+    next(error);
   }
 };
 
@@ -147,11 +145,7 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar avaliações:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar avaliações'
-    });
+    next(error);
   }
 };
 
@@ -167,11 +161,7 @@ export const getAvaliacaoById: RequestHandler = async (req, res, next) => {
       .populate('questoes');
     
     if (!avaliacao) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Avaliação não encontrada'
-      });
-      return;
+      throw createError('Avaliação não encontrada', 404);
     }
     
     res.status(200).json({
@@ -179,11 +169,7 @@ export const getAvaliacaoById: RequestHandler = async (req, res, next) => {
       data: avaliacao
     });
   } catch (error) {
-    console.error('Erro ao buscar avaliação:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar avaliação'
-    });
+    next(error);
   }
 };
 
@@ -198,22 +184,14 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a avaliação existe
     const avaliacao = await Avaliacao.findById(id);
     if (!avaliacao) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Avaliação não encontrada'
-      });
-      return;
+      throw createError('Avaliação não encontrada', 404);
     }
     
     // Se estiver alterando a disciplina, verificar se a nova disciplina existe
     if (updateData.disciplina && updateData.disciplina.toString() !== avaliacao.disciplina.toString()) {
       const disciplina = await Disciplina.findById(updateData.disciplina);
       if (!disciplina) {
-        res.status(404).json({
-          status: 'error',
-          message: 'Disciplina não encontrada'
-        });
-        return;
+        throw createError('Disciplina não encontrada', 404);
       }
     }
     
@@ -222,19 +200,11 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
     
     if (tipo === TipoAvaliacao.AP) {
       if (!updateData.trimestre && !avaliacao.trimestre) {
-        res.status(400).json({
-          status: 'error',
-          message: 'O campo trimestre é obrigatório para avaliações provinciais (AP)'
-        });
-        return;
+        throw createError('O campo trimestre é obrigatório para avaliações provinciais (AP)', 400);
       }
     } else if (tipo === TipoAvaliacao.EXAME) {
       if (!updateData.epoca && !avaliacao.epoca) {
-        res.status(400).json({
-          status: 'error',
-          message: 'O campo época é obrigatório para exames'
-        });
-        return;
+        throw createError('O campo época é obrigatório para exames', 400);
       }
     }
     
@@ -270,11 +240,7 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       
       const exists = await Avaliacao.findOne(queryFiltro);
       if (exists) {
-        res.status(409).json({
-          status: 'error',
-          message: 'Já existe uma avaliação com as mesmas características'
-        });
-        return;
+        throw createError('Já existe uma avaliação com as mesmas características', 409, 'DUPLICATE_RESOURCE');
       }
     }
     
@@ -290,11 +256,7 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       data: updatedAvaliacao
     });
   } catch (error) {
-    console.error('Erro ao atualizar avaliação:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao atualizar avaliação'
-    });
+    next(error);
   }
 };
 
@@ -308,11 +270,7 @@ export const deleteAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a avaliação existe
     const avaliacao = await Avaliacao.findById(id);
     if (!avaliacao) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Avaliação não encontrada'
-      });
-      return;
+      throw createError('Avaliação não encontrada', 404);
     }
     
     // Verificar se a avaliação tem questões associadas
@@ -331,11 +289,7 @@ export const deleteAvaliacao: RequestHandler = async (req, res, next) => {
       message: `Avaliação removida com sucesso${questoesCount > 0 ? ` (incluindo ${questoesCount} questões)` : ''}`
     });
   } catch (error) {
-    console.error('Erro ao remover avaliação:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao remover avaliação'
-    });
+    next(error);
   }
 };
 
@@ -347,11 +301,7 @@ export const searchAvaliacoes: RequestHandler = async (req, res, next) => {
     const { q } = req.query;
     
     if (!q || typeof q !== 'string') {
-      res.status(400).json({
-        status: 'error',
-        message: 'Termo de busca inválido'
-      });
-      return;
+      throw createError('Termo de busca inválido', 400);
     }
     
     // Buscar disciplinas com o termo de busca
@@ -380,11 +330,7 @@ export const searchAvaliacoes: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar avaliações:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar avaliações'
-    });
+    next(error);
   }
 };
 
@@ -475,10 +421,6 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
       }
     });
   } catch (error) {
-    console.error('Erro ao obter estatísticas de avaliações:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao obter estatísticas de avaliações'
-    });
+    next(error);
   }
 };
