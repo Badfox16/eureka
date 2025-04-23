@@ -93,7 +93,7 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
 
 1. Clone o repositório:
 
-   **git clone **https://github.com/seu-usuario/eureka.git
+   **git clone ** https://github.com/Badfox16/eureka.git
 
    **cd eureka**
 2. Instale as dependências:
