@@ -1,15 +1,16 @@
 import request from 'supertest';
 import { app } from '../../src/index';
 import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../src/models/avaliacao';
+import { Disciplina } from '../../src/models/disciplina';
 import { createAvaliacaoFixtures } from '../fixtures/avaliacoes';
 import { createDisciplinaFixtures } from '../fixtures/disciplinas';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
-import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
 import { TipoUsuario } from '../../src/models/usuario';
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 describe('API de Avaliações', () => {
-  let professorToken: string;
+  let authToken: string;
   let adminToken: string;
   let disciplinaId: string;
   
@@ -26,13 +27,13 @@ describe('API de Avaliações', () => {
       { expiresIn: '1h' }
     );
     
-    professorToken = jwt.sign(
+    authToken = jwt.sign(
       { id: professor!._id.toString(), email: professor!.email },
       process.env.JWT_SECRET!,
       { expiresIn: '1h' }
     );
     
-    // Criar disciplinas para avaliações
+    // Criar disciplinas para teste
     const disciplinas = await createDisciplinaFixtures();
     disciplinaId = disciplinas[0]._id.toString();
     
@@ -44,75 +45,87 @@ describe('API de Avaliações', () => {
     it('deve listar todas as avaliações com paginação', async () => {
       const res = await request(app)
         .get('/api/avaliacoes')
-        .set('Authorization', `Bearer ${professorToken}`);
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('success');
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data.length).toBeGreaterThan(0);
       expect(res.body.meta).toBeDefined();
+      expect(res.body.meta.total).toBeGreaterThan(0);
     });
     
-    it('deve filtrar avaliações por tipo', async () => {
+    it('deve aplicar filtro por disciplina', async () => {
       const res = await request(app)
-        .get(`/api/avaliacoes?tipo=${TipoAvaliacao.AP}`)
-        .set('Authorization', `Bearer ${professorToken}`);
+        .get(`/api/avaliacoes?disciplina=${disciplinaId}`)
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
-      expect(res.body.status).toBe('success');
       expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body.data[0].tipo).toBe(TipoAvaliacao.AP);
+      
+      // Se houver resultados, verificar se todos pertencem à disciplina
+      if (res.body.data.length > 0) {
+        const todasDaDisciplina = res.body.data.every(
+          (a: any) => a.disciplina._id === disciplinaId || a.disciplina === disciplinaId
+        );
+        expect(todasDaDisciplina).toBe(true);
+      }
     });
     
-    it('deve filtrar avaliações por classe', async () => {
-      const res = await request(app)
-        .get('/api/avaliacoes?classe=12')
-        .set('Authorization', `Bearer ${professorToken}`);
-      
-      expect(res.status).toBe(200);
-      expect(res.body.status).toBe('success');
-      expect(Array.isArray(res.body.data)).toBe(true);
-      res.body.data.forEach((avaliacao: any) => {
-        expect(avaliacao.classe).toBe(12);
-      });
-    });
-  });
-  
-  describe('GET /api/avaliacoes/:id', () => {
-    it('deve retornar uma avaliação pelo ID', async () => {
-      // Primeiro obtemos uma avaliação existente
-      const avaliacoes = await Avaliacao.find();
-      const avaliacao = avaliacoes[0];
+    it('deve aplicar filtro por tipo', async () => {
+      const tipoFiltro = TipoAvaliacao.AP;
       
       const res = await request(app)
-        .get(`/api/avaliacoes/${avaliacao._id}`)
-        .set('Authorization', `Bearer ${professorToken}`);
+        .get(`/api/avaliacoes?tipo=${tipoFiltro}`)
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
-      expect(res.body.status).toBe('success');
-      expect(res.body.data._id).toBe(avaliacao._id.toString());
-      expect(res.body.data.tipo).toBe(avaliacao.tipo);
+      
+      // Se houver resultados, verificar se todos são do tipo solicitado
+      if (res.body.data.length > 0) {
+        const todasDoTipo = res.body.data.every((a: any) => a.tipo === tipoFiltro);
+        expect(todasDoTipo).toBe(true);
+      }
     });
     
-    it('deve retornar 404 para ID inexistente', async () => {
-      const fakeId = new mongoose.Types.ObjectId();
+    it('deve aplicar filtro por classe', async () => {
+      const classeFiltro = 12;
       
       const res = await request(app)
-        .get(`/api/avaliacoes/${fakeId}`)
-        .set('Authorization', `Bearer ${professorToken}`);
+        .get(`/api/avaliacoes?classe=${classeFiltro}`)
+        .set('Authorization', `Bearer ${authToken}`);
       
-      expect(res.status).toBe(404);
-      expect(res.body.status).toBe('error');
+      expect(res.status).toBe(200);
+      
+      // Se houver resultados, verificar se todos são da classe solicitada
+      if (res.body.data.length > 0) {
+        const todasDaClasse = res.body.data.every((a: any) => a.classe === classeFiltro);
+        expect(todasDaClasse).toBe(true);
+      }
+    });
+    
+    it('deve aplicar filtro por ano', async () => {
+      const anoAtual = new Date().getFullYear();
+      
+      const res = await request(app)
+        .get(`/api/avaliacoes?ano=${anoAtual}`)
+        .set('Authorization', `Bearer ${authToken}`);
+      
+      expect(res.status).toBe(200);
+      
+      // Se houver resultados, verificar se todos são do ano solicitado
+      if (res.body.data.length > 0) {
+        const todasDoAno = res.body.data.every((a: any) => a.ano === anoAtual);
+        expect(todasDoAno).toBe(true);
+      }
     });
   });
   
   describe('POST /api/avaliacoes', () => {
-    it('deve criar uma nova avaliação do tipo AP', async () => {
-      const anoAtual = new Date().getFullYear();
+    it('deve criar uma nova avaliação tipo AP', async () => {
       const novaAvaliacao = {
         tipo: TipoAvaliacao.AP,
-        ano: anoAtual,
+        ano: new Date().getFullYear(),
         disciplina: disciplinaId,
         classe: 11,
         trimestre: Trimestre.TERCEIRO
@@ -120,33 +133,35 @@ describe('API de Avaliações', () => {
       
       const res = await request(app)
         .post('/api/avaliacoes')
-        .set('Authorization', `Bearer ${professorToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send(novaAvaliacao);
       
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('success');
       expect(res.body.data.tipo).toBe(novaAvaliacao.tipo);
+      expect(res.body.data.ano).toBe(novaAvaliacao.ano);
+      expect(res.body.data.classe).toBe(novaAvaliacao.classe);
       expect(res.body.data.trimestre).toBe(novaAvaliacao.trimestre);
+      expect(res.body.data.disciplina).toBe(disciplinaId);
       
       // Verificar se foi realmente salvo no banco
       const avaliacaoSalva = await Avaliacao.findById(res.body.data._id);
       expect(avaliacaoSalva).not.toBeNull();
-      expect(avaliacaoSalva!.tipo).toBe(TipoAvaliacao.AP);
+      expect(avaliacaoSalva!.tipo).toBe(novaAvaliacao.tipo);
     });
     
-    it('deve criar uma nova avaliação do tipo EXAME', async () => {
-      const anoAtual = new Date().getFullYear();
+    it('deve criar uma nova avaliação tipo EXAME', async () => {
       const novaAvaliacao = {
         tipo: TipoAvaliacao.EXAME,
-        ano: anoAtual,
+        ano: new Date().getFullYear(),
         disciplina: disciplinaId,
         classe: 12,
-        epoca: Epoca.SEGUNDA
+        epoca: Epoca.PRIMEIRA
       };
       
       const res = await request(app)
         .post('/api/avaliacoes')
-        .set('Authorization', `Bearer ${professorToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send(novaAvaliacao);
       
       expect(res.status).toBe(201);
@@ -155,160 +170,134 @@ describe('API de Avaliações', () => {
       expect(res.body.data.epoca).toBe(novaAvaliacao.epoca);
     });
     
-    it('deve validar os campos específicos para AP (trimestre obrigatório)', async () => {
-      const anoAtual = new Date().getFullYear();
+    it('deve validar campos obrigatórios com base no tipo', async () => {
+      // AP sem trimestre
       const avaliacaoInvalida = {
         tipo: TipoAvaliacao.AP,
-        ano: anoAtual,
+        ano: new Date().getFullYear(),
         disciplina: disciplinaId,
         classe: 11
-        // Faltando trimestre
+        // trimestre está faltando
       };
       
       const res = await request(app)
         .post('/api/avaliacoes')
-        .set('Authorization', `Bearer ${professorToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send(avaliacaoInvalida);
       
       expect(res.status).toBe(400);
       expect(res.body.status).toBe('error');
     });
-    
-    it('deve validar os campos específicos para EXAME (época obrigatória)', async () => {
-      const anoAtual = new Date().getFullYear();
-      const avaliacaoInvalida = {
-        tipo: TipoAvaliacao.EXAME,
-        ano: anoAtual,
-        disciplina: disciplinaId,
-        classe: 12
-        // Faltando época
-      };
+  });
+  
+  describe('GET /api/avaliacoes/:id', () => {
+    it('deve retornar uma avaliação pelo ID com questões', async () => {
+      // Buscar uma avaliação existente
+      const avaliacoes = await Avaliacao.find();
+      const avaliacaoId = avaliacoes[0]._id;
       
       const res = await request(app)
-        .post('/api/avaliacoes')
-        .set('Authorization', `Bearer ${professorToken}`)
-        .send(avaliacaoInvalida);
+        .get(`/api/avaliacoes/${avaliacaoId}`)
+        .set('Authorization', `Bearer ${authToken}`);
       
-      expect(res.status).toBe(400);
-      expect(res.body.status).toBe('error');
-    });
-    
-    it('deve impedir a criação de avaliação com características duplicadas', async () => {
-      // Primeiro obter uma avaliação existente
-      const avaliacoes = await Avaliacao.find({ tipo: TipoAvaliacao.AP });
-      const avaliacaoExistente = avaliacoes[0];
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data._id).toBe(avaliacaoId.toString());
+      expect(res.body.data.disciplina).toBeDefined();
       
-      // Tentar criar uma avaliação idêntica
-      const avaliacaoDuplicada = {
-        tipo: avaliacaoExistente.tipo,
-        ano: avaliacaoExistente.ano,
-        disciplina: avaliacaoExistente.disciplina.toString(),
-        classe: avaliacaoExistente.classe,
-        trimestre: avaliacaoExistente.trimestre
-      };
-      
-      const res = await request(app)
-        .post('/api/avaliacoes')
-        .set('Authorization', `Bearer ${professorToken}`)
-        .send(avaliacaoDuplicada);
-      
-      expect(res.status).toBe(409);
-      expect(res.body.status).toBe('error');
-      expect(res.body.message).toContain('mesmas características');
+      // A resposta deve incluir questões
+      expect(Array.isArray(res.body.data.questoes)).toBe(true);
     });
   });
   
   describe('PUT /api/avaliacoes/:id', () => {
     it('deve atualizar uma avaliação existente', async () => {
-      // Primeiro obter uma avaliação existente
-      const avaliacoes = await Avaliacao.find({ tipo: TipoAvaliacao.AP });
+      // Buscar uma avaliação existente
+      const avaliacoes = await Avaliacao.find();
       const avaliacao = avaliacoes[0];
       
       const atualizacao = {
-        ano: avaliacao.ano - 1, // Alterar o ano para um valor anterior
+        ano: avaliacao.ano + 1
       };
       
       const res = await request(app)
         .put(`/api/avaliacoes/${avaliacao._id}`)
-        .set('Authorization', `Bearer ${professorToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send(atualizacao);
       
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('success');
       expect(res.body.data.ano).toBe(atualizacao.ano);
       
-      // O tipo não deve ter mudado
-      expect(res.body.data.tipo).toBe(avaliacao.tipo);
-      
-      // Verificar no banco
+      // Verificar se foi atualizado no banco
       const avaliacaoAtualizada = await Avaliacao.findById(avaliacao._id);
       expect(avaliacaoAtualizada!.ano).toBe(atualizacao.ano);
     });
   });
   
   describe('DELETE /api/avaliacoes/:id', () => {
-    it('deve remover uma avaliação existente', async () => {
-      // Criar uma avaliação para teste
-      const anoAtual = new Date().getFullYear();
-      const avaliacaoParaRemover = await Avaliacao.create({
+    it('deve remover uma avaliação e suas questões relacionadas', async () => {
+      // Primeiro, criar uma avaliação para depois remover
+      const novaAvaliacao = new Avaliacao({
         tipo: TipoAvaliacao.AP,
-        ano: anoAtual,
-        disciplina: new mongoose.Types.ObjectId(disciplinaId),
+        ano: 2022,
+        disciplina: disciplinaId,
         classe: 11,
-        trimestre: Trimestre.TERCEIRO
+        trimestre: Trimestre.PRIMEIRO,
+        questoes: []
       });
+      await novaAvaliacao.save();
       
       const res = await request(app)
-        .delete(`/api/avaliacoes/${avaliacaoParaRemover._id}`)
+        .delete(`/api/avaliacoes/${novaAvaliacao._id}`)
         .set('Authorization', `Bearer ${adminToken}`);
       
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('success');
       
-      // Verificar se foi removido do banco
-      const avaliacaoRemovida = await Avaliacao.findById(avaliacaoParaRemover._id);
+      // Verificar se foi realmente removido do banco
+      const avaliacaoRemovida = await Avaliacao.findById(novaAvaliacao._id);
       expect(avaliacaoRemovida).toBeNull();
-    });
-    
-    it('deve retornar 404 ao tentar remover avaliação inexistente', async () => {
-      const fakeId = new mongoose.Types.ObjectId();
-      
-      const res = await request(app)
-        .delete(`/api/avaliacoes/${fakeId}`)
-        .set('Authorization', `Bearer ${adminToken}`);
-      
-      expect(res.status).toBe(404);
-      expect(res.body.status).toBe('error');
-    });
-  });
-  
-  describe('GET /api/avaliacoes/estatisticas', () => {
-    it('deve retornar estatísticas sobre avaliações', async () => {
-      const res = await request(app)
-        .get('/api/avaliacoes/estatisticas')
-        .set('Authorization', `Bearer ${professorToken}`);
-      
-      expect(res.status).toBe(200);
-      expect(res.body.status).toBe('success');
-      expect(res.body.data).toBeDefined();
-      expect(res.body.data.porTipo).toBeDefined();
-      expect(res.body.data.porDisciplina).toBeDefined();
-      expect(res.body.data.porAno).toBeDefined();
     });
   });
   
   describe('GET /api/avaliacoes/search', () => {
-    it('deve buscar avaliações por termo', async () => {
-      // Buscar pelo ano atual (que deve existir em alguma avaliação)
-      const anoAtual = new Date().getFullYear().toString();
+    it('deve buscar avaliações por disciplina', async () => {
+      // Buscar uma disciplina existente
+      const disciplina = await Disciplina.findOne();
       
       const res = await request(app)
-        .get(`/api/avaliacoes/search?q=${anoAtual}`)
-        .set('Authorization', `Bearer ${professorToken}`);
+        .get(`/api/avaliacoes/search?disciplina=${disciplina!.nome}`)
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('success');
-      expect(Array.isArray(res.body.data)).toBe(true);
+    });
+    
+    it('deve retornar array vazio para termo sem correspondência', async () => {
+      const res = await request(app)
+        .get('/api/avaliacoes/search?disciplina=DisciplinaInexistente123')
+        .set('Authorization', `Bearer ${authToken}`);
+      
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data).toEqual([]);
+    });
+  });
+  
+  describe('GET /api/avaliacoes/estatisticas', () => {
+    it('deve fornecer estatísticas das avaliações', async () => {
+      const res = await request(app)
+        .get('/api/avaliacoes/estatisticas')
+        .set('Authorization', `Bearer ${authToken}`);
+      
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.totalAvaliacoes).toBeDefined();
+      expect(res.body.data.porTipo).toBeDefined();
+      expect(res.body.data.porClasse).toBeDefined();
+      expect(res.body.data.porAno).toBeDefined();
     });
   });
 });

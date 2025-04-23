@@ -4,7 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "nodemon"
+    "dev": "nodemon",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:clear-cache": "jest --clearCache"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
