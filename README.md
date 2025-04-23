@@ -22,25 +22,25 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
 
 **├── src/                      		# Código fonte**
 
-│   ├── config/               	# Configurações do projeto
+**│   ├── config/               	# Configurações do projeto**
 
-│   ├── controllers/         	# Controladores da aplicação
+**│   ├── controllers/         	# Controladores da aplicação**
 
-│   ├── middlewares/      	# Middlewares personalizados
+**│   ├── middlewares/      	# Middlewares personalizados**
 
-│   ├── models/               	# Modelos do banco de dados
+**│   ├── models/               	# Modelos do banco de dados**
 
 **│   ├── routes/               	# Rotas da API**
 
-│   └── schemas/              	# Esquemas de validação (Zod)
+**│   └── schemas/              	# Esquemas de validação (Zod)**
 
 **├── test/                     		# Testes**
 
-│   ├── fixtures/             	# Dados de teste fixos
+**│   ├── fixtures/             	# Dados de teste fixos**
 
-│   └── integration/          	# Testes de integração
+**│   └── integration/          	# Testes de integração**
 
-└── .env                      		# Variáveis de ambiente
+**└── .env                      		# Variáveis de ambiente**
 
 ## Principais Recursos
 
