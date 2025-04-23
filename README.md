@@ -6,7 +6,7 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
 
 ## Tecnologias Utilizadas
 
-* **Node.js** : Ambiente de execução JavaScript server-side
+* **Bun.js** : Ambiente de execução JavaScript server-side
 * **Express** : Framework web para construir a API RESTful
 * **MongoDB** : Banco de dados NoSQL para armazenamento de dados
 * **Mongoose** : ODM (Object Data Modeling) para MongoDB
