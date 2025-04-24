@@ -98,7 +98,7 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
    **cd eureka**
 2. Instale as dependências:
 
-   **npm install**
+   **bun install**
 3. Configure as variáveis de ambiente:
 
    * Crie um arquivo [.env](vscode-file://vscode-app/c:/Users/user/AppData/Local/Programs/Microsoft%20VS%20Code/resources/app/out/vs/code/electron-sandbox/workbench/workbench.html) na raiz do projeto
@@ -111,17 +111,17 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
      **JWT_SECRET=seu_segredo_jwt**
 4. Iniciar o servidor de desenvolvimento:
 
-   **npm run dev**
+   **bun run dev**
 
 ## Testes
 
 Execute os testes com:
 
-**npm test**
+**bun test**
 
 Para executar testes com cobertura:
 
-**npm run test:coverage**
+**bun run test:coverage**
 
 NB - eu estava cansado e com preguiça na reta final então os testes agr estão uma autêntica confusão, n vão funcionar e precisarão de muita refatoração
 

@@ -27,7 +27,7 @@ const avaliacaoBaseSchema = z.object({
 const apSchema = avaliacaoBaseSchema.extend({
   tipo: z.literal(TipoAvaliacao.AP),
   trimestre: trimestreSchema,
-  provincia: z.string().min(2, 'Provincia deve ter pelo menos 2 caracteres'), // Nova validação
+  provincia: objectIdSchema, // Alterado para objectIdSchema
   epoca: z.undefined().optional(),
   questoes: z.array(objectIdSchema).optional(),
 });
@@ -54,7 +54,7 @@ export const updateAvaliacaoSchema = z.object({
   disciplina: objectIdSchema.optional(),
   classe: classeSchema.optional(),
   trimestre: trimestreSchema.optional(),
-  provincia: z.string().min(2, 'Provincia deve ter pelo menos 2 caracteres').optional(), // Nova validação
+  provincia: objectIdSchema.optional(), 
   epoca: epocaSchema.optional(),
   questoes: z.array(objectIdSchema).optional(),
 }).refine(
@@ -88,7 +88,7 @@ export const avaliacaoSchema = baseResourceSchema.merge(
     disciplina: objectIdSchema,
     classe: classeSchema,
     trimestre: trimestreSchema.optional(),
-    provincia: z.string().min(4, 'Provincia deve ter pelo menos 4 caracteres').optional(), 
+    provincia: objectIdSchema.optional(), // Alterado para objectIdSchema.optional()
     epoca: epocaSchema.optional(),
     questoes: z.array(objectIdSchema).default([]),
   })

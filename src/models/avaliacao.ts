@@ -23,11 +23,11 @@ export interface IAvaliacao extends Document {
     disciplina: Types.ObjectId;
     // Campos específicos para AP
     trimestre?: Trimestre;
-    provincia?: string; 
+    provincia?: Types.ObjectId; // Alterado para ObjectId
     // Campos específicos para Exame
     epoca?: Epoca;
     // Outras informações
-    classe: number; 
+    classe: number; // 11 ou 12
     questoes: Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
@@ -58,8 +58,9 @@ const avaliacaoSchema = new Schema<IAvaliacao>(
                 return this.tipo === TipoAvaliacao.AP;
             }
         },
-        provincia: { // Nova propriedade
-            type: String,
+        provincia: { // Alterado para ObjectId
+            type: Schema.Types.ObjectId,
+            ref: "Provincia",
             required: function(this: IAvaliacao) {
                 return this.tipo === TipoAvaliacao.AP;
             }
