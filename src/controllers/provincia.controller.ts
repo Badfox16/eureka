@@ -1,12 +1,25 @@
-// import type { RequestHandler } from 'express'; <-- Remova esta importação
+import { z } from 'zod';
+import type { RequestHandler } from 'express'; // Usa RequestHandler padrão
 import { Provincia } from '../models/provincia';
 import type { CreateProvinciaInput, UpdateProvinciaInput } from '../schemas/provincia.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import { Avaliacao } from '../models/avaliacao';
-import { z } from 'zod';
-import type { CustomRequestHandler } from '../middlewares/customHandler'; // Importe o tipo personalizado
 
-// Schema para validar um array de criação de províncias
+// Função auxiliar para criar erros (pode ser movida para um utilitário)
+class HttpError extends Error {
+  statusCode: number;
+  code?: string;
+
+  constructor(message: string, statusCode: number, code?: string) {
+    super(message);
+    this.name = 'HttpError'; // Para identificar no errorHandler
+    this.statusCode = statusCode;
+    this.code = code;
+    Object.setPrototypeOf(this, HttpError.prototype);
+  }
+}
+
+// Schema para validar um array de criação de províncias (usado internamente)
 const createProvinciasSchema = z.array(
   z.object({
     nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -18,24 +31,25 @@ const createProvinciasSchema = z.array(
 /**
  * Cria múltiplas províncias em massa
  */
-export const createProvinciasEmMassa: CustomRequestHandler = async (req, res, next) => {
+export const createProvinciasEmMassa: RequestHandler = async (req, res, next) => {
   try {
     const provinciasData = createProvinciasSchema.parse(req.body);
 
-    // Verificar se já existem províncias com os mesmos nomes
-    const nomesExistentes = await Provincia.find({ nome: { $in: provinciasData.map(p => p.nome) } }).select('nome').lean();
+    const nomes = provinciasData.map(p => p.nome);
+    const nomesExistentes = await Provincia.find({ nome: { $in: nomes } }).select('nome').lean();
     if (nomesExistentes.length > 0) {
       const nomesConflitantes = nomesExistentes.map(p => p.nome);
-      return res.status(409).json({
-        status: 'error',
-        message: 'Algumas províncias já existem',
-        data: nomesConflitantes
-      });
+      throw new HttpError(
+        `Já existem províncias com os seguintes nomes: ${nomesConflitantes.join(', ')}`,
+        409,
+        'DUPLICATE_RESOURCE'
+      );
     }
 
     const provincias = await Provincia.insertMany(provinciasData);
 
-    return res.status(201).json({
+    // Remove 'return'
+    res.status(201).json({ // <<< SEM RETURN AQUI
       status: 'success',
       data: provincias,
       meta: {
@@ -43,17 +57,6 @@ export const createProvinciasEmMassa: CustomRequestHandler = async (req, res, ne
       }
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      // Se for um erro de validação do Zod, retorna uma resposta formatada
-      return res.status(400).json({
-        status: 'error',
-        message: 'Erro de validação',
-        errors: error.errors.map(err => ({
-          path: err.path.join('.'),
-          message: err.message
-        }))
-      });
-    }
     next(error);
   }
 };
@@ -61,22 +64,19 @@ export const createProvinciasEmMassa: CustomRequestHandler = async (req, res, ne
 /**
  * Cria uma nova província
  */
-export const createProvincia: CustomRequestHandler = async (req, res, next) => {
+export const createProvincia: RequestHandler = async (req, res, next) => {
   try {
     const provinciaData = req.body as CreateProvinciaInput;
-    
-    // Verificar se já existe uma província com o mesmo nome
+
     const exists = await Provincia.findOne({ nome: provinciaData.nome });
     if (exists) {
-      return res.status(409).json({
-        status: 'error',
-        message: `Já existe uma província com o nome ${provinciaData.nome}`
-      });
+      throw new HttpError(`Já existe uma província com o nome ${provinciaData.nome}`, 409, 'DUPLICATE_RESOURCE');
     }
-    
+
     const provincia = await Provincia.create(provinciaData);
-    
-    return res.status(201).json({
+
+    // Remove 'return'
+    res.status(201).json({ // <<< SEM RETURN AQUI
       status: 'success',
       data: provincia
     });
@@ -88,21 +88,21 @@ export const createProvincia: CustomRequestHandler = async (req, res, next) => {
 /**
  * Obtém todas as províncias com opção de paginação
  */
-export const getAllProvincias: CustomRequestHandler = async (req, res, next) => {
+export const getAllProvincias: RequestHandler = async (req, res, next) => {
   try {
     const { page, limit } = paginationSchema.parse({
       page: Number(req.query.page || 1),
       limit: Number(req.query.limit || 10)
     });
-    
+
     const total = await Provincia.countDocuments();
-    
     const provincias = await Provincia.find()
       .sort({ nome: 1 })
       .skip((page - 1) * limit)
       .limit(limit);
-    
-    return res.status(200).json({
+
+    // Remove 'return'
+    res.status(200).json({ // <<< SEM RETURN AQUI
       status: 'success',
       data: provincias,
       meta: {
@@ -120,20 +120,17 @@ export const getAllProvincias: CustomRequestHandler = async (req, res, next) => 
 /**
  * Obtém uma província pelo ID
  */
-export const getProvinciaById: CustomRequestHandler = async (req, res, next) => {
+export const getProvinciaById: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
     const provincia = await Provincia.findById(id);
-    
+
     if (!provincia) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Provincia não encontrada'
-      });
+      throw new HttpError('Província não encontrada', 404, 'NOT_FOUND');
     }
-    
-    return res.status(200).json({
+
+    // Remove 'return'
+    res.status(200).json({ // <<< SEM RETURN AQUI
       status: 'success',
       data: provincia
     });
@@ -145,32 +142,31 @@ export const getProvinciaById: CustomRequestHandler = async (req, res, next) => 
 /**
  * Atualiza uma província pelo ID
  */
-export const updateProvincia: CustomRequestHandler = async (req, res, next) => {
+export const updateProvincia: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updateData = req.body as UpdateProvinciaInput;
-    
+
     const provincia = await Provincia.findById(id);
     if (!provincia) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Provincia não encontrada'
-      });
+      throw new HttpError('Província não encontrada para atualização', 404, 'NOT_FOUND');
     }
-    
+
     if (updateData.nome && updateData.nome !== provincia.nome) {
       const exists = await Provincia.findOne({ nome: updateData.nome, _id: { $ne: id } });
       if (exists) {
-        return res.status(409).json({
-          status: 'error',
-          message: `Já existe uma província com o nome ${updateData.nome}`
-        });
+        throw new HttpError(`Já existe outra província com o nome ${updateData.nome}`, 409, 'DUPLICATE_RESOURCE');
       }
     }
-    
+
     const updatedProvincia = await Provincia.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
-    
-    return res.status(200).json({
+
+    if (!updatedProvincia) {
+        throw new HttpError('Falha ao atualizar a província, recurso não encontrado após tentativa de atualização.', 404, 'NOT_FOUND');
+    }
+
+    // Remove 'return'
+    res.status(200).json({ // <<< SEM RETURN AQUI
       status: 'success',
       data: updatedProvincia
     });
@@ -182,32 +178,30 @@ export const updateProvincia: CustomRequestHandler = async (req, res, next) => {
 /**
  * Remove uma província pelo ID
  */
-export const deleteProvincia: CustomRequestHandler = async (req, res, next) => {
+export const deleteProvincia: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const provincia = await Provincia.findById(id);
     if (!provincia) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Provincia não encontrada'
-      });
+      throw new HttpError('Província não encontrada para remoção', 404, 'NOT_FOUND');
     }
-    
-    // Verificar se a província está sendo usada em avaliações (se necessário)
+
     const avaliacoesComProvincia = await Avaliacao.countDocuments({ provincia: id });
     if (avaliacoesComProvincia > 0) {
-      return res.status(409).json({
-        status: 'error',
-        message: 'Esta província não pode ser removida pois está sendo usada em avaliações'
-      });
+      throw new HttpError(
+        `Esta província não pode ser removida pois está associada a ${avaliacoesComProvincia} avaliação(ões)`,
+        409,
+        'RESOURCE_IN_USE'
+      );
     }
-    
+
     await Provincia.findByIdAndDelete(id);
-    
-    return res.status(200).json({
+
+    // Remove 'return'
+    res.status(200).json({ // <<< SEM RETURN AQUI
       status: 'success',
-      message: 'Provincia removida com sucesso'
+      message: 'Província removida com sucesso'
     });
   } catch (error) {
     next(error);
@@ -217,30 +211,33 @@ export const deleteProvincia: CustomRequestHandler = async (req, res, next) => {
 /**
  * Busca províncias por termo de pesquisa
  */
-export const searchProvincias: CustomRequestHandler = async (req, res, next) => {
+export const searchProvincias: RequestHandler = async (req, res, next) => {
   try {
     const { q } = req.query;
-    
-    if (!q || typeof q !== 'string') {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Termo de busca inválido'
-      });
+
+    if (!q || typeof q !== 'string' || q.trim() === '') {
+      throw new HttpError('Termo de busca (parâmetro "q") é obrigatório e não pode ser vazio', 400, 'INVALID_QUERY_PARAM');
     }
-    
+
+    const searchTerm = q.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(searchTerm, 'i');
+
     const provincias = await Provincia.find({
       $or: [
-        { nome: { $regex: q, $options: 'i' } },
-        { codigo: { $regex: q, $options: 'i' } },
-        { regiao: { $regex: q, $options: 'i' } }
+        { nome: { $regex: regex } },
+        { codigo: { $regex: regex } },
+        { regiao: { $regex: regex } }
       ]
-    });
-    
-    return res.status(200).json({
+    })
+    .limit(50);
+
+    // Remove 'return'
+    res.status(200).json({ // <<< SEM RETURN AQUI
       status: 'success',
       data: provincias,
       meta: {
-        total: provincias.length
+        total: provincias.length,
+        searchTerm: q
       }
     });
   } catch (error) {

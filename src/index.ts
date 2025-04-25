@@ -10,6 +10,7 @@ import questaoRoutes from './routes/questao.routes'
 import respostaRoutes from './routes/resposta.routes'
 import avaliacaoRoutes from './routes/avaliacao.routes'
 import usuarioRoutes from './routes/usuario.routes'
+import provinciaRoutes from './routes/provincia.routes'
 
 dotenv.config()
 
@@ -31,6 +32,7 @@ app.use('/api/questoes', questaoRoutes)
 app.use('/api/respostas', respostaRoutes)
 app.use('/api/avaliacoes', avaliacaoRoutes)
 app.use('/api/usuarios', usuarioRoutes)
+app.use('/api/provincias', provinciaRoutes)
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {
