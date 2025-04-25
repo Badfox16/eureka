@@ -241,3 +241,60 @@ export const searchDisciplinas: RequestHandler = async (req, res, next) => {
     });
   }
 };
+
+/**
+ * Cria múltiplas disciplinas em massa
+ */
+export const createDisciplinasEmMassa: RequestHandler = async (req, res, next) => {
+  try {
+    const disciplinasData = req.body;
+    
+    // Validar se o body é um array
+    if (!Array.isArray(disciplinasData)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'O body deve ser um array de disciplinas'
+      });
+      return;
+    }
+    
+    // Verificar códigos duplicados no array enviado
+    const codigos = disciplinasData.map(d => d.codigo);
+    const codigosUnicos = new Set(codigos);
+    if (codigos.length !== codigosUnicos.size) {
+      res.status(400).json({
+        status: 'error',
+        message: 'O array contém códigos duplicados'
+      });
+      return;
+    }
+    
+    // Verificar se já existem disciplinas com os mesmos códigos
+    const codigosExistentes = await Disciplina.find({ codigo: { $in: codigos } }).select('codigo').lean();
+    if (codigosExistentes.length > 0) {
+      res.status(409).json({
+        status: 'error',
+        message: 'Algumas disciplinas já existem',
+        data: codigosExistentes.map(d => d.codigo)
+      });
+      return;
+    }
+    
+    // Criar as disciplinas
+    const disciplinas = await Disciplina.insertMany(disciplinasData);
+    
+    res.status(201).json({
+      status: 'success',
+      data: disciplinas,
+      meta: {
+        total: disciplinas.length
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao criar disciplinas em massa:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Erro ao criar disciplinas em massa'
+    });
+  }
+};

@@ -8,6 +8,7 @@ const router = Router();
 
 // Rotas para disciplinas
 router.post('/', validate(createDisciplinaSchema), disciplinaController.createDisciplina);
+router.post('/batch', disciplinaController.createDisciplinasEmMassa); 
 router.get('/', disciplinaController.getAllDisciplinas);
 router.get('/search', disciplinaController.searchDisciplinas);
 router.get('/:id', validateId(), disciplinaController.getDisciplinaById);
