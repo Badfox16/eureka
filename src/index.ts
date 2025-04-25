@@ -1,4 +1,5 @@
 import express from 'express'
+import path from 'path'
 import dotenv from 'dotenv'
 import { connectToDatabase } from './config/db'
 import morgan from 'morgan'
@@ -20,7 +21,9 @@ const PORT = process.env.PORT || 6199
 
 // Middleware para parsear JSON
 app.use(express.json())
-
+// --- Servir arquivos estáticos da pasta de uploads ---
+// Isso fará com que os arquivos em 'tmp/uploads' sejam acessíveis via '/uploads' na URL
+app.use('/uploads', express.static(path.resolve(__dirname, '..', 'tmp', 'uploads'))); 
 // Middleware para tratamento de erros
 app.use(errorHandler);
 

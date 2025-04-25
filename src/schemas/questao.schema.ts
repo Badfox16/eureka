@@ -19,6 +19,8 @@ export const createQuestaoSchema = z.object({
       { message: 'Deve haver exatamente uma alternativa correta' }
     ),
   explicacao: z.string().optional(),
+  imagemEnunciadoUrl: z.string().url().optional(),
+  imagemUrl: z.string().url().optional(),
   avaliacao: objectIdSchema,
   valor: z.number().min(0, 'Valor deve ser no mínimo 0').default(0.5).optional() 
 });

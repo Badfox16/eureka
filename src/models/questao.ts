@@ -4,10 +4,12 @@ export interface IQuestao extends Document {
     _id: Types.ObjectId;
     numero: number;
     enunciado: string;
+    imagemEnunciadoUrl?: string; 
     alternativas: {
         letra: string;
         texto: string;
         correta: boolean;
+        imagemUrl?: string;  
     }[];
     explicacao?: string;
     avaliacao: Types.ObjectId;

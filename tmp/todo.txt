@@ -1,0 +1,1 @@
+Mais tarde é necessário trocar o middleware de upload para usar AWS-S3
