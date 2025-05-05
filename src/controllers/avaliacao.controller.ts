@@ -1,8 +1,8 @@
 import type { RequestHandler } from 'express';
-import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../models/avaliacao';
+import { Avaliacao, TipoAvaliacao, Trimestre, Epoca, VarianteProva, AreaEstudo } from '../models/avaliacao';
 import { Disciplina } from '../models/disciplina';
 import { Questao } from '../models/questao';
-import { Provincia } from '../models/provincia'; // Importar o model Provincia
+import { Provincia } from '../models/provincia';
 import type { CreateAvaliacaoInput, UpdateAvaliacaoInput } from '../schemas/avaliacao.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import { Error as MongooseError } from 'mongoose';
@@ -52,6 +52,14 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
       ano: avaliacaoData.ano,
       classe: avaliacaoData.classe
     };
+
+    if (avaliacaoData.areaEstudo) {
+      queryFiltro.areaEstudo = avaliacaoData.areaEstudo;
+    }
+
+    if (avaliacaoData.variante) {
+      queryFiltro.variante = avaliacaoData.variante;
+    }
 
     if (avaliacaoData.tipo === TipoAvaliacao.AP) {
       if (avaliacaoData.trimestre) queryFiltro.trimestre = avaliacaoData.trimestre;
@@ -116,7 +124,7 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
     }
 
     // Filtrar por classe
-    if (req.query.classe && ['11', '12'].includes(req.query.classe as string)) {
+    if (req.query.classe && ['10', '11', '12'].includes(req.query.classe as string)) {
       filtro.classe = Number(req.query.classe);
     }
 
@@ -149,13 +157,23 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
       filtro.epoca = req.query.epoca;
     }
 
+    // Filtrar por variante de prova
+    if (req.query.variante && Object.values(VarianteProva).includes(req.query.variante as VarianteProva)) {
+      filtro.variante = req.query.variante;
+    }
+
+    // Filtrar por área de estudo
+    if (req.query.areaEstudo && Object.values(AreaEstudo).includes(req.query.areaEstudo as AreaEstudo)) {
+      filtro.areaEstudo = req.query.areaEstudo;
+    }
+
     // Consulta para obter o total de avaliações com filtros
     const total = await Avaliacao.countDocuments(filtro);
 
     // Consulta paginada com filtros
     const avaliacoes = await Avaliacao.find(filtro)
       .populate('disciplina', 'nome codigo')
-      .populate('provincia', 'nome') // Popular a provincia
+      .populate('provincia', 'nome')
       .sort({ ano: -1, tipo: 1 }) // Ordenar por ano (decrescente) e tipo
       .skip((page - 1) * limit)
       .limit(limit);
@@ -185,7 +203,7 @@ export const getAvaliacaoById: RequestHandler = async (req, res, next) => {
 
     const avaliacao = await Avaliacao.findById(id)
       .populate('disciplina')
-      .populate('provincia') // Popular a provincia
+      .populate('provincia')
       .populate('questoes');
 
     if (!avaliacao) {
@@ -250,7 +268,8 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
 
     // Verificar se já existe uma avaliação similar (exceto esta)
     if (updateData.tipo || updateData.disciplina || updateData.ano ||
-      updateData.classe || updateData.trimestre || updateData.epoca || updateData.provincia) {
+      updateData.classe || updateData.trimestre || updateData.epoca ||
+      updateData.provincia || updateData.variante || updateData.areaEstudo) {
 
       const queryFiltro: any = {
         _id: { $ne: id }
@@ -267,6 +286,12 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
 
       if (updateData.classe) queryFiltro.classe = updateData.classe;
       else queryFiltro.classe = avaliacao.classe;
+
+      if (updateData.variante) queryFiltro.variante = updateData.variante;
+      else if (avaliacao.variante) queryFiltro.variante = avaliacao.variante;
+
+      if (updateData.areaEstudo) queryFiltro.areaEstudo = updateData.areaEstudo;
+      else if (avaliacao.areaEstudo) queryFiltro.areaEstudo = avaliacao.areaEstudo;
 
       if (tipo === TipoAvaliacao.AP) {
         if (updateData.trimestre) queryFiltro.trimestre = updateData.trimestre;
@@ -291,7 +316,7 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('disciplina').populate('provincia'); // Popular a provincia
+    ).populate('disciplina').populate('provincia');
 
     res.status(200).json({
       status: 'success',
@@ -356,13 +381,16 @@ export const searchAvaliacoes: RequestHandler = async (req, res, next) => {
 
     const disciplinaIds = disciplinas.map(d => d._id);
 
-    // Buscar avaliações que contenham o termo como número ou tenham disciplinas com o termo
+    // Buscar avaliações que contenham o termo 
+    // ou disciplinas com o termo ou áreas de estudo com o termo
     const avaliacoes = await Avaliacao.find({
       $or: [
         { disciplina: { $in: disciplinaIds } },
-        { ano: isNaN(Number(q)) ? -1 : Number(q) }
+        { ano: isNaN(Number(q)) ? -1 : Number(q) },
+        { areaEstudo: { $regex: q, $options: 'i' } },
+        { titulo: { $regex: q, $options: 'i' } }
       ]
-    }).populate('disciplina').populate('provincia'); // Popular a provincia
+    }).populate('disciplina').populate('provincia');
 
     res.status(200).json({
       status: 'success',
@@ -435,6 +463,32 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
       }
     ]);
 
+    // Novos agregados: Total por área de estudo
+    const totalPorAreaEstudo = await Avaliacao.aggregate([
+      {
+        $group: {
+          _id: '$areaEstudo',
+          total: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { total: -1 }
+      }
+    ]);
+
+    // Novos agregados: Total por variante
+    const totalPorVariante = await Avaliacao.aggregate([
+      {
+        $group: {
+          _id: '$variante',
+          total: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { total: -1 }
+      }
+    ]);
+
     // Total de questões por avaliação (média)
     const questoesPorAvaliacao = await Avaliacao.aggregate([
       {
@@ -459,6 +513,8 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
         porTipo: totalPorTipo,
         porDisciplina: totalPorDisciplina,
         porAno: totalPorAno,
+        porAreaEstudo: totalPorAreaEstudo,
+        porVariante: totalPorVariante,
         questoes: questoesPorAvaliacao.length > 0 ? questoesPorAvaliacao[0] : { media: 0, min: 0, max: 0, total: 0 }
       }
     });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { baseResourceSchema, classeSchema, objectIdSchema } from './common.schema';
-import { TipoAvaliacao, Trimestre, Epoca } from '../models/avaliacao';
+import { TipoAvaliacao, Trimestre, Epoca, VarianteProva, AreaEstudo } from '../models/avaliacao';
 
 // Usando os enums do modelo
 export const tipoAvaliacaoSchema = z.nativeEnum(TipoAvaliacao, {
@@ -15,19 +15,30 @@ export const epocaSchema = z.nativeEnum(Epoca, {
   errorMap: () => ({ message: 'Época inválida' })
 });
 
+export const varianteProvaSchema = z.nativeEnum(VarianteProva, {
+  errorMap: () => ({ message: 'Variante de prova inválida' })
+});
+
+export const areaEstudoSchema = z.nativeEnum(AreaEstudo, {
+  errorMap: () => ({ message: 'Área de estudo inválida' })
+});
+
 // Schema base para avaliação
 const avaliacaoBaseSchema = z.object({
   tipo: tipoAvaliacaoSchema,
-  ano: z.number().int().min(2000, 'Ano deve ser pelo menos 2000').max(new Date().getFullYear(), 'Ano não pode ser futuro'),
+  ano: z.number().int().min(2000, 'Ano deve ser pelo menos 2000').max(new Date().getFullYear() + 1, 'Ano não pode ser mais de um ano no futuro'),
   disciplina: objectIdSchema,
   classe: classeSchema,
+  titulo: z.string().max(200, 'Título não pode exceder 200 caracteres').optional(),
+  variante: varianteProvaSchema.default(VarianteProva.UNICA),
+  areaEstudo: areaEstudoSchema.default(AreaEstudo.GERAL),
 });
 
 // Schema específico para AP
 const apSchema = avaliacaoBaseSchema.extend({
   tipo: z.literal(TipoAvaliacao.AP),
   trimestre: trimestreSchema,
-  provincia: objectIdSchema, // Alterado para objectIdSchema
+  provincia: objectIdSchema,
   epoca: z.undefined().optional(),
   questoes: z.array(objectIdSchema).optional(),
 });
@@ -50,12 +61,15 @@ export const createAvaliacaoSchema = z.discriminatedUnion('tipo', [
 // Schema para validar atualização de avaliação
 export const updateAvaliacaoSchema = z.object({
   tipo: tipoAvaliacaoSchema.optional(),
-  ano: z.number().int().min(2000).max(new Date().getFullYear()).optional(),
+  ano: z.number().int().min(2000).max(new Date().getFullYear() + 1).optional(),
   disciplina: objectIdSchema.optional(),
   classe: classeSchema.optional(),
   trimestre: trimestreSchema.optional(),
-  provincia: objectIdSchema.optional(), 
+  provincia: objectIdSchema.optional(),
   epoca: epocaSchema.optional(),
+  variante: varianteProvaSchema.optional(),
+  areaEstudo: areaEstudoSchema.optional(),
+  titulo: z.string().max(200).optional(),
   questoes: z.array(objectIdSchema).optional(),
 }).refine(
   (data) => {
@@ -88,8 +102,11 @@ export const avaliacaoSchema = baseResourceSchema.merge(
     disciplina: objectIdSchema,
     classe: classeSchema,
     trimestre: trimestreSchema.optional(),
-    provincia: objectIdSchema.optional(), // Alterado para objectIdSchema.optional()
+    provincia: objectIdSchema.optional(),
     epoca: epocaSchema.optional(),
+    variante: varianteProvaSchema.default(VarianteProva.UNICA),
+    areaEstudo: areaEstudoSchema.default(AreaEstudo.GERAL),
+    titulo: z.string().max(200).optional(),
     questoes: z.array(objectIdSchema).default([]),
   })
 ).refine(
