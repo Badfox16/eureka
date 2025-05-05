@@ -1,42 +1,119 @@
-import type { RequestHandler } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { Estudante } from '../models/estudante';
 import { EstudanteQuiz } from '../models/estudanteQuiz';
 import { QuizResposta } from '../models/quizResposta';
-import type { CreateEstudanteInput, UpdateEstudanteInput } from '../schemas/estudante.schema';
+import { createEstudanteSchema, type CreateEstudanteInput, type UpdateEstudanteInput } from '../schemas/estudante.schema';
 import { paginationSchema } from '../schemas/common.schema';
+import { Usuario, TipoUsuario } from '../models/usuario';
+import bcrypt from 'bcrypt';
+import { generatePassword } from '../utils/password-generator';
+import { CustomError } from '../middlewares/errorHandler';
 
 /**
  * Cria um novo estudante
  */
-export const createEstudante: RequestHandler = async (req, res, next) => {
+export const createEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const estudanteData = req.body as CreateEstudanteInput;
+    // Validar entrada com Zod
+    const validatedData = createEstudanteSchema.safeParse(req.body);
+    
+    if (!validatedData.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Dados inválidos',
+        errors: validatedData.error.format()
+      });
+    }
+    
+    const estudanteData = validatedData.data;
     
     // Verificar se já existe um estudante com o mesmo email
-    const exists = await Estudante.findOne({ email: estudanteData.email });
-    if (exists) {
-      res.status(409).json({
+    const existsEstudante = await Estudante.findOne({ email: estudanteData.email });
+    if (existsEstudante) {
+      return res.status(409).json({
         status: 'error',
         message: `Já existe um estudante com o email ${estudanteData.email}`
       });
-      return;
     }
     
-    const estudante = await Estudante.create(estudanteData);
+    // Verificar se já existe um usuário com o mesmo email
+    const existsUsuario = await Usuario.findOne({ email: estudanteData.email });
+    if (existsUsuario) {
+      return res.status(409).json({
+        status: 'error',
+        message: `Já existe um usuário com o email ${estudanteData.email}`
+      });
+    }
     
-    res.status(201).json({
-      status: 'success',
-      data: estudante
+    // Criar um usuário para o estudante
+    const saltRounds = 10;
+    // Use a senha fornecida ou gere uma senha aleatória
+    const password = estudanteData.password || generatePassword();
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
+    const novoUsuario = await Usuario.create({
+      nome: estudanteData.nome,
+      email: estudanteData.email,
+      password: hashedPassword,
+      tipo: TipoUsuario.NORMAL // Estudantes são usuários normais
     });
-  } catch (error) {
-    next(error);
+    
+    // Criar o estudante associado ao usuário
+    const estudante = await Estudante.create({
+      nome: estudanteData.nome,
+      email: estudanteData.email,
+      classe: estudanteData.classe,
+      escola: estudanteData.escola,
+      provincia: estudanteData.provincia,
+      usuario: novoUsuario._id
+    });
+    
+    // Remover senha do objeto de resposta
+    const usuarioResponse = {
+      _id: novoUsuario._id,
+      nome: novoUsuario.nome,
+      email: novoUsuario.email,
+      tipo: novoUsuario.tipo
+    };
+    
+    // Determinar se deve retornar a senha temporária na resposta
+    const senhaTemporaria = estudanteData.password ? undefined : password;
+    
+    return res.status(201).json({
+      status: 'success',
+      data: {
+        estudante,
+        usuario: usuarioResponse,
+        senhaTemporaria
+      }
+    });
+  } catch (err: unknown) {
+    const error = err as any;
+
+     // Identificar erros específicos
+     if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Dados de estudante inválidos',
+        errors: Object.values(error.errors).map((err: any) => err.message)
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Já existe um estudante com este email'
+      });
+    }
+    
+    return next(err);
   }
 };
 
 /**
  * Obtém todos os estudantes com opção de paginação e filtro
  */
-export const getAllEstudantes: RequestHandler = async (req, res, next) => {
+export const getAllEstudantes = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit } = paginationSchema.parse({
       page: Number(req.query.page || 1),
@@ -95,7 +172,7 @@ export const getAllEstudantes: RequestHandler = async (req, res, next) => {
       };
     }));
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: estudantesDetalhados,
       meta: {
@@ -107,25 +184,24 @@ export const getAllEstudantes: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Obtém um estudante pelo ID
  */
-export const getEstudanteById: RequestHandler = async (req, res, next) => {
+export const getEstudanteById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
     const estudante = await Estudante.findById(id);
     
     if (!estudante) {
-      res.status(404).json({
+      return res.status(404).json({
         status: 'error',
         message: 'Estudante não encontrado'
       });
-      return;
     }
     
     // Obter informações de participação em quizzes
@@ -154,7 +230,7 @@ export const getEstudanteById: RequestHandler = async (req, res, next) => {
     const mediaAcerto = quizzesInfo.length > 0 ? quizzesInfo[0].mediaAcerto : 0;
     const totalPontos = quizzesInfo.length > 0 ? quizzesInfo[0].totalPontos : 0;
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: {
         ...estudante.toObject(),
@@ -167,117 +243,111 @@ export const getEstudanteById: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Atualiza um estudante pelo ID
  */
-export const updateEstudante: RequestHandler = async (req, res, next) => {
+export const updateEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const updateData = req.body as UpdateEstudanteInput;
+    const estudanteData = req.body as UpdateEstudanteInput;
     
-    // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
     if (!estudante) {
-      res.status(404).json({
+      return res.status(404).json({
         status: 'error',
         message: 'Estudante não encontrado'
       });
-      return;
     }
     
-    // Se estiver atualizando o email, verificar se já existe outro com esse email
-    if (updateData.email && updateData.email !== estudante.email) {
-      const exists = await Estudante.findOne({ 
-        email: updateData.email, 
-        _id: { $ne: id } 
+    // Se o email estiver sendo atualizado, atualizar também o usuário
+    if (estudanteData.email && estudanteData.email !== estudante.email) {
+      // Verificar se o novo email já está em uso
+      const emailExists = await Usuario.findOne({ 
+        email: estudanteData.email,
+        _id: { $ne: estudante.usuario }
       });
       
-      if (exists) {
-        res.status(409).json({
+      if (emailExists) {
+        return res.status(409).json({
           status: 'error',
-          message: `Já existe um estudante com o email ${updateData.email}`
+          message: `Já existe um usuário com o email ${estudanteData.email}`
         });
-        return;
       }
+      
+      // Atualizar email do usuário associado
+      await Usuario.findByIdAndUpdate(estudante.usuario, {
+        email: estudanteData.email,
+        nome: estudanteData.nome || undefined
+      });
+    } else if (estudanteData.nome) {
+      // Atualizar apenas o nome do usuário se o email não mudar
+      await Usuario.findByIdAndUpdate(estudante.usuario, {
+        nome: estudanteData.nome
+      });
     }
     
     // Atualizar o estudante
-    const updatedEstudante = await Estudante.findByIdAndUpdate(
+    const estudanteAtualizado = await Estudante.findByIdAndUpdate(
       id,
-      updateData,
+      estudanteData,
       { new: true, runValidators: true }
     );
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
-      data: updatedEstudante
+      data: estudanteAtualizado
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Remove um estudante pelo ID
  */
-export const deleteEstudante: RequestHandler = async (req, res, next) => {
+export const deleteEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
-    // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
     if (!estudante) {
-      res.status(404).json({
+      return res.status(404).json({
         status: 'error',
         message: 'Estudante não encontrado'
       });
-      return;
     }
     
-    // Verificar se o estudante tem quizzes associados
-    const quizzes = await EstudanteQuiz.find({ estudante: id });
+    // Excluir o usuário associado
+    await Usuario.findByIdAndDelete(estudante.usuario);
     
-    if (quizzes.length > 0) {
-      // Para cada quiz do estudante, remover todas as respostas associadas
-      for (const quiz of quizzes) {
-        await QuizResposta.deleteMany({ estudanteQuiz: quiz._id });
-      }
-      
-      // Remover todos os quizzes do estudante
-      await EstudanteQuiz.deleteMany({ estudante: id });
-    }
-    
-    // Remover o estudante
+    // Excluir o estudante
     await Estudante.findByIdAndDelete(id);
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
-      message: quizzes.length > 0 
-        ? `Estudante removido com sucesso (incluindo ${quizzes.length} quizzes e todas as respostas)` 
-        : 'Estudante removido com sucesso'
+      message: 'Estudante excluído com sucesso'
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Busca estudantes por termo de pesquisa
  */
-export const searchEstudantes: RequestHandler = async (req, res, next) => {
+export const searchEstudantes = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { q } = req.query;
     
     if (!q || typeof q !== 'string') {
-      res.status(400).json({
+      return res.status(400).json({
         status: 'error',
         message: 'Termo de busca inválido'
       });
-      return;
     }
     
     // Buscar estudantes que contenham o termo de busca no nome, email, escola ou província
@@ -304,7 +374,7 @@ export const searchEstudantes: RequestHandler = async (req, res, next) => {
       };
     }));
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: estudantesDetalhados,
       meta: {
@@ -312,14 +382,14 @@ export const searchEstudantes: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Obtém quizzes de um estudante
  */
-export const getQuizzesEstudante: RequestHandler = async (req, res, next) => {
+export const getQuizzesEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { status } = req.query;
@@ -327,11 +397,10 @@ export const getQuizzesEstudante: RequestHandler = async (req, res, next) => {
     // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
     if (!estudante) {
-      res.status(404).json({
+      return res.status(404).json({
         status: 'error',
         message: 'Estudante não encontrado'
       });
-      return;
     }
     
     // Filtro por status (em andamento ou finalizados)
@@ -354,7 +423,7 @@ export const getQuizzesEstudante: RequestHandler = async (req, res, next) => {
       })
       .sort({ dataInicio: -1 }); // Ordenar por data de início (mais recentes primeiro)
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: quizzes,
       meta: {
@@ -362,25 +431,24 @@ export const getQuizzesEstudante: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Obtém estatísticas dos quizzes de um estudante agrupadas por disciplina
  */
-export const getEstatisticasPorDisciplina: RequestHandler = async (req, res, next) => {
+export const getEstatisticasPorDisciplina = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     
     // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
     if (!estudante) {
-      res.status(404).json({
+      return res.status(404).json({
         status: 'error',
         message: 'Estudante não encontrado'
       });
-      return;
     }
     
     // Buscar quizzes finalizados do estudante
@@ -444,19 +512,19 @@ export const getEstatisticasPorDisciplina: RequestHandler = async (req, res, nex
       delete disciplina.quizzes;
     });
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: Object.values(estatisticasPorDisciplina)
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 };
 
 /**
  * Obtém a evolução de desempenho do estudante ao longo do tempo
  */
-export const getEvolucaoDesempenho: RequestHandler = async (req, res, next) => {
+export const getEvolucaoDesempenho = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const periodoMeses = Number(req.query.meses || 3); // Padrão: últimos 3 meses
@@ -464,11 +532,10 @@ export const getEvolucaoDesempenho: RequestHandler = async (req, res, next) => {
     // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
     if (!estudante) {
-      res.status(404).json({
+      return res.status(404).json({
         status: 'error',
         message: 'Estudante não encontrado'
       });
-      return;
     }
     
     // Calcular a data limite
@@ -535,7 +602,7 @@ export const getEvolucaoDesempenho: RequestHandler = async (req, res, next) => {
       mediaPontos: dados.somaPontos / dados.quizzes
     }));
     
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: {
         evolucaoDetalhada: evolucao,
@@ -543,6 +610,164 @@ export const getEvolucaoDesempenho: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    next(error);
+    return next(error);
+  }
+};
+
+/**
+ * Obtém o perfil do estudante autenticado
+ */
+export const getEstudanteProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Verificar se o usuário está autenticado
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Não autenticado'
+      });
+    }
+    
+    // Extrair ID do usuário autenticado
+    const { id: usuarioId } = req.user;
+    
+    // Verificar se o usuário é um estudante
+    const usuario = await Usuario.findById(usuarioId)
+      .select('-password'); // Excluir a senha da resposta
+    
+    if (!usuario) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Usuário não encontrado'
+      });
+    }
+    
+    if (usuario.tipo !== TipoUsuario.NORMAL) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Acesso negado. Apenas estudantes podem acessar este recurso.'
+      });
+    }
+    
+    // Buscar o perfil do estudante usando select para incluir só os campos necessários
+    const estudante = await Estudante.findOne({ usuario: usuarioId })
+      .select('nome email classe escola provincia ativo');
+    
+    if (!estudante) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Perfil de estudante não encontrado'
+      });
+    }
+    
+    // Agrupamento das estatísticas em uma única consulta
+    const [
+      totalQuizzes,
+      avaliacoesConcluidas,
+      estatisticas
+    ] = await Promise.all([
+      EstudanteQuiz.countDocuments({ estudante: estudante._id }),
+      EstudanteQuiz.countDocuments({ 
+        estudante: estudante._id,
+        dataFim: { $exists: true } 
+      }),
+      EstudanteQuiz.aggregate([
+        { $match: { estudante: estudante._id, dataFim: { $exists: true } } },
+        { $group: {
+          _id: null,
+          mediaAcertos: { $avg: '$percentualAcerto' },
+          totalPontos: { $sum: '$pontuacaoObtida' }
+        }}
+      ])
+    ]);
+    
+    const mediaAcertos = estatisticas.length > 0 ? estatisticas[0].mediaAcertos : 0;
+    const totalPontos = estatisticas.length > 0 ? estatisticas[0].totalPontos : 0;
+    
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        estudante,
+        usuario: {
+          _id: usuario._id,
+          nome: usuario.nome,
+          email: usuario.email,
+          tipo: usuario.tipo
+        },
+        estatisticas: {
+          totalQuizzes,
+          avaliacoesConcluidas,
+          mediaAcertos: Math.round(mediaAcertos * 100) / 100, // Arredondar para 2 casas decimais
+          totalPontos
+        }
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * Altera a senha do estudante autenticado
+ */
+export const alterarSenhaEstudante = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+     // Verificar se o usuário está autenticado
+     if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Não autenticado'
+      });
+    }
+    
+    const { senhaAtual, novaSenha } = req.body;
+    const { id: usuarioId } = req.user;
+    
+    // Validar inputs
+    if (!senhaAtual || !novaSenha) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Senha atual e nova senha são obrigatórias'
+      });
+    }
+    
+    if (novaSenha.length < 6) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'A nova senha deve ter pelo menos 6 caracteres'
+      });
+    }
+    
+    // Buscar usuário
+    const usuario = await Usuario.findById(usuarioId);
+    if (!usuario) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Usuário não encontrado'
+      });
+    }
+    
+    // Verificar senha atual
+    const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.password);
+    if (!senhaCorreta) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Senha atual incorreta'
+      });
+    }
+    
+    // Atualizar senha
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(novaSenha, saltRounds);
+    
+    await Usuario.findByIdAndUpdate(usuarioId, {
+      password: hashedPassword
+    });
+    
+    return res.status(200).json({
+      status: 'success',
+      message: 'Senha alterada com sucesso'
+    });
+  } catch (error) {
+    return next(error);
   }
 };

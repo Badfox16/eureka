@@ -15,6 +15,9 @@ router.get('/:id', validateId(), estudanteController.getEstudanteById);
 router.put('/:id', validateId(), validate(updateEstudanteSchema), estudanteController.updateEstudante);
 router.delete('/:id', validateId(), estudanteController.deleteEstudante);
 
+// Rota para retornar dados do perfil
+router.get('/me', authenticate, estudanteController.getEstudanteProfile);
+
 // Rotas para quizzes de um estudante
 router.get('/:id/quizzes', validateId(), estudanteController.getQuizzesEstudante);
 

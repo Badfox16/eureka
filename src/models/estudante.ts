@@ -7,6 +7,7 @@ export interface IEstudante extends Document {
     classe: number
     escola?: string
     provincia?: string
+    usuario: Types.ObjectId; // Referência ao usuário associado
     ativo: boolean;
     createdAt: Date
     updatedAt: Date
@@ -23,6 +24,11 @@ const estudanteSchema = new Schema<IEstudante>(
         },
         escola: { type: String },
         provincia: { type: String },
+        usuario: {
+            type: Schema.Types.ObjectId,
+            ref: 'Usuario',
+            required: true
+        },
         ativo: {
             type: Boolean,
             default: true

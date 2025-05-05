@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { Usuario, TipoUsuario, type IUsuario } from '../models/usuario';
+import { Estudante } from '../models/estudante';
 import type { CreateUsuarioInput, UpdateUsuarioInput, LoginInput } from '../schemas/usuario.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import bcrypt from 'bcrypt';
@@ -60,53 +61,69 @@ export const createUsuario: RequestHandler = async (req, res, next) => {
  */
 export const login: RequestHandler = async (req, res, next) => {
   try {
-    const { email, password } = req.body as LoginInput;
+    const { email, password } = req.body;
     
     // Buscar usuário pelo email
     const usuario = await Usuario.findOne({ email });
     if (!usuario) {
-      res.status(401).json({
+      return res.status(401).json({
         status: 'error',
         message: 'Email ou senha incorretos'
       });
-      return;
     }
     
     // Verificar senha
-    const senhaCorreta = await bcrypt.compare(password, usuario.password);
-    if (!senhaCorreta) {
-      res.status(401).json({
+    const isMatch = await bcrypt.compare(password, usuario.password);
+    if (!isMatch) {
+      return res.status(401).json({
         status: 'error',
         message: 'Email ou senha incorretos'
       });
-      return;
     }
     
-    // Gerar token JWT com ID como string
-    const userId = usuario._id;
+    // Se for um estudante, buscar os dados do estudante
+    let estudanteData = null;
+    if (usuario.tipo === TipoUsuario.NORMAL) {
+      const estudante = await Estudante.findOne({ usuario: usuario._id });
+      if (estudante) {
+        estudanteData = {
+          _id: estudante._id,
+          nome: estudante.nome,
+          email: estudante.email,
+          classe: estudante.classe,
+          escola: estudante.escola,
+          provincia: estudante.provincia
+        };
+      }
+    }
     
+    // Gerar token JWT
     const token = jwt.sign(
-        { id: userId.toString(), email: usuario.email },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      { 
+        id: usuario._id,
+        email: usuario.email,
+        tipo: usuario.tipo
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
     
-    // Remover senha do objeto de resposta usando desestruturação
-    const { password: _, ...usuarioSemSenha } = usuario.toObject();
+    // Dados do usuário para resposta
+    const userData = {
+      _id: usuario._id,
+      nome: usuario.nome,
+      email: usuario.email,
+      tipo: usuario.tipo,
+      estudante: estudanteData
+    };
     
     res.status(200).json({
       status: 'success',
-      data: {
-        usuario: usuarioSemSenha,
-        token
-      }
+      token,
+      data: userData
     });
   } catch (error) {
-    console.error('Erro ao fazer login:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao fazer login'
-    });
+    next(error);
   }
 };
 

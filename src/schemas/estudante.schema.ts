@@ -8,6 +8,7 @@ export const createEstudanteSchema = z.object({
   classe: classeSchema,
   escola: z.string().optional(),
   provincia: z.string().optional(),
+  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres").optional()
 });
 
 // Schema para validar atualização de estudante

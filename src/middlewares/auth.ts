@@ -1,12 +1,26 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import { Usuario } from '../models/usuario';
+import { Usuario, TipoUsuario } from '../models/usuario';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chave_secreta_temporaria';
+
+// Declare a extensão do tipo Request
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        tipo: TipoUsuario;
+      }
+    }
+  }
+}
 
 interface JwtPayload {
   id: string;
   email: string;
+  tipo: TipoUsuario;
 }
 
 export const authenticate: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -54,8 +68,12 @@ export const authenticate: RequestHandler = async (req: Request, res: Response, 
       return;
     }
     
-    // Adicionar o ID do usuário à request para uso nos controllers
-    (req as any).userId = decoded.id;
+    // Adicionar o usuário à requisição
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      tipo: decoded.tipo
+    };
     
     next();
   } catch (error) {
