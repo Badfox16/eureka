@@ -8,10 +8,11 @@ import disciplinaRoutes from './routes/disciplina.routes'
 import estudanteRoutes from './routes/estudante.routes'
 import quizRoutes from './routes/quiz.routes'
 import questaoRoutes from './routes/questao.routes'
-import respostaRoutes from './routes/resposta.routes'
 import avaliacaoRoutes from './routes/avaliacao.routes'
 import usuarioRoutes from './routes/usuario.routes'
 import provinciaRoutes from './routes/provincia.routes'
+import estatisticaRoutes from './routes/estatistica.routes'
+import quizRespostaRoutes from './routes/quizResposta.routes'
 
 dotenv.config()
 
@@ -32,16 +33,23 @@ app.use('/api/disciplinas', disciplinaRoutes)
 app.use('/api/estudantes', estudanteRoutes)
 app.use('/api/quizzes', quizRoutes)
 app.use('/api/questoes', questaoRoutes)
-app.use('/api/respostas', respostaRoutes)
 app.use('/api/avaliacoes', avaliacaoRoutes)
 app.use('/api/usuarios', usuarioRoutes)
 app.use('/api/provincias', provinciaRoutes)
+
+// Novas rotas
+app.use('/api/estatisticas', estatisticaRoutes)
+app.use('/api/quiz-respostas', quizRespostaRoutes)
+
+// Remover rota de respostas obsoleta (substituída por quiz-respostas)
+// app.use('/api/respostas', respostaRoutes)
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {
   res.json({
     message: 'API Eureka - Sistema de Preparação para Exames',
-    status: 'online'
+    status: 'online',
+    version: '2.0.0' // Versão atualizada para refletir as melhorias
   })
 })
 

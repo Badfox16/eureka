@@ -18,7 +18,7 @@ const estudanteSchema = new Schema<IEstudante>(
         email: { type: String, required: true, unique: true },
         classe: {
             type: Number,
-            enum: [11, 12],
+            enum: [10, 11, 12], 
             required: true
         },
         escola: { type: String },

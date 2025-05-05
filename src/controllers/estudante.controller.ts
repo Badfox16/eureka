@@ -1,8 +1,9 @@
 import type { RequestHandler } from 'express';
 import { Estudante } from '../models/estudante';
+import { EstudanteQuiz } from '../models/estudanteQuiz';
+import { QuizResposta } from '../models/quizResposta';
 import type { CreateEstudanteInput, UpdateEstudanteInput } from '../schemas/estudante.schema';
 import { paginationSchema } from '../schemas/common.schema';
-import { Resposta } from '../models/respostas';
 
 /**
  * Cria um novo estudante
@@ -28,11 +29,7 @@ export const createEstudante: RequestHandler = async (req, res, next) => {
       data: estudante
     });
   } catch (error) {
-    console.error('Erro ao criar estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao criar estudante'
-    });
+    next(error);
   }
 };
 
@@ -50,7 +47,7 @@ export const getAllEstudantes: RequestHandler = async (req, res, next) => {
     const filtro: any = {};
     
     // Filtrar por classe
-    if (req.query.classe && ['11', '12'].includes(req.query.classe as string)) {
+    if (req.query.classe && ['10', '11', '12'].includes(req.query.classe as string)) {
       filtro.classe = Number(req.query.classe);
     }
     
@@ -64,6 +61,11 @@ export const getAllEstudantes: RequestHandler = async (req, res, next) => {
       filtro.escola = { $regex: req.query.escola, $options: 'i' };
     }
     
+    // Filtrar por status ativo/inativo
+    if (req.query.ativo !== undefined) {
+      filtro.ativo = req.query.ativo === 'true';
+    }
+    
     // Consulta para obter o total de estudantes com filtros
     const total = await Estudante.countDocuments(filtro);
     
@@ -73,9 +75,29 @@ export const getAllEstudantes: RequestHandler = async (req, res, next) => {
       .skip((page - 1) * limit)
       .limit(limit);
     
+    // Para cada estudante, obter informações básicas sobre participação em quizzes
+    const estudantesDetalhados = await Promise.all(estudantes.map(async (estudante) => {
+      const quizzesParticipados = await EstudanteQuiz.countDocuments({
+        estudante: estudante._id
+      });
+      
+      const quizzesFinalizados = await EstudanteQuiz.countDocuments({
+        estudante: estudante._id,
+        dataFim: { $exists: true }
+      });
+      
+      return {
+        ...estudante.toObject(),
+        _extras: {
+          quizzesParticipados,
+          quizzesFinalizados
+        }
+      };
+    }));
+    
     res.status(200).json({
       status: 'success',
-      data: estudantes,
+      data: estudantesDetalhados,
       meta: {
         total,
         page,
@@ -85,11 +107,7 @@ export const getAllEstudantes: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar estudantes:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar estudantes'
-    });
+    next(error);
   }
 };
 
@@ -110,16 +128,46 @@ export const getEstudanteById: RequestHandler = async (req, res, next) => {
       return;
     }
     
+    // Obter informações de participação em quizzes
+    const quizzesParticipados = await EstudanteQuiz.countDocuments({
+      estudante: id
+    });
+    
+    const quizzesFinalizados = await EstudanteQuiz.countDocuments({
+      estudante: id,
+      dataFim: { $exists: true }
+    });
+    
+    // Calcular estatísticas básicas
+    const quizzesInfo = await EstudanteQuiz.aggregate([
+      { $match: { 
+        estudante: estudante._id,
+        dataFim: { $exists: true }
+      }},
+      { $group: {
+        _id: null,
+        mediaAcerto: { $avg: "$percentualAcerto" },
+        totalPontos: { $sum: "$pontuacaoObtida" }
+      }}
+    ]);
+    
+    const mediaAcerto = quizzesInfo.length > 0 ? quizzesInfo[0].mediaAcerto : 0;
+    const totalPontos = quizzesInfo.length > 0 ? quizzesInfo[0].totalPontos : 0;
+    
     res.status(200).json({
       status: 'success',
-      data: estudante
+      data: {
+        ...estudante.toObject(),
+        _extras: {
+          quizzesParticipados,
+          quizzesFinalizados,
+          mediaAcerto: Math.round(mediaAcerto * 100) / 100,
+          totalPontos
+        }
+      }
     });
   } catch (error) {
-    console.error('Erro ao buscar estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar estudante'
-    });
+    next(error);
   }
 };
 
@@ -169,11 +217,7 @@ export const updateEstudante: RequestHandler = async (req, res, next) => {
       data: updatedEstudante
     });
   } catch (error) {
-    console.error('Erro ao atualizar estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao atualizar estudante'
-    });
+    next(error);
   }
 };
 
@@ -194,12 +238,17 @@ export const deleteEstudante: RequestHandler = async (req, res, next) => {
       return;
     }
     
-    // Verificar se o estudante tem respostas associadas
-    const temRespostas = estudante.respostas && estudante.respostas.length > 0;
+    // Verificar se o estudante tem quizzes associados
+    const quizzes = await EstudanteQuiz.find({ estudante: id });
     
-    // Se tem respostas, remover todas as respostas primeiro
-    if (temRespostas) {
-      await Resposta.deleteMany({ estudante: id });
+    if (quizzes.length > 0) {
+      // Para cada quiz do estudante, remover todas as respostas associadas
+      for (const quiz of quizzes) {
+        await QuizResposta.deleteMany({ estudanteQuiz: quiz._id });
+      }
+      
+      // Remover todos os quizzes do estudante
+      await EstudanteQuiz.deleteMany({ estudante: id });
     }
     
     // Remover o estudante
@@ -207,14 +256,12 @@ export const deleteEstudante: RequestHandler = async (req, res, next) => {
     
     res.status(200).json({
       status: 'success',
-      message: `Estudante removido com sucesso${temRespostas ? ' (incluindo todas as suas respostas)' : ''}`
+      message: quizzes.length > 0 
+        ? `Estudante removido com sucesso (incluindo ${quizzes.length} quizzes e todas as respostas)` 
+        : 'Estudante removido com sucesso'
     });
   } catch (error) {
-    console.error('Erro ao remover estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao remover estudante'
-    });
+    next(error);
   }
 };
 
@@ -243,28 +290,39 @@ export const searchEstudantes: RequestHandler = async (req, res, next) => {
       ]
     });
     
+    // Para cada estudante, obter informações básicas sobre participação em quizzes
+    const estudantesDetalhados = await Promise.all(estudantes.map(async (estudante) => {
+      const quizzesParticipados = await EstudanteQuiz.countDocuments({
+        estudante: estudante._id
+      });
+      
+      return {
+        ...estudante.toObject(),
+        _extras: {
+          quizzesParticipados
+        }
+      };
+    }));
+    
     res.status(200).json({
       status: 'success',
-      data: estudantes,
+      data: estudantesDetalhados,
       meta: {
         total: estudantes.length
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar estudantes:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar estudantes'
-    });
+    next(error);
   }
 };
 
 /**
- * Obtém todas as respostas de um estudante
+ * Obtém quizzes de um estudante
  */
-export const getRespostasEstudante: RequestHandler = async (req, res, next) => {
+export const getQuizzesEstudante: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { status } = req.query;
     
     // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
@@ -276,37 +334,42 @@ export const getRespostasEstudante: RequestHandler = async (req, res, next) => {
       return;
     }
     
-    // Buscar todas as respostas do estudante com informações das questões
-    const respostas = await Resposta.find({ estudante: id })
+    // Filtro por status (em andamento ou finalizados)
+    const filtro: any = { estudante: id };
+    
+    if (status === 'finalizados') {
+      filtro.dataFim = { $exists: true };
+    } else if (status === 'em_andamento') {
+      filtro.dataFim = { $exists: false };
+    }
+    
+    // Buscar todos os quizzes do estudante com informações relacionadas
+    const quizzes = await EstudanteQuiz.find(filtro)
       .populate({
-        path: 'questao',
+        path: 'quiz',
         populate: {
           path: 'avaliacao',
           populate: 'disciplina'
         }
       })
-      .sort({ createdAt: -1 }); // Ordenar por data de criação (mais recentes primeiro)
+      .sort({ dataInicio: -1 }); // Ordenar por data de início (mais recentes primeiro)
     
     res.status(200).json({
       status: 'success',
-      data: respostas,
+      data: quizzes,
       meta: {
-        total: respostas.length
+        total: quizzes.length
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar respostas do estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar respostas do estudante'
-    });
+    next(error);
   }
 };
 
 /**
- * Obtém estatísticas de desempenho do estudante
+ * Obtém estatísticas dos quizzes de um estudante agrupadas por disciplina
  */
-export const getEstatisticasEstudante: RequestHandler = async (req, res, next) => {
+export const getEstatisticasPorDisciplina: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
     
@@ -320,76 +383,166 @@ export const getEstatisticasEstudante: RequestHandler = async (req, res, next) =
       return;
     }
     
-    // Buscar respostas do estudante
-    const respostas = await Resposta.find({ estudante: id })
-      .populate({
-        path: 'questao',
-        populate: {
-          path: 'avaliacao',
-          populate: 'disciplina'
-        }
-      });
-    
-    // Calcular estatísticas gerais
-    const totalRespostas = respostas.length;
-    const respostasCorretas = respostas.filter(r => r.estaCorreta).length;
-    const percentualAcerto = totalRespostas > 0 ? (respostasCorretas / totalRespostas) * 100 : 0;
-    
-    // Estatísticas por disciplina
-    const estatisticasPorDisciplina: Record<string, {
-      nome: string,
-      total: number,
-      corretas: number,
-      percentual: number
-    }> = {};
-    
-    // Agrupar respostas por disciplina e calcular estatísticas
-    respostas.forEach(resposta => {
-      const questao = resposta.questao as any; // Usando any devido ao populate aninhado
-      if (!questao || !questao.avaliacao || !questao.avaliacao.disciplina) return;
-      
-      const disciplina = questao.avaliacao.disciplina;
-      const disciplinaId = disciplina._id.toString();
-      
-      if (!estatisticasPorDisciplina[disciplinaId]) {
-        estatisticasPorDisciplina[disciplinaId] = {
-          nome: disciplina.nome,
-          total: 0,
-          corretas: 0,
-          percentual: 0
-        };
-      }
-      
-      estatisticasPorDisciplina[disciplinaId].total += 1;
-      if (resposta.estaCorreta) {
-        estatisticasPorDisciplina[disciplinaId].corretas += 1;
+    // Buscar quizzes finalizados do estudante
+    const quizzes = await EstudanteQuiz.find({ 
+      estudante: id,
+      dataFim: { $exists: true }
+    }).populate({
+      path: 'quiz',
+      populate: {
+        path: 'avaliacao',
+        populate: 'disciplina'
       }
     });
     
-    // Calcular percentuais para cada disciplina
-    Object.values(estatisticasPorDisciplina).forEach(stats => {
-      stats.percentual = stats.total > 0 ? (stats.corretas / stats.total) * 100 : 0;
+    // Agrupar por disciplina
+    const estatisticasPorDisciplina: Record<string, any> = {};
+    
+    quizzes.forEach(quiz => {
+      const avaliacaoInfo = (quiz.quiz as any)?.avaliacao;
+      const disciplinaInfo = avaliacaoInfo?.disciplina;
+      
+      if (!disciplinaInfo) return;
+      
+      const disciplinaId = disciplinaInfo._id.toString();
+      
+      if (!estatisticasPorDisciplina[disciplinaId]) {
+        estatisticasPorDisciplina[disciplinaId] = {
+          disciplina: {
+            id: disciplinaId,
+            nome: disciplinaInfo.nome,
+            codigo: disciplinaInfo.codigo
+          },
+          quizzes: [],
+          totalQuizzes: 0,
+          mediaAcerto: 0,
+          totalPontos: 0
+        };
+      }
+      
+      estatisticasPorDisciplina[disciplinaId].quizzes.push({
+        id: quiz._id,
+        titulo: (quiz.quiz as any).titulo,
+        dataInicio: quiz.dataInicio,
+        dataFim: quiz.dataFim,
+        percentualAcerto: quiz.percentualAcerto,
+        pontuacaoObtida: quiz.pontuacaoObtida
+      });
+      
+      estatisticasPorDisciplina[disciplinaId].totalQuizzes += 1;
+      estatisticasPorDisciplina[disciplinaId].totalPontos += quiz.pontuacaoObtida;
+    });
+    
+    // Calcular médias
+    Object.values(estatisticasPorDisciplina).forEach((disciplina: any) => {
+      disciplina.mediaAcerto = disciplina.quizzes.reduce(
+        (acc: number, quiz: any) => acc + quiz.percentualAcerto, 0
+      ) / disciplina.totalQuizzes;
+      
+      // Remover a lista de quizzes da resposta (para reduzir o tamanho)
+      // Se você precisa dos quizzes detalhados, remova esta linha
+      delete disciplina.quizzes;
     });
     
     res.status(200).json({
       status: 'success',
+      data: Object.values(estatisticasPorDisciplina)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Obtém a evolução de desempenho do estudante ao longo do tempo
+ */
+export const getEvolucaoDesempenho: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const periodoMeses = Number(req.query.meses || 3); // Padrão: últimos 3 meses
+    
+    // Verificar se o estudante existe
+    const estudante = await Estudante.findById(id);
+    if (!estudante) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Estudante não encontrado'
+      });
+      return;
+    }
+    
+    // Calcular a data limite
+    const dataLimite = new Date();
+    dataLimite.setMonth(dataLimite.getMonth() - periodoMeses);
+    
+    // Buscar quizzes finalizados do estudante no período
+    const quizzes = await EstudanteQuiz.find({ 
+      estudante: id,
+      dataFim: { $exists: true, $gte: dataLimite }
+    })
+    .populate({
+      path: 'quiz',
+      populate: {
+        path: 'avaliacao',
+        populate: 'disciplina'
+      }
+    })
+    .sort({ dataFim: 1 }); // Ordenar cronologicamente
+    
+    // Preparar dados de evolução
+    const evolucao = quizzes.map(quiz => {
+      const disciplinaNome = (quiz.quiz as any)?.avaliacao?.disciplina?.nome || 'Desconhecida';
+      
+      return {
+        data: quiz.dataFim,
+        quizId: quiz._id,
+        quizTitulo: (quiz.quiz as any)?.titulo || 'Quiz sem título',
+        disciplina: disciplinaNome,
+        percentualAcerto: quiz.percentualAcerto,
+        pontuacaoObtida: quiz.pontuacaoObtida,
+        totalQuestoes: quiz.totalQuestoes
+      };
+    });
+    
+    // Agrupar por mês para análise de tendência
+    const evolucaoPorMes: Record<string, any> = {};
+    
+    quizzes.forEach(quiz => {
+      if (!quiz.dataFim) return;
+      
+      const data = quiz.dataFim;
+      const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!evolucaoPorMes[chave]) {
+        evolucaoPorMes[chave] = {
+          mes: chave,
+          quizzes: 0,
+          somaPercentuais: 0,
+          somaPontos: 0
+        };
+      }
+      
+      evolucaoPorMes[chave].quizzes += 1;
+      evolucaoPorMes[chave].somaPercentuais += quiz.percentualAcerto;
+      evolucaoPorMes[chave].somaPontos += quiz.pontuacaoObtida;
+    });
+    
+    // Calcular médias mensais
+    const tendenciaMensal = Object.entries(evolucaoPorMes).map(([mes, dados]: [string, any]) => ({
+      mes,
+      quizzes: dados.quizzes,
+      mediaAcerto: dados.somaPercentuais / dados.quizzes,
+      mediaPontos: dados.somaPontos / dados.quizzes
+    }));
+    
+    res.status(200).json({
+      status: 'success',
       data: {
-        geral: {
-          totalRespostas,
-          respostasCorretas,
-          percentualAcerto: Math.round(percentualAcerto * 100) / 100 // Arredondar para 2 casas decimais
-        },
-        disciplinas: Object.values(estatisticasPorDisciplina).map(stats => ({
-          ...stats,
-          percentual: Math.round(stats.percentual * 100) / 100 // Arredondar para 2 casas decimais
-        }))
+        evolucaoDetalhada: evolucao,
+        tendenciaMensal: tendenciaMensal.sort((a, b) => a.mes.localeCompare(b.mes)) // Ordenar por mês
       }
     });
   } catch (error) {
-    console.error('Erro ao obter estatísticas do estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao obter estatísticas do estudante'
-    });
+    next(error);
   }
 };
