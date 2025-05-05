@@ -40,6 +40,8 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/estudantes/${id}`,
     SEARCH: (query: string) => `/estudantes/search?q=${encodeURIComponent(query)}`,
     QUIZZES: (id: string) => `/estudantes/${id}/quizzes`,
+    PROFILE: '/estudantes/me', 
+    ALTERAR_SENHA: '/estudantes/me/alterar-senha', 
     ESTATISTICAS: {
       GERAL: (id: string) => `/estudantes/${id}/estatisticas`,
       POR_DISCIPLINA: (id: string) => `/estudantes/${id}/estatisticas/disciplinas`,
@@ -51,6 +53,7 @@ export const ENDPOINTS = {
     BASE: '/quizzes',
     BY_ID: (id: string) => `/quizzes/${id}`,
     RESPOSTAS: (id: string) => `/quizzes/${id}/respostas`,
+    RANKING: (id: string) => `/quizzes/${id}/ranking`, 
   },
   RESPOSTAS: {
     BASE: '/respostas',
@@ -59,11 +62,12 @@ export const ENDPOINTS = {
     BY_QUESTAO: (questaoId: string) => `/respostas/questao/${questaoId}`,
   },
   ESTATISTICAS: {
-    DASHBOARD: '/estatisticas/dashboard',
+    DASHBOARD: '/estatisticas/gerais', 
     ESTUDANTES: '/estatisticas/estudantes',
     AVALIACOES: '/estatisticas/avaliacoes',
     DESEMPENHO_GERAL: '/estatisticas/desempenho-geral',
     DISCIPLINAS: '/estatisticas/disciplinas',
+    RANKING: '/estatisticas/ranking', 
   },
   QUIZ_RESPOSTAS: {
     BASE: '/quiz-respostas',

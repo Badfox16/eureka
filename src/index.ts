@@ -13,6 +13,8 @@ import usuarioRoutes from './routes/usuario.routes'
 import provinciaRoutes from './routes/provincia.routes'
 import estatisticaRoutes from './routes/estatistica.routes'
 import quizRespostaRoutes from './routes/quizResposta.routes'
+import authRoutes from './routes/auth.routes'
+
 
 dotenv.config()
 
@@ -22,26 +24,31 @@ const PORT = process.env.PORT || 6199
 
 // Middleware para parsear JSON
 app.use(express.json())
+
 // --- Servir arquivos estáticos da pasta de uploads ---
 // Isso fará com que os arquivos em 'tmp/uploads' sejam acessíveis via '/uploads' na URL
 app.use('/uploads', express.static(path.resolve(__dirname, '..', 'tmp', 'uploads'))); 
+
 // Middleware para tratamento de erros
-app.use(errorHandler);
+app.use(errorHandler)
+
+// Prefico da API
+const API_PREFIX = '/api/v1'
 
 // Rotas da API
-app.use('/api/disciplinas', disciplinaRoutes)
-app.use('/api/estudantes', estudanteRoutes)
-app.use('/api/quizzes', quizRoutes)
-app.use('/api/questoes', questaoRoutes)
-app.use('/api/avaliacoes', avaliacaoRoutes)
-app.use('/api/usuarios', usuarioRoutes)
-app.use('/api/provincias', provinciaRoutes)
-
-// Novas rotas
-app.use('/api/estatisticas', estatisticaRoutes)
-app.use('/api/quiz-respostas', quizRespostaRoutes)
+app.use(`${API_PREFIX}/auth`, authRoutes)
+app.use(`${API_PREFIX}/usuarios`, usuarioRoutes)
+app.use(`${API_PREFIX}/estudantes`, estudanteRoutes)
+app.use(`${API_PREFIX}/disciplinas`, disciplinaRoutes)
+app.use(`${API_PREFIX}/provincias`, provinciaRoutes)
+app.use(`${API_PREFIX}/avaliacoes`, avaliacaoRoutes)
+app.use(`${API_PREFIX}/questoes`, questaoRoutes)
+app.use(`${API_PREFIX}/quizzes`, quizRoutes)
+app.use(`${API_PREFIX}/quiz-respostas`, quizRespostaRoutes)
+app.use(`${API_PREFIX}/estatisticas`, estatisticaRoutes)
 
 // Remover rota de respostas obsoleta (substituída por quiz-respostas)
+// apos testes
 // app.use('/api/respostas', respostaRoutes)
 
 // Rota básica para verificar se o servidor está rodando
@@ -49,7 +56,7 @@ app.get('/', (req, res) => {
   res.json({
     message: 'API Eureka - Sistema de Preparação para Exames',
     status: 'online',
-    version: '2.0.0' // Versão atualizada para refletir as melhorias
+    version: '1.0.0' 
   })
 })
 
