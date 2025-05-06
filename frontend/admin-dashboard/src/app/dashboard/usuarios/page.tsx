@@ -86,8 +86,8 @@ export default function UsuariosPage() {
   // Resetar filtros
   const resetFilters = () => {
     setSearchQuery("");
-    setTipoFilter("");
-    setStatusFilter("");
+    setTipoFilter("all");
+    setStatusFilter("all");
     setCurrentPage(1);
     loadUsuarios();
   };
@@ -155,14 +155,14 @@ export default function UsuariosPage() {
             </div>
             
             <Select value={tipoFilter} onValueChange={(value) => {
-              setTipoFilter(value);
+              setTipoFilter(value === "all" ? "" : value);
               handleApplyFilters();
             }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os tipos</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value={TipoUsuario.ADMIN}>Administrador</SelectItem>
                 <SelectItem value={TipoUsuario.PROFESSOR}>Professor</SelectItem>
                 <SelectItem value={TipoUsuario.NORMAL}>Aluno</SelectItem>

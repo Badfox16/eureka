@@ -9,7 +9,7 @@ const router = Router();
 
 // Rotas públicas
 router.post('/register', validate(createUsuarioSchema), usuarioController.createUsuario);
-router.post('/login', validate(loginSchema), usuarioController.login);
+// router.post('/login', validate(loginSchema), usuarioController.login);
 
 // Rotas protegidas (requerem autenticação)
 router.get('/profile', authenticate, usuarioController.getProfile);
