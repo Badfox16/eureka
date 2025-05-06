@@ -101,7 +101,7 @@ export default function LoginPage() {
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="default"
                           className="absolute right-0 top-0 h-full px-3"
                           onClick={() => setShowPassword(!showPassword)}
                         >

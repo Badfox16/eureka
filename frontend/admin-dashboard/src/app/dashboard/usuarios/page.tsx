@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import DashboardLayout from "@/components/layout/dashboard-layout"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Plus } from "lucide-react"
+import { useState, useEffect } from "react";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import { Button } from "@/components/ui/button";
+import { Plus, Pencil, Trash2, Search, X, Filter } from "lucide-react";
 import { 
   Table,
   TableBody,
@@ -12,252 +11,299 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { TableToolbar } from "@/components/ui/table-toolbar"
-import { Pagination } from "@/components/ui/pagination"
-import { ItemsPerPage } from "@/components/ui/items-per-page"
-import { TableRowActions } from "@/components/ui/table-row-actions"
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { UsuarioForm } from "@/components/usuarios/usuario-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { TipoUsuario } from "@/types";
+import { toast } from "sonner";
+import { usuarioService } from "@/services/usuario.service";
+import { Usuario } from "@/types/usuario";
+import { formatDate } from "@/lib/utils";
+import { hasRole } from "@/lib/auth";
 
 export default function UsuariosPage() {
-  // Dados de exemplo que seriam carregados do backend
-  const allUsuarios = [
-    // Seus 5 exemplos existentes
-    { 
-      id: 1, 
-      nome: "João Silva", 
-      email: "joao.silva@exemplo.com", 
-      tipo: "ADMIN", 
-      status: "Ativo", 
-      dataCriacao: "2024-01-15" 
-    },
-    { 
-      id: 2, 
-      nome: "Maria Oliveira", 
-      email: "maria@exemplo.com", 
-      tipo: "PROFESSOR", 
-      status: "Ativo", 
-      dataCriacao: "2024-02-20" 
-    },
-    { 
-      id: 3, 
-      nome: "Pedro Santos", 
-      email: "pedro@exemplo.com", 
-      tipo: "NORMAL", 
-      status: "Inativo", 
-      dataCriacao: "2024-03-10" 
-    },
-    { 
-      id: 4, 
-      nome: "Ana Pereira", 
-      email: "ana@exemplo.com", 
-      tipo: "PROFESSOR", 
-      status: "Ativo", 
-      dataCriacao: "2024-04-05" 
-    },
-    { 
-      id: 5, 
-      nome: "Carlos Ferreira", 
-      email: "carlos@exemplo.com", 
-      tipo: "NORMAL", 
-      status: "Ativo", 
-      dataCriacao: "2024-05-01" 
-    },
-    // Adicione mais exemplos para testar paginação
-    { 
-      id: 6, 
-      nome: "Lúcia Mendes", 
-      email: "lucia@exemplo.com", 
-      tipo: "PROFESSOR", 
-      status: "Ativo", 
-      dataCriacao: "2024-05-01" 
-    },
-    { 
-      id: 7, 
-      nome: "Ricardo Oliveira", 
-      email: "ricardo@exemplo.com", 
-      tipo: "NORMAL", 
-      status: "Inativo", 
-      dataCriacao: "2024-05-01" 
-    },
-    // adicione mais conforme necessário...
-  ]
+  // Estado para armazenar usuários
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Estado para a tabela
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(5)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
+  // Estado para paginação e filtros
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tipoFilter, setTipoFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Filtros disponíveis
-  const filters = [
-    {
-      id: "tipo",
-      label: "Tipo",
-      value: activeFilters["tipo"] || "",
-      options: [
-        { value: "ADMIN", label: "Admin" },
-        { value: "PROFESSOR", label: "Professor" },
-        { value: "NORMAL", label: "Normal" },
-      ]
-    },
-    {
-      id: "status",
-      label: "Status",
-      value: activeFilters["status"] || "",
-      options: [
-        { value: "Ativo", label: "Ativo" },
-        { value: "Inativo", label: "Inativo" },
-      ]
+  // Verificar se o usuário atual tem permissão para editar
+  const canEdit = hasRole(TipoUsuario.ADMIN);
+
+  // Carregar usuários da API
+  const loadUsuarios = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await usuarioService.getAll({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchQuery || undefined,
+        tipo: tipoFilter || undefined,
+        status: statusFilter || undefined
+      });
+      
+      setUsuarios(response.data);
+      setTotalItems(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
+      setError("Não foi possível carregar os usuários. Tente novamente mais tarde.");
+    } finally {
+      setIsLoading(false);
     }
-  ]
+  };
 
-  // Aplicar filtros aos dados
-  const filteredUsuarios = useMemo(() => {
-    return allUsuarios.filter((usuario) => {
-      // Filtro de pesquisa em múltiplos campos
-      const matchesSearch = searchQuery
-        ? usuario.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          usuario.email.toLowerCase().includes(searchQuery.toLowerCase())
-        : true
+  useEffect(() => {
+    loadUsuarios();
+  }, [currentPage, itemsPerPage]);
 
-      // Filtros específicos
-      const matchesTipo = activeFilters["tipo"]
-        ? usuario.tipo === activeFilters["tipo"]
-        : true
+  // Aplicar filtros (busca, tipo)
+  const handleApplyFilters = () => {
+    setCurrentPage(1); // Resetar para a primeira página ao filtrar
+    loadUsuarios();
+  };
 
-      const matchesStatus = activeFilters["status"]
-        ? usuario.status === activeFilters["status"]
-        : true
+  // Resetar filtros
+  const resetFilters = () => {
+    setSearchQuery("");
+    setTipoFilter("");
+    setStatusFilter("");
+    setCurrentPage(1);
+    loadUsuarios();
+  };
 
-      return matchesSearch && matchesTipo && matchesStatus
-    })
-  }, [allUsuarios, searchQuery, activeFilters])
+  // Funções CRUD
+  const handleCreateUsuario = async (data: any) => {
+    await usuarioService.create(data);
+    loadUsuarios();
+  };
 
-  // Paginação
-  const paginatedUsuarios = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredUsuarios.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredUsuarios, currentPage, itemsPerPage])
+  const handleUpdateUsuario = async (id: string, data: any) => {
+    await usuarioService.update(id, data);
+    loadUsuarios();
+  };
 
-  // Total de páginas
-  const totalPages = Math.ceil(filteredUsuarios.length / itemsPerPage)
+  const handleDeleteUsuario = async (id: string) => {
+    await usuarioService.delete(id);
+    loadUsuarios();
+  };
 
-  // Funções para manipular filtros
-  const handleFilterChange = (filterId: string, value: string) => {
-    setActiveFilters((prev) => ({
-      ...prev,
-      [filterId]: value,
-    }))
-    setCurrentPage(1) // Resetar para primeira página ao filtrar
-  }
-
-  const handleFilterClear = (filterId: string) => {
-    setActiveFilters((prev) => {
-      const newFilters = { ...prev }
-      delete newFilters[filterId]
-      return newFilters
-    })
-    setCurrentPage(1)
-  }
+  // Renderizar badge por tipo de usuário
+  const renderTipoBadge = (tipo: TipoUsuario) => {
+    switch (tipo) {
+      case TipoUsuario.ADMIN:
+        return <Badge variant="default">Administrador</Badge>;
+      case TipoUsuario.PROFESSOR:
+        return <Badge variant="outline">Professor</Badge>;
+      case TipoUsuario.NORMAL:
+        return <Badge variant="secondary">Aluno</Badge>;
+      default:
+        return <Badge>{tipo}</Badge>;
+    }
+  };
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Usuários</h1>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Usuário
-        </Button>
-      </div>
-
+      <h1 className="text-2xl font-bold tracking-tight">Usuários</h1>
+      <p className="text-muted-foreground">Gerencie os usuários do sistema</p>
       <div className="space-y-4">
-        <TableToolbar
-          searchQuery={searchQuery}
-          onSearchChange={(value) => {
-            setSearchQuery(value)
-            setCurrentPage(1)
-          }}
-          filters={filters}
-          activeFilters={activeFilters}
-          onFilterChange={handleFilterChange}
-          onFilterClear={handleFilterClear}
-          itemsTotal={allUsuarios.length}
-          itemsFiltered={filteredUsuarios.length}
-        />
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="hidden md:table-cell">Tipo</TableHead>
-                <TableHead className="hidden md:table-cell">Status</TableHead>
-                <TableHead className="w-24 text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedUsuarios.length > 0 ? (
-                paginatedUsuarios.map((usuario) => (
-                  <TableRow key={usuario.id}>
-                    <TableCell className="font-medium">{usuario.nome}</TableCell>
-                    <TableCell>{usuario.email}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge 
-                        variant={
-                          usuario.tipo === "ADMIN" 
-                            ? "destructive" 
-                            : usuario.tipo === "PROFESSOR" 
-                              ? "default" 
-                              : "outline"
-                        }
-                      >
-                        {usuario.tipo}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge 
-                        variant={usuario.status === "Ativo" ? "success" : "secondary"}
-                      >
-                        {usuario.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <TableRowActions
-                        onView={() => console.log(`Visualizar ${usuario.nome}`)}
-                        onEdit={() => console.log(`Editar ${usuario.nome}`)}
-                        onDelete={() => console.log(`Excluir ${usuario.nome}`)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Nenhum usuário encontrado.
-                  </TableCell>
-                </TableRow>
+        {/* Filtros e Ações */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 w-full sm:w-[250px]"
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-9 w-9 p-0"
+                  onClick={() => {
+                    setSearchQuery("");
+                    handleApplyFilters();
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               )}
-            </TableBody>
-          </Table>
+            </div>
+            
+            <Select value={tipoFilter} onValueChange={(value) => {
+              setTipoFilter(value);
+              handleApplyFilters();
+            }}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos os tipos</SelectItem>
+                <SelectItem value={TipoUsuario.ADMIN}>Administrador</SelectItem>
+                <SelectItem value={TipoUsuario.PROFESSOR}>Professor</SelectItem>
+                <SelectItem value={TipoUsuario.NORMAL}>Aluno</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {(searchQuery || tipoFilter || statusFilter) && (
+              <Button variant="outline" onClick={resetFilters}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+          
+          {canEdit && (
+            <UsuarioForm
+              title="Criar Novo Usuário"
+              onSubmit={handleCreateUsuario}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Usuário
+                </Button>
+              }
+            />
+          )}
         </div>
 
+        {/* Tabela de Usuários */}
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <p>Carregando usuários...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-destructive/10 p-4 rounded-md text-destructive text-center">
+            {error}
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Data de Criação</TableHead>
+                  {canEdit && <TableHead className="text-right">Ações</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {usuarios.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={canEdit ? 5 : 4} className="text-center">
+                      Nenhum usuário encontrado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  usuarios.map((usuario) => (
+                    <TableRow key={usuario._id}>
+                      <TableCell className="font-medium">{usuario.nome}</TableCell>
+                      <TableCell>{usuario.email}</TableCell>
+                      <TableCell>{renderTipoBadge(usuario.tipo)}</TableCell>
+                      <TableCell>{usuario.createdAt ? formatDate(usuario.createdAt) : '-'}</TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <UsuarioForm
+                              title="Editar Usuário"
+                              usuario={usuario}
+                              onSubmit={(data) => handleUpdateUsuario(usuario._id, data)}
+                              trigger={
+                                <Button variant="outline" size="default">
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                            <ConfirmDialog
+                              title="Excluir Usuário"
+                              description={`Tem certeza que deseja excluir o usuário ${usuario.nome}? Esta ação não pode ser desfeita.`}
+                              onConfirm={() => handleDeleteUsuario(usuario._id)}
+                              trigger={
+                                <Button variant="destructive" size="default">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              }
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {/* Paginação */}
         <div className="flex items-center justify-between">
-          <ItemsPerPage
-            value={itemsPerPage}
-            onChange={(value) => {
-              setItemsPerPage(value)
-              setCurrentPage(1)
-            }}
-          />
+          <div className="text-sm text-muted-foreground">
+            Mostrando {usuarios.length} de {totalItems} usuários
+          </div>
           
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || isLoading}
+            >
+              Anterior
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages || 1}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages || isLoading}
+            >
+              Próxima
+            </Button>
+            
+            <Select 
+              value={itemsPerPage.toString()} 
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder={`${itemsPerPage} por página`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 por página</SelectItem>
+                <SelectItem value="10">10 por página</SelectItem>
+                <SelectItem value="20">20 por página</SelectItem>
+                <SelectItem value="50">50 por página</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </DashboardLayout>
-  )
+  );
 }
