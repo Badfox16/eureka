@@ -21,7 +21,4 @@ export const estudanteSchema = baseResourceSchema.merge(
   })
 );
 
-// Tipos derivados do schema
-export type CreateEstudanteInput = z.infer<typeof createEstudanteSchema>;
-export type UpdateEstudanteInput = z.infer<typeof updateEstudanteSchema>;
-export type EstudanteResponse = z.infer<typeof estudanteSchema>;
+// Tipos são definidos no arquivo types/estudante.ts

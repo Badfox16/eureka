@@ -31,8 +31,4 @@ export const updateQuestaoSchema = createQuestaoSchema.partial();
 // Schema completo de questão
 export const questaoSchema = baseResourceSchema.merge(createQuestaoSchema);
 
-// Tipos derivados do schema
-export type CreateQuestaoInput = z.infer<typeof createQuestaoSchema>;
-export type UpdateQuestaoInput = z.infer<typeof updateQuestaoSchema>;
-export type QuestaoResponse = z.infer<typeof questaoSchema>;
-export type Alternativa = z.infer<typeof alternativaSchema>;
+// Tipos são definidos no arquivo types/questao.ts

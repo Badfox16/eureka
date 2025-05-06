@@ -17,6 +17,4 @@ export const updateEstudanteQuizSchema = createEstudanteQuizSchema.partial();
 
 export const estudanteQuizSchema = baseResourceSchema.merge(createEstudanteQuizSchema);
 
-export type CreateEstudanteQuizInput = z.infer<typeof createEstudanteQuizSchema>;
-export type UpdateEstudanteQuizInput = z.infer<typeof updateEstudanteQuizSchema>;
-export type EstudanteQuizResponse = z.infer<typeof estudanteQuizSchema>;
+// Tipos são definidos no arquivo types/estudanteQuiz.ts

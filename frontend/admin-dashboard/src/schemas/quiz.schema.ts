@@ -16,7 +16,4 @@ export const updateQuizSchema = createQuizSchema.partial();
 // Schema completo de quiz
 export const quizSchema = baseResourceSchema.merge(createQuizSchema);
 
-// Tipos derivados do schema
-export type CreateQuizInput = z.infer<typeof createQuizSchema>;
-export type UpdateQuizInput = z.infer<typeof updateQuizSchema>;
-export type QuizResponse = z.infer<typeof quizSchema>;
+// Tipos são definidos no arquivo types/quiz.ts

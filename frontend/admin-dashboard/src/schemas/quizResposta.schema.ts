@@ -30,5 +30,4 @@ export const registrarRespostaSchema = z.object({
   }),
 });
 
-export type IniciarQuizInput = z.TypeOf<typeof iniciarQuizSchema>['body'];
-export type RegistrarRespostaInput = z.TypeOf<typeof registrarRespostaSchema>['body'];
+// Tipos são definidos no arquivo types/quizResposta.ts
