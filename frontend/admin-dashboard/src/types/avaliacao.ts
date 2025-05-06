@@ -2,6 +2,17 @@ import { BaseModel } from './base';
 import { Disciplina } from './disciplina';
 import { Provincia } from './provincia';
 import { Questao } from './questao';
+import { 
+  createAvaliacaoSchema, 
+  updateAvaliacaoSchema, 
+  avaliacaoSchema 
+} from '../schemas/avaliacao.schema';
+import { z } from 'zod';
+
+// Tipos derivados dos schemas
+export type CreateAvaliacaoInput = z.infer<typeof createAvaliacaoSchema>;
+export type UpdateAvaliacaoInput = z.infer<typeof updateAvaliacaoSchema>;
+export type AvaliacaoModel = z.infer<typeof avaliacaoSchema>;
 
 export enum TipoAvaliacao {
   AP = "AP", // Avaliação Provincial
@@ -49,6 +60,20 @@ export interface Avaliacao extends BaseModel {
 
 export interface AvaliacaoForm {
   tipo: TipoAvaliacao;
+  ano: number;
+  disciplina: string;
+  trimestre?: Trimestre;
+  provincia?: string;
+  variante?: VarianteProva;
+  epoca?: Epoca;
+  areaEstudo?: AreaEstudo;
+  classe: number;
+  titulo?: string;
+}
+
+export interface AvaliacaoTableItem {
+  id: string | number;
+  tipo: string;
   ano: number;
   disciplina: string;
   trimestre?: Trimestre;

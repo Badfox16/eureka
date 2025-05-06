@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 export default function HomePage() {
   // Redireciona para a página de login
-  redirect("/login");
+  redirect("auth/login");
   
   // Este retorno nunca será executado, mas é necessário para o TypeScript
   return null;

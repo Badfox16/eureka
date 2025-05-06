@@ -18,6 +18,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
+  // TEMPORARIAMENTE DESATIVADO PARA DESENVOLVIMENTO
+  // Comentando a lógica de autenticação
+  /*
   // Verificar se já está autenticado
   const token = request.cookies.get('token')?.value
   const isAuthenticated = !!token
@@ -34,6 +37,7 @@ export function middleware(request: NextRequest) {
     const url = new URL('/dashboard', request.url)
     return NextResponse.redirect(url)
   }
+  */
   
   return NextResponse.next()
 }

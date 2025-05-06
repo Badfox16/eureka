@@ -1,5 +1,17 @@
+import { z } from 'zod';
 import { BaseModel, TipoUsuario } from './base';
+import { 
+  createUsuarioSchema, 
+  updateUsuarioSchema, 
+  usuarioSchema 
+} from '../schemas/usuario.schema';
 
+// Tipos derivados dos schemas
+export type CreateUsuarioInput = z.infer<typeof createUsuarioSchema>;
+export type UpdateUsuarioInput = z.infer<typeof updateUsuarioSchema>;
+export type UsuarioModel = z.infer<typeof usuarioSchema>;
+
+// Interfaces adicionais específicas para a UI
 export interface Usuario extends BaseModel {
   nome: string;
   email: string;

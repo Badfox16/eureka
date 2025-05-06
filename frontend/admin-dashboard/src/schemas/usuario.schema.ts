@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { baseResourceSchema } from './common.schema';
-import { TipoUsuario } from '../models/usuario';
+import { TipoUsuario } from '../types/base';
 
 // Schema para validar criação de usuário
 export const createUsuarioSchema = z.object({
@@ -35,9 +35,4 @@ export const usuarioSchema = baseResourceSchema.merge(
   })
 );
 
-// Tipos derivados do schema
-export type CreateUsuarioInput = z.infer<typeof createUsuarioSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-export type UpdateUsuarioInput = z.infer<typeof updateUsuarioSchema>;
-export type UsuarioResponse = z.infer<typeof usuarioSchema>;
+// Tipos são definidos no arquivo types/usuario.ts
