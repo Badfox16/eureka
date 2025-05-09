@@ -57,15 +57,15 @@ export function useCreateDisciplina() {
 }
 
 // Hook para atualizar disciplina
-export function useUpdateDisciplina(id: string) {
+export function useUpdateDisciplina() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: UpdateDisciplinaInput) => disciplinaService.update(id, data),
+    mutationFn: ({ id, ...data }: { id: string } & UpdateDisciplinaInput) => 
+      disciplinaService.update(id, data),
     onSuccess: () => {
       toast.success('Disciplina atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: [DISCIPLINAS_KEY] });
-      queryClient.invalidateQueries({ queryKey: [DISCIPLINAS_KEY, id] });
     },
     onError: (error: any) => {
       toast.error(`Erro ao atualizar disciplina: ${error.message}`);

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus, Loader2, Edit, Trash } from "lucide-react"
 import { 
   Table,
   TableBody,
@@ -16,29 +16,43 @@ import { Pagination } from "@/components/ui/pagination"
 import { TableToolbar } from "@/components/ui/table-toolbar"
 import { ItemsPerPage } from "@/components/ui/items-per-page"
 import { TableRowActions } from "@/components/ui/table-row-actions"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge"
+import { DisciplinaForm } from "@/components/disciplinas/disciplina-form"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { 
+  useDisciplinas, 
+  useCreateDisciplina, 
+  useUpdateDisciplina, 
+  useDeleteDisciplina 
+} from "@/hooks/use-disciplinas"
+import { Disciplina } from "@/types/disciplina"
+import { formatDate } from "@/lib/utils"
+import { toast } from "sonner"
 
 export default function DisciplinasPage() {
-  // Dados de exemplo que seriam carregados do backend
-  const allDisciplinas = [
-    { id: 1, codigo: "MAT", nome: "Matemática", descricao: "Estudo de números, quantidades, formas, estruturas e suas relações." },
-    { id: 2, codigo: "FIS", nome: "Física", descricao: "Ciência que estuda as propriedades da matéria, energia, espaço e tempo." },
-    { id: 3, codigo: "QUI", nome: "Química", descricao: "Estudo da composição, estrutura, propriedades e transformações da matéria." },
-    { id: 4, codigo: "BIO", nome: "Biologia", descricao: "Ciência que estuda os seres vivos e suas interações com o meio ambiente." },
-    { id: 5, codigo: "HIS", nome: "História", descricao: "Estudo sistemático do passado humano, suas sociedades e civilizações." },
-    { id: 6, codigo: "GEO", nome: "Geografia", descricao: "Ciência que estuda o espaço geográfico e suas transformações." },
-    { id: 7, codigo: "POR", nome: "Português", descricao: "Estudo da língua portuguesa em suas dimensões linguísticas e literárias." },
-    { id: 8, codigo: "ING", nome: "Inglês", descricao: "Estudo da língua inglesa e suas aplicações no contexto global." },
-    { id: 9, codigo: "FIL", nome: "Filosofia", descricao: "Estudo crítico e reflexivo do conhecimento, valores e existência humana." },
-    { id: 10, codigo: "PSI", nome: "Psicologia", descricao: "Ciência que estuda os processos mentais e comportamentais dos indivíduos." },
-    { id: 11, codigo: "SOC", nome: "Sociologia", descricao: "Estudo das relações sociais, instituições e estruturas da sociedade." },
-    { id: 12, codigo: "ECO", nome: "Economia", descricao: "Estudo da produção, distribuição e consumo de bens e serviços." },
-  ]
-
-  // Estado para a tabela
+  // Estado para paginação e filtros
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(5)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
+
+  // Buscar disciplinas com React Query
+  const { 
+    data, 
+    isLoading, 
+    error 
+  } = useDisciplinas({
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchQuery || undefined,
+    status: activeFilters["status"]
+  });
+
+  // Mutations para operações CRUD
+  const createMutation = useCreateDisciplina();
+  const updateMutation = useUpdateDisciplina(); // Sem id
+  const deleteMutation = useDeleteDisciplina();
 
   // Filtros disponíveis
   const filters = [
@@ -46,36 +60,17 @@ export default function DisciplinasPage() {
       id: "codigo",
       label: "Código",
       value: activeFilters["codigo"] || "",
+    },
+    {
+      id: "status",
+      label: "Status",
+      value: activeFilters["status"] || "",
+      options: [
+        { value: "active", label: "Ativo" },
+        { value: "inactive", label: "Inativo" }
+      ]
     }
   ]
-
-  // Aplicar filtros aos dados
-  const filteredDisciplinas = useMemo(() => {
-    return allDisciplinas.filter((disciplina) => {
-      // Filtro de pesquisa em múltiplos campos
-      const matchesSearch = searchQuery
-        ? disciplina.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          disciplina.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          disciplina.descricao.toLowerCase().includes(searchQuery.toLowerCase())
-        : true
-
-      // Filtros específicos
-      const matchesCodigo = activeFilters["codigo"]
-        ? disciplina.codigo.toLowerCase().includes(activeFilters["codigo"].toLowerCase())
-        : true
-
-      return matchesSearch && matchesCodigo
-    })
-  }, [allDisciplinas, searchQuery, activeFilters])
-
-  // Paginação
-  const paginatedDisciplinas = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredDisciplinas.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredDisciplinas, currentPage, itemsPerPage])
-
-  // Total de páginas
-  const totalPages = Math.ceil(filteredDisciplinas.length / itemsPerPage)
 
   // Funções para manipular filtros
   const handleFilterChange = (filterId: string, value: string) => {
@@ -95,14 +90,66 @@ export default function DisciplinasPage() {
     setCurrentPage(1)
   }
 
+  // Funções CRUD
+  const handleCreateDisciplina = async (formData: { codigo: string; nome: string; descricao: string; ativo: boolean }) => {
+    try {
+      await createMutation.mutateAsync(formData);
+      toast.success("Disciplina criada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao criar disciplina:", error);
+      toast.error("Erro ao criar disciplina. Tente novamente.");
+    }
+  }
+
+  const handleUpdateDisciplina = async (id: string, formData: { codigo: string; nome: string; descricao: string; ativo: boolean }) => {
+    try {
+      await updateMutation.mutateAsync({
+        id,
+        ...formData
+      });
+      toast.success("Disciplina atualizada com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar disciplina:", error);
+      toast.error("Erro ao atualizar disciplina. Tente novamente.");
+    }
+  }
+
+  const handleDeleteDisciplina = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success("Disciplina excluída com sucesso!");
+    } catch (error) {
+      console.error("Erro ao excluir disciplina:", error);
+      toast.error("Erro ao excluir disciplina. Tente novamente.");
+    }
+  }
+
+  // Renderizar status
+  const renderStatusBadge = (ativo: boolean) => {
+    return ativo 
+      ? <Badge variant="success">Ativo</Badge>
+      : <Badge variant="secondary">Inativo</Badge>;
+  }
+
+  // Disciplinas e paginação
+  const disciplinas = data?.data || [];
+  const totalItems = data?.pagination?.total || 0;
+  const totalPages = data?.pagination?.totalPages || 1;
+
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Disciplinas</h1>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Disciplina
-        </Button>
+        <DisciplinaForm
+          title="Nova Disciplina"
+          onSubmit={handleCreateDisciplina}
+          trigger={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Disciplina
+            </Button>
+          }
+        />
       </div>
 
       <div className="space-y-4">
@@ -116,8 +163,8 @@ export default function DisciplinasPage() {
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
           onFilterClear={handleFilterClear}
-          itemsTotal={allDisciplinas.length}
-          itemsFiltered={filteredDisciplinas.length}
+          itemsTotal={totalItems}
+          itemsFiltered={disciplinas.length}
         />
 
         <div className="rounded-md border">
@@ -127,31 +174,77 @@ export default function DisciplinasPage() {
                 <TableHead className="w-20">Código</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden md:table-cell">Descrição</TableHead>
+                <TableHead className="w-20">Status</TableHead>
                 <TableHead className="w-24 text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedDisciplinas.length > 0 ? (
-                paginatedDisciplinas.map((disciplina) => (
-                  <TableRow key={disciplina.id}>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    <div className="flex justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center text-destructive">
+                    Erro ao carregar disciplinas. Tente novamente.
+                  </TableCell>
+                </TableRow>
+              ) : disciplinas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    Nenhuma disciplina encontrada.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                disciplinas.map((disciplina: Disciplina) => (
+                  <TableRow key={disciplina._id}>
                     <TableCell className="font-medium">{disciplina.codigo}</TableCell>
                     <TableCell>{disciplina.nome}</TableCell>
-                    <TableCell className="hidden md:table-cell">{disciplina.descricao}</TableCell>
+                    <TableCell className="hidden md:table-cell">{disciplina.descricao || "—"}</TableCell>
+                    <TableCell>{renderStatusBadge(disciplina.ativo)}</TableCell>
                     <TableCell className="text-right">
                       <TableRowActions
-                        onView={() => console.log(`Visualizar ${disciplina.nome}`)}
-                        onEdit={() => console.log(`Editar ${disciplina.nome}`)}
-                        onDelete={() => console.log(`Excluir ${disciplina.nome}`)}
+                        editTrigger={
+                          <DropdownMenuItem asChild>
+                            <DisciplinaForm
+                              title="Editar Disciplina"
+                              disciplina={disciplina}
+                              onSubmit={(data) => handleUpdateDisciplina(disciplina._id, data)}
+                              trigger={
+                                <div className="flex w-full items-center">
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  <span>Editar</span>
+                                </div>
+                              }
+                            />
+                          </DropdownMenuItem>
+                        }
+                        deleteTrigger={
+                          <DropdownMenuItem 
+                            asChild
+                            className="text-destructive hover:bg-destructive hover:text-white focus:bg-destructive focus:text-white"
+                          >
+                            <ConfirmDialog
+                              title="Excluir Disciplina"
+                              description={`Tem certeza que deseja excluir a disciplina ${disciplina.nome}? Esta ação não pode ser desfeita.`}
+                              onConfirm={() => handleDeleteDisciplina(disciplina._id)}
+                              trigger={
+                                <div className="flex w-full items-center">
+                                  <Trash className="mr-2 h-4 w-4" />
+                                  <span>Excluir</span>
+                                </div>
+                              }
+                            />
+                          </DropdownMenuItem>
+                        }
                       />
                     </TableCell>
                   </TableRow>
                 ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
-                    Nenhuma disciplina encontrada.
-                  </TableCell>
-                </TableRow>
               )}
             </TableBody>
           </Table>
