@@ -1,4 +1,4 @@
-import { Usuario, TipoUsuario } from '../../src/models/usuario';
+import { Usuario, TipoUsuario } from '../../server/models/usuario';
 import bcrypt from 'bcrypt';
 
 // Senhas pré-hasheadas para testes

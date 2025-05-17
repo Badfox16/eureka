@@ -1,5 +1,5 @@
-import { Quiz } from '../../src/models/quiz';
-import { Avaliacao } from '../../src/models/avaliacao';
+import { Quiz } from '../../server/models/quiz';
+import { Avaliacao } from '../../server/models/avaliacao';
 
 // Fixture de quizzes dependente de avaliações
 export const getQuizFixtures = async () => {

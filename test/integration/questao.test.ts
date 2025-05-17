@@ -1,15 +1,15 @@
 import request from 'supertest';
-import { app } from '../../src/index';
-import { Questao } from '../../src/models/questao';
-import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../src/models/avaliacao';
-import { Disciplina } from '../../src/models/disciplina';
+import { app } from '../../server/index';
+import { Questao } from '../../server/models/questao';
+import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../server/models/avaliacao';
+import { Disciplina } from '../../server/models/disciplina';
 import mongoose from 'mongoose';
 import { createDisciplinaFixtures } from '../fixtures/disciplinas';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
 import { createAvaliacaoFixtures } from '../fixtures/avaliacoes';
 import { createQuestaoFixtures } from '../fixtures/questoes';
 import jwt from 'jsonwebtoken';
-import { TipoUsuario } from '../../src/models/usuario';
+import { TipoUsuario } from '../../server/models/usuario';
 
 describe('API de Questões', () => {
   let authToken: string;

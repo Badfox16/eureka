@@ -1,9 +1,9 @@
 import request from 'supertest';
-import { app } from '../../src/index';
-import { Estudante } from '../../src/models/estudante';
+import { app } from '../../server/index';
+import { Estudante } from '../../server/models/estudante';
 import { createEstudanteFixtures } from '../fixtures/estudantes';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
-import { TipoUsuario } from '../../src/models/usuario';
+import { TipoUsuario } from '../../server/models/usuario';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 

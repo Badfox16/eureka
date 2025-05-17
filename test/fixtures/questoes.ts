@@ -1,5 +1,5 @@
-import { Questao } from '../../src/models/questao';
-import { Avaliacao } from '../../src/models/avaliacao';
+import { Questao } from '../../server/models/questao';
+import { Avaliacao } from '../../server/models/avaliacao';
 import { Types } from 'mongoose';
 
 // Fixture de questões dependente de avaliações

@@ -1,4 +1,4 @@
-import { Disciplina } from '../../src/models/disciplina';
+import { Disciplina } from '../../server/models/disciplina';
 
 export const disciplinaFixtures = [
   {

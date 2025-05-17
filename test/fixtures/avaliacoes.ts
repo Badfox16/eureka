@@ -1,5 +1,5 @@
-import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../src/models/avaliacao';
-import { Disciplina } from '../../src/models/disciplina';
+import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../server/models/avaliacao';
+import { Disciplina } from '../../server/models/disciplina';
 import { Types } from 'mongoose';
 
 // Fixture de avaliações dependente de disciplinas

@@ -1,4 +1,4 @@
-import { Estudante } from '../../src/models/estudante';
+import { Estudante } from '../../server/models/estudante';
 
 export const estudanteFixtures = [
   {
