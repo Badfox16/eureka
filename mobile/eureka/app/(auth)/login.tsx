@@ -38,10 +38,9 @@ export default function LoginScreen() {
     alert("Funcionalidade de recuperar senha ainda não implementada");
   };
 
-  const navegarParaCadastro = () => {
-    // Navegando para a página de cadastro (quando existir)
-    alert("Funcionalidade de cadastro ainda não implementada");
-  };
+const navegarParaCadastro = () => {
+  router.push('/(auth)/cadastro');
+};
 
   const fazerLogin = () => {
     // Simulando login bem-sucedido

@@ -59,6 +59,7 @@ export default function RootLayout() {
             headerRight: () => <ThemeToggle />,
           }}
         />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack>
       <PortalHost />
     </ThemeProvider>
