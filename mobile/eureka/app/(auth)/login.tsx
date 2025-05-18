@@ -1,18 +1,19 @@
 import React from 'react';
 import { View, Image, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Card } from '~/components/ui/card';
 import { Button } from '~/components/ui/button';
 import { Text } from '~/components/ui/text';
-import { Input as TextInput } from '~/components/ui/input';
 import { Separator } from '~/components/ui/separator';
 import { XStack, YStack } from '~/components/ui/stack';
+import { CustomInput } from '~/components/ui/custom-input';
 
-import { useTailwind } from '../../lib/tailwind';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+
+// Importando o novo hook de tema
+import { useTheme } from '~/lib/theme/useTheme';
 
 export default function LoginScreen() {
   const [email, setEmail] = React.useState('');
@@ -20,14 +21,40 @@ export default function LoginScreen() {
   const [mostrarSenha, setMostrarSenha] = React.useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tw = useTailwind();
+  
+  // Usando o novo hook de tema
+  const { colors, tw, isDark } = useTheme();
+
+  // Corrigindo o atributo style duplicado usando um objeto combinado
+  const viewStyle = { 
+    ...tw.style('flex-1'),
+    backgroundColor: colors.background 
+  };
+
+  // Funções de navegação
+  const navegarParaRecuperarSenha = () => {
+    // Navegando para a página de recuperar senha (quando existir)
+    // Você pode implementar temporariamente um alert
+    alert("Funcionalidade de recuperar senha ainda não implementada");
+  };
+
+  const navegarParaCadastro = () => {
+    // Navegando para a página de cadastro (quando existir)
+    alert("Funcionalidade de cadastro ainda não implementada");
+  };
+
+  const fazerLogin = () => {
+    // Simulando login bem-sucedido
+    // Quando a estrutura de rotas estiver pronta, substitua pelo router.push
+    alert(`Login com ${email} realizado com sucesso!`);
+  };
 
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={tw.style('flex-1 bg-white dark:bg-slate-950')}
+      style={viewStyle}
     >
-      <StatusBar style="auto" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView 
         contentContainerStyle={tw.style('flex-grow justify-center px-5 pb-10')}
         keyboardShouldPersistTaps="handled"
@@ -40,138 +67,160 @@ export default function LoginScreen() {
               style={tw.style('w-20 h-20 mb-2')}
               resizeMode="contain"
             />
-            <Text style={tw.style('text-2xl font-bold text-slate-800 dark:text-white')}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary }}>
               Eureka
             </Text>
-            <Text style={tw.style('text-sm text-slate-500 dark:text-slate-400')}>
+            <Text style={{ fontSize: 14, color: colors.text.secondary }}>
               Preparação para exames
             </Text>
           </YStack>
 
-          <Card style={tw.style('bg-white dark:bg-slate-900 rounded-2xl shadow-md')}>
+          <Card style={{ backgroundColor: colors.card, borderRadius: 16 }}>
             <YStack p="$4" gap="$4">
-              <Text style={tw.style('text-xl font-bold text-slate-800 dark:text-white mb-2')}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }}>
                 Entrar
               </Text>
 
-              {/* Campo de Email */}
+              {/* Campo de Email - usando CustomInput */}
               <YStack gap="$2">
-                <Text style={tw.style('text-sm font-medium text-slate-700 dark:text-slate-300')}>
+                <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text.secondary }}>
                   Email
                 </Text>
-                <View style={tw.style('relative')}>
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Seu endereço de email"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    style={tw.style('px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white')}
-                    placeholderTextColor={tw.color('slate-400')}
-                    leftIconComponent={
-                      <Ionicons name="mail-outline" size={20} color={tw.color('slate-400')} />
-                    }
-                  />
-                </View>
+                <CustomInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="Seu endereço de email"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  leftIcon={
+                    <Ionicons 
+                      name="mail-outline" 
+                      size={20} 
+                      color={colors.text.muted}
+                      style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
+                    />
+                  }
+                />
               </YStack>
 
-              {/* Campo de Senha */}
+              {/* Campo de Senha - usando CustomInput */}
               <YStack gap="$2">
-                <Text style={tw`text-sm font-medium text-slate-700 dark:text-slate-300`}>
+                <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text.secondary }}>
                   Senha
                 </Text>
-                <View style={tw`relative`}>
-                  <TextInput
-                    value={senha}
-                    onChangeText={setSenha}
-                    placeholder="Sua senha"
-                    secureTextEntry={!mostrarSenha}
-                    style={tw`px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white`}
-                    placeholderTextColor={tw.color('slate-400')}
-                    leftIconComponent={
-                      <Ionicons name="lock-closed-outline" size={20} color={tw.color('slate-400')} />
-                    }
-                    rightIconComponent={
-                      <TouchableOpacity onPress={() => setMostrarSenha(!mostrarSenha)} style={tw`p-2`}>
-                        <Ionicons 
-                          name={mostrarSenha ? "eye-off-outline" : "eye-outline"} 
-                          size={20} 
-                          color={tw.color('slate-400')}
-                        />
-                      </TouchableOpacity>
-                    }
-                  />
-                </View>
+                <CustomInput
+                  value={senha}
+                  onChangeText={setSenha}
+                  placeholder="Sua senha"
+                  secureTextEntry={!mostrarSenha}
+                  leftIcon={
+                    <Ionicons 
+                      name="lock-closed-outline" 
+                      size={20} 
+                      color={colors.text.muted}
+                      style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
+                    />
+                  }
+                  rightIcon={
+                    <TouchableOpacity 
+                      onPress={() => setMostrarSenha(!mostrarSenha)} 
+                      style={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
+                    >
+                      <Ionicons 
+                        name={mostrarSenha ? "eye-off-outline" : "eye-outline"} 
+                        size={20} 
+                        color={colors.text.muted}
+                      />
+                    </TouchableOpacity>
+                  }
+                />
               </YStack>
 
               {/* Esqueci minha senha */}
               <XStack justifyContent="flex-end">
-                <TouchableOpacity
-                  onPress={() => router.push('/recuperar-senha')}
-                  style={tw`py-2`}
+                <TouchableOpacity 
+                  onPress={navegarParaRecuperarSenha}
+                  style={{ padding: 8 }}
                 >
-                  <Text style={tw`text-sm text-violet-600 dark:text-violet-400 font-medium`}>
+                  <Text style={{ fontSize: 14, color: colors.text.accent, fontWeight: '500' }}>
                     Esqueci minha senha
                   </Text>
                 </TouchableOpacity>
               </XStack>
 
-              {/* Botão de Login */}
-              <Button
-                onPress={() => router.push('/(app)')}
-                style={tw`bg-violet-600 dark:bg-violet-500 py-3.5 rounded-xl mt-2`}
-                pressStyle={tw`bg-violet-700 dark:bg-violet-600`}
+              {/* Botão de Login - personalizado para aceitar pressStyle */}
+              <TouchableOpacity
+                onPress={fazerLogin}
+                style={{
+                  backgroundColor: colors.primary[600],
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  marginTop: 8,
+                }}
+                activeOpacity={0.7} // Simula o efeito pressStyle
               >
-                <Text style={tw`text-white font-semibold text-center`}>
+                <Text style={{ color: 'white', fontWeight: '600', textAlign: 'center' }}>
                   Entrar
                 </Text>
-              </Button>
+              </TouchableOpacity>
             </YStack>
           </Card>
 
           {/* Separador */}
           <XStack alignItems="center" my="$2">
-            <Separator style={tw`flex-1 bg-slate-200 dark:bg-slate-700`} />
-            <Text style={tw`mx-4 text-slate-400 dark:text-slate-500 font-medium`}>ou</Text>
-            <Separator style={tw`flex-1 bg-slate-200 dark:bg-slate-700`} />
+            <Separator style={{ flex: 1, backgroundColor: colors.separator }} />
+            <Text style={{ marginHorizontal: 16, color: colors.text.muted, fontWeight: '500' }}>ou</Text>
+            <Separator style={{ flex: 1, backgroundColor: colors.separator }} />
           </XStack>
 
-          {/* Botões de redes sociais */}
+          {/* Botões de redes sociais - substituindo Button por TouchableOpacity */}
           <YStack gap="$3">
-            <Button
-              onPress={() => {}}
-              style={tw`border border-slate-200 dark:border-slate-700 py-3.5 rounded-xl bg-white dark:bg-slate-900`}
-              pressStyle={tw`bg-slate-50 dark:bg-slate-800`}
+            <TouchableOpacity
+              onPress={() => alert("Login com Google ainda não implementado")}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingVertical: 14, 
+                borderRadius: 12,
+                backgroundColor: colors.card
+              }}
+              activeOpacity={0.7} // Simula o efeito pressStyle
             >
               <XStack gap="$2" justifyContent="center" alignItems="center">
-                <Ionicons name="logo-google" size={18} color={tw.color('slate-700 dark:slate-300')} />
-                <Text style={tw`text-slate-700 dark:text-slate-300 font-semibold`}>
+                <Ionicons name="logo-google" size={18} color={colors.text.secondary} />
+                <Text style={{ color: colors.text.secondary, fontWeight: '600' }}>
                   Continuar com Google
                 </Text>
               </XStack>
-            </Button>
+            </TouchableOpacity>
 
-            <Button
-              onPress={() => {}}
-              style={tw`border border-slate-200 dark:border-slate-700 py-3.5 rounded-xl bg-white dark:bg-slate-900`}
-              pressStyle={tw`bg-slate-50 dark:bg-slate-800`}
+            <TouchableOpacity
+              onPress={() => alert("Login com Apple ainda não implementado")}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingVertical: 14, 
+                borderRadius: 12,
+                backgroundColor: colors.card
+              }}
+              activeOpacity={0.7} // Simula o efeito pressStyle
             >
               <XStack gap="$2" justifyContent="center" alignItems="center">
-                <Ionicons name="logo-apple" size={18} color={tw.color('slate-700 dark:slate-300')} />
-                <Text style={tw`text-slate-700 dark:text-slate-300 font-semibold`}>
+                <Ionicons name="logo-apple" size={18} color={colors.text.secondary} />
+                <Text style={{ color: colors.text.secondary, fontWeight: '600' }}>
                   Continuar com Apple
                 </Text>
               </XStack>
-            </Button>
+            </TouchableOpacity>
           </YStack>
 
           {/* Link para cadastro */}
           <XStack justifyContent="center" mt="$4">
-            <Text style={tw`text-slate-600 dark:text-slate-400`}>
+            <Text style={{ color: colors.text.secondary }}>
               Não tem uma conta?{' '}
             </Text>
-            <TouchableOpacity onPress={() => router.push('/cadastro')}>
-              <Text style={tw`text-violet-600 dark:text-violet-400 font-semibold`}>
+            <TouchableOpacity onPress={navegarParaCadastro}>
+              <Text style={{ color: colors.text.accent, fontWeight: '600' }}>
                 Cadastre-se
               </Text>
             </TouchableOpacity>
