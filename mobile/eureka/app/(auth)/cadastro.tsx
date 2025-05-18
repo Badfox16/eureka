@@ -75,7 +75,7 @@ export default function CadastroScreen() {
               style={tw.style('w-16 h-16 mb-2')}
               resizeMode="contain"
             />
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.accent }}>
               Crie sua conta
             </Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary }}>
@@ -85,7 +85,7 @@ export default function CadastroScreen() {
 
           <Card style={{ backgroundColor: colors.card, borderRadius: 16 }}>
             <YStack p="$4" gap="$4">
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.accent, marginBottom: 8 }}>
                 Cadastro
               </Text>
 

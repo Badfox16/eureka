@@ -21,14 +21,14 @@ export default function LoginScreen() {
   const [mostrarSenha, setMostrarSenha] = React.useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
+
   // Usando o novo hook de tema
   const { colors, tw, isDark } = useTheme();
 
   // Corrigindo o atributo style duplicado usando um objeto combinado
-  const viewStyle = { 
+  const viewStyle = {
     ...tw.style('flex-1'),
-    backgroundColor: colors.background 
+    backgroundColor: colors.background
   };
 
   // Funções de navegação
@@ -38,35 +38,37 @@ export default function LoginScreen() {
     alert("Funcionalidade de recuperar senha ainda não implementada");
   };
 
-const navegarParaCadastro = () => {
-  router.push('/(auth)/cadastro');
-};
+  const navegarParaCadastro = () => {
+    router.push('/(auth)/cadastro');
+  };
 
   const fazerLogin = () => {
     // Simulando login bem-sucedido
+    router.push('/(app)');
+
     // Quando a estrutura de rotas estiver pronta, substitua pelo router.push
-    alert(`Login com ${email} realizado com sucesso!`);
+    //alert(`Login com ${email} realizado com sucesso!`);
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={viewStyle}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={tw.style('flex-grow justify-center px-5 pb-10')}
         keyboardShouldPersistTaps="handled"
       >
         <YStack gap="$4" pt={insets.top}>
           {/* Logo e Título */}
           <YStack alignItems="center" gap="$2" mb="$6">
-            <Image 
-              source={require('../../assets/images/logo.png')} 
+            <Image
+              source={require('../../assets/images/logo.png')}
               style={tw.style('w-20 h-20 mb-2')}
               resizeMode="contain"
             />
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.accent }}>
               Eureka
             </Text>
             <Text style={{ fontSize: 14, color: colors.text.secondary }}>
@@ -76,7 +78,7 @@ const navegarParaCadastro = () => {
 
           <Card style={{ backgroundColor: colors.card, borderRadius: 16 }}>
             <YStack p="$4" gap="$4">
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.primary, marginBottom: 8 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text.accent, marginBottom: 8 }}>
                 Entrar
               </Text>
 
@@ -92,9 +94,9 @@ const navegarParaCadastro = () => {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   leftIcon={
-                    <Ionicons 
-                      name="mail-outline" 
-                      size={20} 
+                    <Ionicons
+                      name="mail-outline"
+                      size={20}
                       color={colors.text.muted}
                       style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
                     />
@@ -113,21 +115,21 @@ const navegarParaCadastro = () => {
                   placeholder="Sua senha"
                   secureTextEntry={!mostrarSenha}
                   leftIcon={
-                    <Ionicons 
-                      name="lock-closed-outline" 
-                      size={20} 
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={20}
                       color={colors.text.muted}
                       style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
                     />
                   }
                   rightIcon={
-                    <TouchableOpacity 
-                      onPress={() => setMostrarSenha(!mostrarSenha)} 
+                    <TouchableOpacity
+                      onPress={() => setMostrarSenha(!mostrarSenha)}
                       style={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
                     >
-                      <Ionicons 
-                        name={mostrarSenha ? "eye-off-outline" : "eye-outline"} 
-                        size={20} 
+                      <Ionicons
+                        name={mostrarSenha ? "eye-off-outline" : "eye-outline"}
+                        size={20}
                         color={colors.text.muted}
                       />
                     </TouchableOpacity>
@@ -137,7 +139,7 @@ const navegarParaCadastro = () => {
 
               {/* Esqueci minha senha */}
               <XStack justifyContent="flex-end">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={navegarParaRecuperarSenha}
                   style={{ padding: 8 }}
                 >
@@ -179,7 +181,7 @@ const navegarParaCadastro = () => {
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                paddingVertical: 14, 
+                paddingVertical: 14,
                 borderRadius: 12,
                 backgroundColor: colors.card
               }}
@@ -198,7 +200,7 @@ const navegarParaCadastro = () => {
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                paddingVertical: 14, 
+                paddingVertical: 14,
                 borderRadius: 12,
                 backgroundColor: colors.card
               }}
