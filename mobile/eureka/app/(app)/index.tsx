@@ -74,7 +74,7 @@ export default function HomeScreen() {
                 justifyContent: 'space-between',
                 alignItems: 'center'
             }}>
-                <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.primary }}>
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text.accent }}>
                     Eureka
                 </Text>
 
@@ -147,7 +147,7 @@ export default function HomeScreen() {
 
                 {/* Seção de Avaliações Recentes */}
                 <YStack gap="$4" mb="$6">
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text.primary }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text.accent }}>
                         Avaliações Recentes
                     </Text>
 
@@ -272,7 +272,7 @@ export default function HomeScreen() {
 
                 {/* Seção de Quizzes Rápidos */}
                 <YStack gap="$4">
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text.primary }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text.accent }}>
                         Quizzes Rápidos
                     </Text>
 
