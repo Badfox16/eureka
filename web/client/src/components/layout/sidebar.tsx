@@ -42,7 +42,7 @@ export function Sidebar() {
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center space-x-2">
           <Image 
-            src="/logo.svg" 
+            src="/logo.png" 
             alt="Eureka" 
             width={32} 
             height={32} 

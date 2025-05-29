@@ -3,7 +3,7 @@ import { baseResourceSchema, objectIdSchema } from './common.schema';
 
 // Schema para validar criação de quiz
 export const createQuizSchema = z.object({
-  titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
+  titulo: z.string().optional(),
   descricao: z.string().optional(),
   avaliacao: objectIdSchema,
   tempoLimite: z.number().positive('Tempo limite deve ser um valor positivo').optional(),

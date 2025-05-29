@@ -49,13 +49,13 @@ export default function Home() {
 
           <div className="flex items-center gap-4">
             <Link
-              href="/login"
+              href="/auth/login"
               className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
             >
               Login
             </Link>
             <Link
-              href="/cadastro"
+              href="/auth/cadastro"
               className="rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
             >
               Comece Grátis
@@ -81,7 +81,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
-                href="/cadastro"
+                href="auth/cadastro"
                 className="rounded-full bg-primary-600 px-8 py-3 text-base font-semibold text-white hover:bg-primary-700"
               >
                 Comece Agora
@@ -234,7 +234,7 @@ export default function Home() {
               preparação para exames com o Eureka.
             </p>
             <Link
-              href="/cadastro"
+              href="/auth/cadastro"
               className="inline-block rounded-full bg-white px-8 py-3 text-base font-semibold text-primary-600 hover:bg-primary-50"
             >
               Criar conta gratuita

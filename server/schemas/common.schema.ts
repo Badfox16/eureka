@@ -29,4 +29,9 @@ export const errorSchema = z.object({
 });
 
 // Enums compartilhados
-export const classeSchema = z.enum(['11', '12']).transform(Number);
+export const classeSchema = z.coerce.number().int().refine(
+  (val) => val === 11 || val === 12,
+  {
+    message: "A classe deve ser 11 ou 12",
+  }
+);

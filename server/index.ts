@@ -21,15 +21,15 @@ dotenv.config()
 export const app = express()
 
 // Configuração do CORS
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',') 
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
   : ['http://localhost:3000', 'https://eureka-dashboard.vercel.app']
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     // Permitir requisições sem 'origin' (como apps mobile ou Postman)
     if (!origin) return callback(null, true)
-    
+
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true)
     } else {
@@ -49,7 +49,7 @@ app.use(express.json())
 
 // --- Servir arquivos estáticos da pasta de uploads ---
 // Isso fará com que os arquivos em 'tmp/uploads' sejam acessíveis via '/uploads' na URL
-app.use('/uploads', express.static(path.resolve(__dirname, '..', 'tmp', 'uploads'))); 
+app.use('/uploads', express.static(path.resolve(__dirname, '..', 'tmp', 'uploads')));
 
 // Middleware para tratamento de erros (deve vir após as rotas)
 // app.use(errorHandler)
@@ -74,7 +74,7 @@ app.get('/', (req, res) => {
   res.json({
     message: 'API Eureka - Sistema de Preparação para Exames',
     status: 'online',
-    version: '1.0.0' 
+    version: '1.0.0'
   })
 })
 
@@ -99,6 +99,6 @@ app.use((req, res) => {
 })
 
 app.listen(PORT, async () => {
-    await connectToDatabase()
-    console.log(`🚀 Servidor a correr na porta ${PORT}`)
+  await connectToDatabase()
+  console.log(`🚀 Servidor a correr na porta ${PORT}`)
 })

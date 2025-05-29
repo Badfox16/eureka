@@ -21,6 +21,7 @@ function createError(message: string, statusCode: number, code?: string, errors?
  */
 export const createAvaliacao: RequestHandler = async (req, res, next) => {
   try {
+    // Validar os dados da avaliação
     const avaliacaoData = req.body as CreateAvaliacaoInput;
 
     // Verificar se a disciplina existe
