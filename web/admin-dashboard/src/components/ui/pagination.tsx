@@ -61,7 +61,7 @@ export function Pagination({
     <div className="flex items-center justify-center space-x-2 py-4">
       <Button
         variant="outline"
-        size="icon"
+        size="default"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
       >
@@ -92,7 +92,7 @@ export function Pagination({
       
       <Button
         variant="outline"
-        size="icon"
+        size="default"
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
       >

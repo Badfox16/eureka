@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { disciplinaService } from '@/services/disciplina.service';
 import { 
+  Disciplina,
   CreateDisciplinaInput, 
   UpdateDisciplinaInput 
 } from '@/types/disciplina';
-import { QueryParams } from '@/types/api';
+import { QueryParams, PaginatedResponse } from '@/types/api';
 import { toast } from 'sonner';
 
 // Query key para disciplinas
@@ -12,10 +13,39 @@ const DISCIPLINAS_KEY = 'disciplinas';
 
 // Hook para buscar todas as disciplinas
 export function useDisciplinas(params?: QueryParams) {
-  return useQuery({
+  const hasSearchTerm = params?.search && params.search.length >= 2;
+  
+  return useQuery<PaginatedResponse<Disciplina>>({
     queryKey: [DISCIPLINAS_KEY, params],
-    queryFn: () => disciplinaService.getAll(params),
-    placeholderData: keepPreviousData, // Substitui keepPreviousData
+    queryFn: async () => {
+      try {
+        // Se há um termo de pesquisa válido, use o endpoint de search
+        if (hasSearchTerm && params?.search) {
+          return disciplinaService.search(params.search);
+        }
+        
+        // Não há termo de pesquisa, usar endpoint normal
+        const { search, ...restParams } = params || {};
+        return disciplinaService.getAll(restParams);
+      } catch (error) {
+        console.error("Erro ao buscar disciplinas:", error);
+        // Retorne uma estrutura vazia mas consistente em caso de erro
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            totalPages: 0,
+            currentPage: 1,
+            limit: params?.limit || 10,
+            hasPrevPage: false,
+            hasNextPage: false,
+            prevPage: null,
+            nextPage: null
+          }
+        };
+      }
+    },
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }
@@ -35,7 +65,7 @@ export function useSearchDisciplinas(query: string) {
   return useQuery({
     queryKey: [DISCIPLINAS_KEY, 'search', query],
     queryFn: () => disciplinaService.search(query),
-    enabled: query.length >= 2,
+    enabled: query.length >= 1,
     staleTime: 1000 * 60, // 1 minuto
   });
 }

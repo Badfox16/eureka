@@ -15,7 +15,7 @@ import {
   export function ItemsPerPage({
     value,
     onChange,
-    options = [10, 25, 50, 100],
+    options = [5, 10, 15, 20, 25],
   }: ItemsPerPageProps) {
     return (
       <div className="flex items-center space-x-2">

@@ -4,7 +4,7 @@ import { useState } from "react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Plus, Loader2, Edit, Trash } from "lucide-react"
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -20,11 +20,11 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge"
 import { DisciplinaForm } from "@/components/disciplinas/disciplina-form"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { 
-  useDisciplinas, 
-  useCreateDisciplina, 
-  useUpdateDisciplina, 
-  useDeleteDisciplina 
+import {
+  useDisciplinas,
+  useCreateDisciplina,
+  useUpdateDisciplina,
+  useDeleteDisciplina
 } from "@/hooks/use-disciplinas"
 import { Disciplina } from "@/types/disciplina"
 import { formatDate } from "@/lib/utils"
@@ -33,15 +33,15 @@ import { toast } from "sonner"
 export default function DisciplinasPage() {
   // Estado para paginação e filtros
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(5)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
 
   // Buscar disciplinas com React Query
-  const { 
-    data, 
-    isLoading, 
-    error 
+  const {
+    data,
+    isLoading,
+    error
   } = useDisciplinas({
     page: currentPage,
     limit: itemsPerPage,
@@ -51,7 +51,7 @@ export default function DisciplinasPage() {
 
   // Mutations para operações CRUD
   const createMutation = useCreateDisciplina();
-  const updateMutation = useUpdateDisciplina(); // Sem id
+  const updateMutation = useUpdateDisciplina();
   const deleteMutation = useDeleteDisciplina();
 
   // Filtros disponíveis
@@ -94,10 +94,10 @@ export default function DisciplinasPage() {
   const handleCreateDisciplina = async (formData: { codigo: string; nome: string; descricao: string; ativo: boolean }) => {
     try {
       await createMutation.mutateAsync(formData);
-      toast.success("Disciplina criada com sucesso!");
+      return Promise.resolve();
     } catch (error) {
       console.error("Erro ao criar disciplina:", error);
-      toast.error("Erro ao criar disciplina. Tente novamente.");
+      return Promise.reject(error);
     }
   }
 
@@ -107,32 +107,31 @@ export default function DisciplinasPage() {
         id,
         ...formData
       });
-      toast.success("Disciplina atualizada com sucesso!");
+      return Promise.resolve();
     } catch (error) {
       console.error("Erro ao atualizar disciplina:", error);
-      toast.error("Erro ao atualizar disciplina. Tente novamente.");
+      return Promise.reject(error);
     }
   }
 
   const handleDeleteDisciplina = async (id: string) => {
     try {
       await deleteMutation.mutateAsync(id);
-      toast.success("Disciplina excluída com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir disciplina:", error);
-      toast.error("Erro ao excluir disciplina. Tente novamente.");
+      throw error;
     }
   }
 
   // Renderizar status
   const renderStatusBadge = (ativo: boolean) => {
-    return ativo 
+    return ativo
       ? <Badge variant="success">Ativo</Badge>
       : <Badge variant="secondary">Inativo</Badge>;
   }
 
-  // Disciplinas e paginação
-  const disciplinas = data?.data || [];
+  // Disciplinas e paginação - com validação segura para evitar erros
+  const disciplinas = Array.isArray(data?.data) ? data.data : [];
   const totalItems = data?.pagination?.total || 0;
   const totalPages = data?.pagination?.totalPages || 1;
 
@@ -159,6 +158,7 @@ export default function DisciplinasPage() {
             setSearchQuery(value)
             setCurrentPage(1)
           }}
+          showClearButton={true}
           filters={filters}
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
@@ -224,7 +224,7 @@ export default function DisciplinasPage() {
                           </DropdownMenuItem>
                         }
                         deleteTrigger={
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             asChild
                             className="text-destructive hover:bg-destructive hover:text-white focus:bg-destructive focus:text-white"
                           >
@@ -258,7 +258,7 @@ export default function DisciplinasPage() {
               setCurrentPage(1)
             }}
           />
-          
+
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

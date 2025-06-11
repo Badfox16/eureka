@@ -31,6 +31,7 @@ interface TableToolbarProps {
   onFilterClear: (filterId: string) => void
   itemsTotal: number
   itemsFiltered: number
+  showClearButton?: boolean // Nova propriedade opcional
 }
 
 export function TableToolbar({
@@ -42,6 +43,7 @@ export function TableToolbar({
   onFilterClear,
   itemsTotal,
   itemsFiltered,
+  showClearButton = true // Valor padrão é true para compatibilidade
 }: TableToolbarProps) {
   const activeFilterCount = Object.keys(activeFilters).length
 
@@ -52,16 +54,16 @@ export function TableToolbar({
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              type="search"
+              type="text" // Mudamos de "search" para "text" para evitar o X nativo do navegador
               placeholder="Pesquisar..."
               className="w-full pl-8"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
             />
-            {searchQuery && (
+            {showClearButton && searchQuery && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="default"
                 className="absolute right-0 top-0 h-full"
                 onClick={() => onSearchChange("")}
               >
@@ -152,7 +154,7 @@ export function TableToolbar({
                 <span className="font-medium mr-1">{filter.label}:</span> {label}
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="default"
                   className="ml-1 h-4 w-4 p-0"
                   onClick={() => onFilterClear(filterId)}
                 >

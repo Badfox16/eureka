@@ -42,8 +42,9 @@ class DisciplinaService {
     });
   }
 
-  async search(query: string): Promise<Disciplina[]> {
-    return apiClient<Disciplina[]>(ENDPOINTS.DISCIPLINAS.SEARCH(query));
+  
+  async search(query: string, params?: Omit<QueryParams, 'search'>): Promise<PaginatedResponse<Disciplina>> {
+    return apiClient<PaginatedResponse<Disciplina>>(ENDPOINTS.DISCIPLINAS.SEARCH(query));
   }
 }
 

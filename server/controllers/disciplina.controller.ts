@@ -56,24 +56,28 @@ export const getAllDisciplinas: RequestHandler = async (req, res, next) => {
       .skip((page - 1) * limit)
       .limit(limit);
     
+    // MODIFICADO: Estrutura de resposta consistente
     res.status(200).json({
-      status: 'success',
       data: disciplinas,
-      meta: {
+      pagination: {
         total,
-        page,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
         limit,
-        pages: Math.ceil(total / limit)
+        hasPrevPage: page > 1,
+        hasNextPage: page < Math.ceil(total / limit),
+        prevPage: page > 1 ? page - 1 : null,
+        nextPage: page < Math.ceil(total / limit) ? page + 1 : null
       }
     });
   } catch (error) {
     console.error('Erro ao buscar disciplinas:', error);
     res.status(500).json({
-      status: 'error',
       message: 'Erro ao buscar disciplinas'
     });
   }
 };
+
 
 /**
  * Obtém uma disciplina pelo ID
@@ -211,7 +215,6 @@ export const searchDisciplinas: RequestHandler = async (req, res, next) => {
     
     if (!q || typeof q !== 'string') {
       res.status(400).json({
-        status: 'error',
         message: 'Termo de busca inválido'
       });
       return;
@@ -226,17 +229,25 @@ export const searchDisciplinas: RequestHandler = async (req, res, next) => {
       ]
     });
     
+    const total = disciplinas.length;
+    
+    // MODIFICADO: Estrutura de resposta consistente
     res.status(200).json({
-      status: 'success',
       data: disciplinas,
-      meta: {
-        total: disciplinas.length
+      pagination: {
+        total,
+        totalPages: 1,
+        currentPage: 1,
+        limit: total,
+        hasPrevPage: false,
+        hasNextPage: false,
+        prevPage: null,
+        nextPage: null
       }
     });
   } catch (error) {
     console.error('Erro ao buscar disciplinas:', error);
     res.status(500).json({
-      status: 'error',
       message: 'Erro ao buscar disciplinas'
     });
   }
