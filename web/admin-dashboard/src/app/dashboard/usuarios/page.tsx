@@ -297,8 +297,8 @@ export default function UsuariosPage() {
               <SelectContent>
                 <SelectItem value="5">5 por página</SelectItem>
                 <SelectItem value="10">10 por página</SelectItem>
+                <SelectItem value="15">15 por página</SelectItem>
                 <SelectItem value="20">20 por página</SelectItem>
-                <SelectItem value="50">50 por página</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -40,6 +40,10 @@ class ProvinciaService {
       method: 'DELETE',
     });
   }
+
+  async search(query: string, params?: Omit<QueryParams, 'search'>): Promise<PaginatedResponse<Provincia>> {
+    return apiClient<PaginatedResponse<Provincia>>(ENDPOINTS.PROVINCIAS.SEARCH(query));
+  }
 }
 
 export const provinciaService = new ProvinciaService();

@@ -34,6 +34,7 @@ export const ENDPOINTS = {
   PROVINCIAS: {
     BASE: '/provincias',
     BY_ID: (id: string) => `/provincias/${id}`,
+    SEARCH: (query: string) => `/provincias/search?q=${encodeURIComponent(query)}`,
   },
   ESTUDANTES: {
     BASE: '/estudantes',

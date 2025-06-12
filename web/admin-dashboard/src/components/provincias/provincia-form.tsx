@@ -201,7 +201,6 @@ export function ProvinciaForm({ title, provincia, onSubmit, trigger }: Provincia
                 <SelectItem value="Norte">Norte</SelectItem>
                 <SelectItem value="Centro">Centro</SelectItem>
                 <SelectItem value="Sul">Sul</SelectItem>
-                <SelectItem value="Leste">Leste</SelectItem>
               </SelectContent>
             </Select>
             {errors.regiao && (

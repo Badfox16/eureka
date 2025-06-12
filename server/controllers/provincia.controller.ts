@@ -86,30 +86,45 @@ export const createProvincia: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * Obtém todas as províncias com opção de paginação
+ * Obtém todas as províncias com opção de paginação e filtros
  */
 export const getAllProvincias: RequestHandler = async (req, res, next) => {
   try {
+    // Extrair parâmetros de paginação
     const { page, limit } = paginationSchema.parse({
       page: Number(req.query.page || 1),
       limit: Number(req.query.limit || 10)
     });
 
-    const total = await Provincia.countDocuments();
-    const provincias = await Provincia.find()
+    // Construir filtros dinâmicos com base nos query params
+    const filter: any = {};
+    
+    // Adicionar filtro de região se fornecido
+    if (req.query.regiao) {
+      filter.regiao = req.query.regiao;
+    }
+    
+    // Contar total de documentos que correspondem ao filtro
+    const total = await Provincia.countDocuments(filter);
+    
+    // Buscar províncias com filtros aplicados
+    const provincias = await Provincia.find(filter)
       .sort({ nome: 1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    // Remove 'return'
-    res.status(200).json({ // <<< SEM RETURN AQUI
+    res.status(200).json({
       status: 'success',
       data: provincias,
-      meta: {
+      pagination: { // Mudei para pagination para ficar consistente com o frontend
         total,
-        page,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page,
         limit,
-        pages: Math.ceil(total / limit)
+        hasPrevPage: page > 1,
+        hasNextPage: page < Math.ceil(total / limit),
+        prevPage: page > 1 ? page - 1 : null,
+        nextPage: page < Math.ceil(total / limit) ? page + 1 : null
       }
     });
   } catch (error) {

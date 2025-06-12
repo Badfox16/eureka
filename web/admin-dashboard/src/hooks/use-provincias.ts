@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { provinciaService } from '@/services/provincia.service';
 import { 
+  Provincia,
   CreateProvinciaInput, 
   UpdateProvinciaInput 
 } from '@/types/provincia';
-import { QueryParams } from '@/types/api';
+import { QueryParams, PaginatedResponse } from '@/types/api';
 import { toast } from 'sonner';
 
 // Query key para provincias
@@ -12,9 +13,38 @@ const PROVINCIAS_KEY = 'provincias';
 
 // Hook para buscar todas as provincias
 export function useProvincias(params?: QueryParams) {
-  return useQuery({
+  const hasSearchTerm = params?.search && params.search.length >= 1;
+  
+  return useQuery<PaginatedResponse<Provincia>>({
     queryKey: [PROVINCIAS_KEY, params],
-    queryFn: () => provinciaService.getAll(params),
+    queryFn: async () => {
+      try {
+        // Se há um termo de pesquisa, use a função search
+        if (hasSearchTerm && params?.search) {
+          return provinciaService.search(params.search);
+        }
+        
+        // Não há termo de pesquisa, usar endpoint normal
+        const { search, ...restParams } = params || {};
+        return provinciaService.getAll(restParams);
+      } catch (error) {
+        console.error("Erro ao buscar províncias:", error);
+        // Retorne uma estrutura vazia mas consistente em caso de erro
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            totalPages: 0,
+            currentPage: 1,
+            limit: params?.limit || 10,
+            hasPrevPage: false,
+            hasNextPage: false,
+            prevPage: null,
+            nextPage: null
+          }
+        };
+      }
+    },
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
