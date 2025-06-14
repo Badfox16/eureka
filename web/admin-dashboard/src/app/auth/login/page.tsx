@@ -1,12 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, ControllerRenderProps } from "react-hook-form"
 import { z } from "zod"
 import { Eye, EyeOff } from "lucide-react"
+import { useLogin } from "@/hooks/use-auth"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -29,34 +28,37 @@ import { Input } from "@/components/ui/input"
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
+  const login = useLogin();
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
-      senha: "",
+      password: "",
     },
   });
 
-  async function onSubmit(data: LoginFormValues) {
+  function onSubmit(data: LoginFormValues) {
+    console.log("🔐 Login - Formulário submetido:", data);
+    
     try {
-      // Aqui você faria a chamada para a API de login
-      console.log("Dados de login:", data);
-      
-      // Simula um login bem-sucedido
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
+      login.mutate(data, {
+        onSuccess: (result) => {
+          console.log("✅ Login - Sucesso:", result);
+        },
+        onError: (error) => {
+          console.error("❌ Login - Erro:", error);
+        }
+      });
     } catch (error) {
-      console.error("Erro no login:", error);
+      console.error("💥 Login - Exceção:", error);
     }
   }
 
@@ -75,7 +77,7 @@ export default function LoginPage() {
               <FormField
                 control={form.control}
                 name="email"
-                render={({ field }) => (
+                render={({ field }: { field: ControllerRenderProps<LoginFormValues, 'email'> }) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
@@ -87,8 +89,8 @@ export default function LoginPage() {
               />
               <FormField
                 control={form.control}
-                name="senha"
-                render={({ field }) => (
+                name="password"
+                render={({ field }: { field: ControllerRenderProps<LoginFormValues, 'password'> }) => (
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
@@ -113,8 +115,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Entrar
+              <Button type="submit" className="w-full" disabled={login.isPending}>
+                {login.isPending ? "Entrando..." : "Entrar"}
               </Button>
             </form>
           </Form>

@@ -41,7 +41,7 @@ export async function apiClient<T = any>(
         authHeaders.Authorization = `Bearer ${token}`;
       }
     }
-    
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...fetchOptions,
       headers: {
@@ -54,14 +54,43 @@ export async function apiClient<T = any>(
     
     clearTimeout(timeoutId);
     
-    const data = await response.json().catch(() => ({}));
+    // Log para depuração
+    console.log(`Resposta da API [${response.status}] para ${endpoint}`);
     
+    let data;
+    try {
+      data = await response.json();
+      // Log para ver a estrutura exata dos dados
+      console.log('Dados da resposta:', data);
+    } catch (jsonError) {
+      console.error('Erro ao processar JSON:', jsonError);
+      data = {};
+    }
+
     if (!response.ok) {
-      throw new ApiError(
-        response.status,
-        data.message || `Erro ${response.status}`,
-        data
-      );
+      // Casos especiais para login/autenticação
+      if (endpoint.includes('/auth/login') && response.status === 401) {
+        // Para login, usamos uma mensagem mais amigável
+        throw new ApiError(
+          response.status,
+          data.message || 'Email ou senha inválidos',
+          data
+        );
+      } else if (response.status === 401) {
+        // Para outras rotas, mantemos a mensagem de não autorizado
+        throw new ApiError(
+          response.status,
+          data.message || 'Usuário não autorizado',
+          data
+        );
+      } else {
+        // Para outros erros
+        throw new ApiError(
+          response.status,
+          data.message || `Erro ${response.status}`,
+          data
+        );
+      }
     }
     
     return data as T;

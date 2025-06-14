@@ -1,127 +1,116 @@
 import { z } from 'zod';
-import { baseResourceSchema, classeSchema, objectIdSchema } from './common.schema';
-import { TipoAvaliacao, Trimestre, Epoca, VarianteProva, AreaEstudo } from '../models/avaliacao';
+import { baseResourceSchema, objectIdSchema } from './common.schema';
 
-// Usando os enums do modelo
-export const tipoAvaliacaoSchema = z.nativeEnum(TipoAvaliacao, {
-  errorMap: () => ({ message: 'Tipo de avaliação inválido' })
-});
+// Enums correspondentes aos do modelo
+export const TipoAvaliacaoEnum = z.enum(['AP', 'EXAME']);
+export const TrimestreEnum = z.enum(['1º', '2º', '3º']);
+export const EpocaEnum = z.enum(['1ª', '2ª']);
+export const VarianteProvaEnum = z.enum(['A', 'B', 'C', 'D', 'ÚNICA']);
+export const AreaEstudoEnum = z.enum(['CIÊNCIAS', 'LETRAS', 'GERAL']);
 
-export const trimestreSchema = z.nativeEnum(Trimestre, {
-  errorMap: () => ({ message: 'Trimestre inválido' })
-});
-
-export const epocaSchema = z.nativeEnum(Epoca, {
-  errorMap: () => ({ message: 'Época inválida' })
-});
-
-export const varianteProvaSchema = z.nativeEnum(VarianteProva, {
-  errorMap: () => ({ message: 'Variante de prova inválida' })
-});
-
-export const areaEstudoSchema = z.nativeEnum(AreaEstudo, {
-  errorMap: () => ({ message: 'Área de estudo inválida' })
-});
-
-// Schema base para avaliação
-const avaliacaoBaseSchema = z.object({
-  tipo: tipoAvaliacaoSchema,
-  ano: z.number().int().min(2000, 'Ano deve ser pelo menos 2000').max(new Date().getFullYear() + 1, 'Ano não pode ser mais de um ano no futuro'),
+// Schema base sem validações condicionais
+export const baseAvaliacaoSchema = z.object({
+  tipo: TipoAvaliacaoEnum,
+  ano: z.number()
+    .int()
+    .min(2000, 'O ano deve ser 2000 ou posterior')
+    .max(new Date().getFullYear(), 'O ano não pode ser maior que o ano atual'),
   disciplina: objectIdSchema,
-  classe: classeSchema,
-  titulo: z.string().max(200, 'Título não pode exceder 200 caracteres').optional(),
-  variante: varianteProvaSchema.default(VarianteProva.UNICA),
-  areaEstudo: areaEstudoSchema.default(AreaEstudo.GERAL),
+  trimestre: TrimestreEnum.optional(),
+  provincia: objectIdSchema.optional(),
+  variante: VarianteProvaEnum.default('ÚNICA'),
+  epoca: EpocaEnum.optional(),
+  areaEstudo: AreaEstudoEnum.default('GERAL'),
+  classe: z.number().int().min(10).max(12),
+  titulo: z.string().max(200).optional(),
+  questoes: z.array(objectIdSchema).default([]),
 });
 
-// Schema específico para AP
-const apSchema = avaliacaoBaseSchema.extend({
-  tipo: z.literal(TipoAvaliacao.AP),
-  trimestre: trimestreSchema,
-  provincia: objectIdSchema,
-  epoca: z.undefined().optional(),
-  questoes: z.array(objectIdSchema).optional(),
-});
-
-// Schema específico para EXAME
-const exameSchema = avaliacaoBaseSchema.extend({
-  tipo: z.literal(TipoAvaliacao.EXAME),
-  epoca: epocaSchema,
-  trimestre: z.undefined().optional(),
-  provincia: z.undefined().optional(),
-  questoes: z.array(objectIdSchema).optional(),
-});
-
-// Schema para validar criação de avaliação (união discriminada)
-export const createAvaliacaoSchema = z.discriminatedUnion('tipo', [
-  apSchema,
-  exameSchema,
-]);
+// Schema para validação - usando z.preprocess para validação condicional
+export const createAvaliacaoSchema = z.preprocess(
+  // O preprocess não modifica o tipo do schema, apenas valida
+  (data: any) => {
+    // Validações personalizadas
+    const parsedData = baseAvaliacaoSchema.parse(data);
+    const errors: { path: string[], message: string }[] = [];
+    
+    // Validação para AP
+    if (parsedData.tipo === 'AP') {
+      if (!parsedData.trimestre) {
+        errors.push({
+          path: ['trimestre'],
+          message: 'Trimestre é obrigatório para Avaliações Provinciais'
+        });
+      }
+      
+      if (!parsedData.provincia) {
+        errors.push({
+          path: ['provincia'],
+          message: 'Província é obrigatória para Avaliações Provinciais'
+        });
+      }
+    }
+    
+    // Validação para EXAME
+    if (parsedData.tipo === 'EXAME' && !parsedData.epoca) {
+      errors.push({
+        path: ['epoca'],
+        message: 'Época é obrigatória para Exames'
+      });
+    }
+    
+    // Se houver erros, lançar exceção
+    if (errors.length > 0) {
+      throw new z.ZodError(errors.map(err => ({
+        code: z.ZodIssueCode.custom,
+        path: err.path,
+        message: err.message
+      })));
+    }
+    
+    return data;
+  },
+  // O schema original permanece como um ZodObject
+  baseAvaliacaoSchema
+);
 
 // Schema para validar atualização de avaliação
-export const updateAvaliacaoSchema = z.object({
-  tipo: tipoAvaliacaoSchema.optional(),
-  ano: z.number().int().min(2000).max(new Date().getFullYear() + 1).optional(),
+export const updateAvaliacaoSchema = baseAvaliacaoSchema.partial();
+
+// Schema para filtrar avaliações
+export const filterAvaliacaoSchema = z.object({
+  tipo: TipoAvaliacaoEnum.optional(),
+  ano: z.number().int().optional(),
   disciplina: objectIdSchema.optional(),
-  classe: classeSchema.optional(),
-  trimestre: trimestreSchema.optional(),
+  trimestre: TrimestreEnum.optional(),
   provincia: objectIdSchema.optional(),
-  epoca: epocaSchema.optional(),
-  variante: varianteProvaSchema.optional(),
-  areaEstudo: areaEstudoSchema.optional(),
-  titulo: z.string().max(200).optional(),
-  questoes: z.array(objectIdSchema).optional(),
-}).refine(
-  (data) => {
-    // Se não estiver atualizando o tipo, não precisa validar mais nada
-    if (!data.tipo) return true;
-    
-    // Se estiver atualizando para AP, deve fornecer trimestre ou não fornecer época
-    if (data.tipo === TipoAvaliacao.AP && data.epoca !== undefined) {
-      return false;
-    }
-    
-    // Se estiver atualizando para EXAME, deve fornecer época ou não fornecer trimestre
-    if (data.tipo === TipoAvaliacao.EXAME && data.trimestre !== undefined) {
-      return false;
-    }
-    
-    return true;
-  },
-  {
-    message: "Valores incompatíveis: AP requer trimestre (sem época) e EXAME requer época (sem trimestre)",
-    path: ["tipo"],
-  }
-);
+  variante: VarianteProvaEnum.optional(),
+  epoca: EpocaEnum.optional(),
+  areaEstudo: AreaEstudoEnum.optional(),
+  classe: z.number().int().min(10).max(12).optional(),
+  search: z.string().optional(),
+});
 
 // Schema completo de avaliação
-export const avaliacaoSchema = baseResourceSchema.merge(
-  z.object({
-    tipo: tipoAvaliacaoSchema,
-    ano: z.number().int().min(2000).max(new Date().getFullYear()),
-    disciplina: objectIdSchema,
-    classe: classeSchema,
-    trimestre: trimestreSchema.optional(),
-    provincia: objectIdSchema.optional(),
-    epoca: epocaSchema.optional(),
-    variante: varianteProvaSchema.default(VarianteProva.UNICA),
-    areaEstudo: areaEstudoSchema.default(AreaEstudo.GERAL),
-    titulo: z.string().max(200).optional(),
-    questoes: z.array(objectIdSchema).default([]),
-  })
-).refine(
-  (data) => {
-    if (data.tipo === TipoAvaliacao.AP) return !!data.trimestre && !data.epoca && !!data.provincia;
-    if (data.tipo === TipoAvaliacao.EXAME) return !!data.epoca && !data.trimestre && !data.provincia;
-    return true;
-  },
-  {
-    message: "AP requer trimestre e provincia, EXAME requer apenas época",
-    path: ["tipo"],
-  }
-);
+export const avaliacaoSchema = baseResourceSchema.merge(baseAvaliacaoSchema);
 
-// Tipos derivados do schema
-export type CreateAvaliacaoInput = z.infer<typeof createAvaliacaoSchema>;
-export type UpdateAvaliacaoInput = z.infer<typeof updateAvaliacaoSchema>;
-export type AvaliacaoResponse = z.infer<typeof avaliacaoSchema>;
+// Schema para paginação de avaliações
+export const paginatedAvaliacaoSchema = z.object({
+  data: z.array(avaliacaoSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+});
+
+// Schema para resposta de avaliação individual
+export const avaliacaoResponseSchema = z.object({
+  success: z.boolean(),
+  data: avaliacaoSchema,
+});
+
+// Schema para resposta de listagem de avaliações
+export const avaliacoesResponseSchema = z.object({
+  success: z.boolean(),
+  data: paginatedAvaliacaoSchema,
+});

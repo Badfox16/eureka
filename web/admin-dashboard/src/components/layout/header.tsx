@@ -17,11 +17,11 @@ export default function Header() {
       </div>
       <div className="flex items-center space-x-4">
         <ThemeToggle />
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="default">
           <Bell className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Admin</span>
+          <span className="text-sm font-medium">Nome - Cargo</span>
           <UserCircle className="h-8 w-8" />
         </div>
       </div>
