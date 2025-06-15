@@ -6,15 +6,8 @@ import { Provincia } from '../models/provincia';
 import type { CreateAvaliacaoInput, UpdateAvaliacaoInput } from '../schemas/avaliacao.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import { Error as MongooseError } from 'mongoose';
-
-// Função auxiliar para criar erros personalizados
-function createError(message: string, statusCode: number, code?: string, errors?: any[]) {
-  const error = new Error(message) as any;
-  error.statusCode = statusCode;
-  if (code) error.code = code;
-  if (errors) error.errors = errors;
-  return error;
-}
+import { HttpError } from '../utils/error.utils';
+import { formatResponse } from '../utils/response.utils';
 
 /**
  * Cria uma nova avaliação
@@ -27,22 +20,30 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a disciplina existe
     const disciplina = await Disciplina.findById(avaliacaoData.disciplina);
     if (!disciplina) {
-      throw createError('Disciplina não encontrada', 404);
+      throw new HttpError('Disciplina não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
     }
 
     // Verificar campos específicos com base no tipo
     if (avaliacaoData.tipo === TipoAvaliacao.AP) {
       if (!avaliacaoData.trimestre || !avaliacaoData.provincia) {
-        throw createError('Os campos trimestre e provincia são obrigatórios para avaliações provinciais (AP)', 400);
+        throw new HttpError(
+          'Os campos trimestre e provincia são obrigatórios para avaliações provinciais (AP)', 
+          400, 
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
       // Verificar se a provincia existe
       const provincia = await Provincia.findById(avaliacaoData.provincia);
       if (!provincia) {
-        throw createError('Provincia não encontrada', 404);
+        throw new HttpError('Provincia não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
       }
     } else if (avaliacaoData.tipo === TipoAvaliacao.EXAME) {
       if (!avaliacaoData.epoca) {
-        throw createError('O campo época é obrigatório para exames', 400);
+        throw new HttpError(
+          'O campo época é obrigatório para exames', 
+          400, 
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
     }
 
@@ -74,7 +75,11 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
     try {
       const exists = await Avaliacao.findOne(queryFiltro);
       if (exists) {
-        throw createError('Já existe uma avaliação com as mesmas características', 409, 'DUPLICATE_RESOURCE');
+        throw new HttpError(
+          'Já existe uma avaliação com as mesmas características', 
+          409, 
+          'DUPLICATE_RESOURCE'
+        );
       }
     } catch (error: any) {
       if (error instanceof MongooseError.ValidationError) {
@@ -87,10 +92,7 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
     // Criar a avaliação
     const avaliacao = await Avaliacao.create(avaliacaoData);
 
-    res.status(201).json({
-      status: 'success',
-      data: avaliacao
-    });
+    res.status(201).json(formatResponse(avaliacao));
   } catch (error) {
     next(error);
   }
@@ -141,12 +143,13 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
         if (provincia) {
           filtro.provincia = provincia._id;
         } else {
-          res.status(200).json({
-            status: 'success',
-            data: [],
-            meta: { total: 0, page, limit, pages: 0 }
-          });
-          return; // Retorna undefined implicitamente
+          res.status(200).json(formatResponse([], {
+            total: 0, 
+            page, 
+            limit, 
+            pages: 0
+          }));
+          return;
         }
       } catch (error) {
         return next(error);
@@ -179,17 +182,13 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    res.status(200).json({
-      status: 'success',
-      data: avaliacoes,
-      meta: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-        filtros: Object.keys(filtro).length > 0 ? filtro : 'nenhum'
-      }
-    });
+    res.status(200).json(formatResponse(avaliacoes, {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+      filtros: Object.keys(filtro).length > 0 ? filtro : 'nenhum'
+    }));
   } catch (error) {
     next(error);
   }
@@ -208,13 +207,10 @@ export const getAvaliacaoById: RequestHandler = async (req, res, next) => {
       .populate('questoes');
 
     if (!avaliacao) {
-      throw createError('Avaliação não encontrada', 404);
+      throw new HttpError('Avaliação não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    res.status(200).json({
-      status: 'success',
-      data: avaliacao
-    });
+    res.status(200).json(formatResponse(avaliacao));
   } catch (error) {
     next(error);
   }
@@ -231,14 +227,14 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a avaliação existe
     const avaliacao = await Avaliacao.findById(id);
     if (!avaliacao) {
-      throw createError('Avaliação não encontrada', 404);
+      throw new HttpError('Avaliação não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
     // Se estiver alterando a disciplina, verificar se a nova disciplina existe
     if (updateData.disciplina && updateData.disciplina.toString() !== avaliacao.disciplina.toString()) {
       const disciplina = await Disciplina.findById(updateData.disciplina);
       if (!disciplina) {
-        throw createError('Disciplina não encontrada', 404);
+        throw new HttpError('Disciplina não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
       }
     }
 
@@ -247,23 +243,31 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
 
     if (tipo === TipoAvaliacao.AP) {
       if (!updateData.trimestre && !avaliacao.trimestre) {
-        throw createError('O campo trimestre é obrigatório para avaliações provinciais (AP)', 400);
+        throw new HttpError(
+          'O campo trimestre é obrigatório para avaliações provinciais (AP)', 
+          400, 
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
       if (updateData.provincia && updateData.provincia.toString() !== avaliacao.provincia?.toString()) {
         // Se estiver alterando a provincia, verificar se a nova provincia existe
         const provincia = await Provincia.findById(updateData.provincia);
         if (!provincia) {
-          throw createError('Provincia não encontrada', 404);
+          throw new HttpError('Provincia não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
         }
       } else if (avaliacao.provincia && !updateData.provincia) {
         const provincia = await Provincia.findById(avaliacao.provincia);
         if (!provincia) {
-          throw createError('Provincia não encontrada', 404);
+          throw new HttpError('Provincia não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
         }
       }
     } else if (tipo === TipoAvaliacao.EXAME) {
       if (!updateData.epoca && !avaliacao.epoca) {
-        throw createError('O campo época é obrigatório para exames', 400);
+        throw new HttpError(
+          'O campo época é obrigatório para exames', 
+          400, 
+          'MISSING_REQUIRED_FIELDS'
+        );
       }
     }
 
@@ -308,7 +312,11 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
 
       const exists = await Avaliacao.findOne(queryFiltro);
       if (exists) {
-        throw createError('Já existe uma avaliação com as mesmas características', 409, 'DUPLICATE_RESOURCE');
+        throw new HttpError(
+          'Já existe uma avaliação com as mesmas características', 
+          409, 
+          'DUPLICATE_RESOURCE'
+        );
       }
     }
 
@@ -319,10 +327,7 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       { new: true, runValidators: true }
     ).populate('disciplina').populate('provincia');
 
-    res.status(200).json({
-      status: 'success',
-      data: updatedAvaliacao
-    });
+    res.status(200).json(formatResponse(updatedAvaliacao));
   } catch (error) {
     next(error);
   }
@@ -338,7 +343,7 @@ export const deleteAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a avaliação existe
     const avaliacao = await Avaliacao.findById(id);
     if (!avaliacao) {
-      throw createError('Avaliação não encontrada', 404);
+      throw new HttpError('Avaliação não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
     // Verificar se a avaliação tem questões associadas
@@ -352,10 +357,14 @@ export const deleteAvaliacao: RequestHandler = async (req, res, next) => {
     // Remover a avaliação
     await Avaliacao.findByIdAndDelete(id);
 
-    res.status(200).json({
-      status: 'success',
-      message: `Avaliação removida com sucesso${questoesCount > 0 ? ` (incluindo ${questoesCount} questões)` : ''}`
-    });
+    const message = `Avaliação removida com sucesso${questoesCount > 0 ? 
+      ` (incluindo ${questoesCount} questões)` : ''}`;
+      
+    res.status(200).json(formatResponse(
+      null, 
+      { questoesRemovidas: questoesCount },
+      message
+    ));
   } catch (error) {
     next(error);
   }
@@ -368,15 +377,19 @@ export const searchAvaliacoes: RequestHandler = async (req, res, next) => {
   try {
     const { q } = req.query;
 
-    if (!q || typeof q !== 'string') {
-      throw createError('Termo de busca inválido', 400);
+    if (!q || typeof q !== 'string' || q.trim() === '') {
+      throw new HttpError('Termo de busca inválido', 400, 'INVALID_QUERY_PARAM');
     }
+
+    // Escapar caracteres especiais para regex
+    const searchTerm = q.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(searchTerm, 'i');
 
     // Buscar disciplinas com o termo de busca
     const disciplinas = await Disciplina.find({
       $or: [
-        { nome: { $regex: q, $options: 'i' } },
-        { codigo: { $regex: q, $options: 'i' } }
+        { nome: { $regex: regex } },
+        { codigo: { $regex: regex } }
       ]
     });
 
@@ -388,18 +401,15 @@ export const searchAvaliacoes: RequestHandler = async (req, res, next) => {
       $or: [
         { disciplina: { $in: disciplinaIds } },
         { ano: isNaN(Number(q)) ? -1 : Number(q) },
-        { areaEstudo: { $regex: q, $options: 'i' } },
-        { titulo: { $regex: q, $options: 'i' } }
+        { areaEstudo: { $regex: regex } },
+        { titulo: { $regex: regex } }
       ]
     }).populate('disciplina').populate('provincia');
 
-    res.status(200).json({
-      status: 'success',
-      data: avaliacoes,
-      meta: {
-        total: avaliacoes.length
-      }
-    });
+    res.status(200).json(formatResponse(avaliacoes, {
+      total: avaliacoes.length,
+      searchTerm: q
+    }));
   } catch (error) {
     next(error);
   }
@@ -508,17 +518,16 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
       }
     ]);
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        porTipo: totalPorTipo,
-        porDisciplina: totalPorDisciplina,
-        porAno: totalPorAno,
-        porAreaEstudo: totalPorAreaEstudo,
-        porVariante: totalPorVariante,
-        questoes: questoesPorAvaliacao.length > 0 ? questoesPorAvaliacao[0] : { media: 0, min: 0, max: 0, total: 0 }
-      }
-    });
+    const estatisticas = {
+      porTipo: totalPorTipo,
+      porDisciplina: totalPorDisciplina,
+      porAno: totalPorAno,
+      porAreaEstudo: totalPorAreaEstudo,
+      porVariante: totalPorVariante,
+      questoes: questoesPorAvaliacao.length > 0 ? questoesPorAvaliacao[0] : { media: 0, min: 0, max: 0, total: 0 }
+    };
+
+    res.status(200).json(formatResponse(estatisticas));
   } catch (error) {
     next(error);
   }
