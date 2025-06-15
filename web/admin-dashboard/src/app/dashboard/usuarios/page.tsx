@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import DashboardLayout from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, X, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X } from "lucide-react";
 import { 
   Table,
   TableBody,
@@ -23,89 +23,44 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { UsuarioForm } from "@/components/usuarios/usuario-form";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { TipoUsuario } from "@/types";
-import { toast } from "sonner";
-import { usuarioService } from "@/services/usuario.service";
-import { Usuario } from "@/types/usuario";
+import { Usuario, CreateUsuarioInput, UpdateUsuarioInput } from "@/types/usuario";
+import { TipoUsuario } from "@/types/base";
 import { formatDate } from "@/lib/utils";
 import { hasRole } from "@/lib/auth";
+import { useUsuarios } from "@/hooks/use-usuarios";
 
 export default function UsuariosPage() {
-  // Estado para armazenar usuários
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Estado para paginação e filtros
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [tipoFilter, setTipoFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  // Estado local para o input de busca (para não fazer requisições a cada tecla)
+  const [searchInput, setSearchInput] = useState("");
+  
+  // Usar o hook personalizado para gerenciar usuários
+  const { 
+    usuarios, 
+    isLoading, 
+    error, 
+    pagination, 
+    queryParams,
+    updateQueryParams,
+    resetFilters,
+    createUsuario,
+    updateUsuario,
+    deleteUsuario
+  } = useUsuarios();
 
   // Verificar se o usuário atual tem permissão para editar
   const canEdit = hasRole(TipoUsuario.ADMIN);
 
-  // Carregar usuários da API
-  const loadUsuarios = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await usuarioService.getAll({
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery || undefined,
-        tipo: tipoFilter || undefined,
-        status: statusFilter || undefined
-      });
-      
-      setUsuarios(response.data);
-      setTotalItems(response.pagination.total);
-      setTotalPages(response.pagination.totalPages);
-    } catch (error) {
-      console.error("Erro ao carregar usuários:", error);
-      setError("Não foi possível carregar os usuários. Tente novamente mais tarde.");
-    } finally {
-      setIsLoading(false);
-    }
+  // Aplicar filtro de busca
+  const handleSearch = () => {
+    updateQueryParams({ search: searchInput, page: 1 });
   };
 
-  useEffect(() => {
-    loadUsuarios();
-  }, [currentPage, itemsPerPage]);
-
-  // Aplicar filtros (busca, tipo)
-  const handleApplyFilters = () => {
-    setCurrentPage(1); // Resetar para a primeira página ao filtrar
-    loadUsuarios();
-  };
-
-  // Resetar filtros
-  const resetFilters = () => {
-    setSearchQuery("");
-    setTipoFilter("all");
-    setStatusFilter("all");
-    setCurrentPage(1);
-    loadUsuarios();
-  };
-
-  // Funções CRUD
-  const handleCreateUsuario = async (data: any) => {
-    await usuarioService.create(data);
-    loadUsuarios();
-  };
-
-  const handleUpdateUsuario = async (id: string, data: any) => {
-    await usuarioService.update(id, data);
-    loadUsuarios();
-  };
-
-  const handleDeleteUsuario = async (id: string) => {
-    await usuarioService.delete(id);
-    loadUsuarios();
+  // Aplicar filtro de tipo
+  const handleTipoFilter = (value: string) => {
+    updateQueryParams({ 
+      tipo: value === "all" ? undefined : value,
+      page: 1 
+    });
   };
 
   // Renderizar badge por tipo de usuário
@@ -122,6 +77,39 @@ export default function UsuariosPage() {
     }
   };
 
+  // Lidar com a criação de usuário - com tipo explícito
+  const handleCreateUsuario = async (data: {
+    nome: string;
+    email: string;
+    password?: string;
+    tipo: TipoUsuario;
+  }): Promise<void> => {
+    await createUsuario({
+      nome: data.nome,
+      email: data.email,
+      password: data.password || '', // Garantir que password seja sempre string
+      tipo: data.tipo
+    });
+  };
+
+  // Lidar com a atualização de usuário - com tipo explícito
+  const handleUpdateUsuario = async (usuario: Usuario, data: {
+    nome?: string;
+    email?: string;
+    password?: string;
+    tipo?: TipoUsuario;
+  }): Promise<void> => {
+    await updateUsuario({ 
+      id: usuario._id, 
+      data: {
+        nome: data.nome,
+        email: data.email,
+        password: data.password,
+        tipo: data.tipo
+      } 
+    });
+  };
+
   return (
     <DashboardLayout>
       <h1 className="text-2xl font-bold tracking-tight">Usuários</h1>
@@ -134,19 +122,19 @@ export default function UsuariosPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome ou email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-8 w-full sm:w-[250px]"
-                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
-              {searchQuery && (
+              {searchInput && (
                 <Button
                   variant="ghost"
                   size="sm"
                   className="absolute right-0 top-0 h-9 w-9 p-0"
                   onClick={() => {
-                    setSearchQuery("");
-                    handleApplyFilters();
+                    setSearchInput("");
+                    updateQueryParams({ search: undefined, page: 1 });
                   }}
                 >
                   <X className="h-4 w-4" />
@@ -154,10 +142,10 @@ export default function UsuariosPage() {
               )}
             </div>
             
-            <Select value={tipoFilter} onValueChange={(value) => {
-              setTipoFilter(value === "all" ? "" : value);
-              handleApplyFilters();
-            }}>
+            <Select 
+              value={queryParams.tipo || "all"} 
+              onValueChange={handleTipoFilter}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filtrar por tipo" />
               </SelectTrigger>
@@ -169,7 +157,7 @@ export default function UsuariosPage() {
               </SelectContent>
             </Select>
             
-            {(searchQuery || tipoFilter || statusFilter) && (
+            {(queryParams.search || queryParams.tipo || queryParams.status) && (
               <Button variant="outline" onClick={resetFilters}>
                 Limpar filtros
               </Button>
@@ -197,7 +185,7 @@ export default function UsuariosPage() {
           </div>
         ) : error ? (
           <div className="bg-destructive/10 p-4 rounded-md text-destructive text-center">
-            {error}
+            {String(error)}
           </div>
         ) : (
           <div className="rounded-md border">
@@ -219,7 +207,7 @@ export default function UsuariosPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  usuarios.map((usuario) => (
+                  usuarios.map((usuario: Usuario) => (
                     <TableRow key={usuario._id}>
                       <TableCell className="font-medium">{usuario.nome}</TableCell>
                       <TableCell>{usuario.email}</TableCell>
@@ -231,7 +219,7 @@ export default function UsuariosPage() {
                             <UsuarioForm
                               title="Editar Usuário"
                               usuario={usuario}
-                              onSubmit={(data) => handleUpdateUsuario(usuario._id, data)}
+                              onSubmit={(data) => handleUpdateUsuario(usuario, data)}
                               trigger={
                                 <Button variant="outline" size="default">
                                   <Pencil className="h-4 w-4" />
@@ -241,7 +229,10 @@ export default function UsuariosPage() {
                             <ConfirmDialog
                               title="Excluir Usuário"
                               description={`Tem certeza que deseja excluir o usuário ${usuario.nome}? Esta ação não pode ser desfeita.`}
-                              onConfirm={() => handleDeleteUsuario(usuario._id)}
+                              onConfirm={async () => {
+                                await deleteUsuario(usuario._id);
+                                return; // Retornar void para corresponder à tipagem
+                              }}
                               trigger={
                                 <Button variant="destructive" size="default">
                                   <Trash2 className="h-4 w-4" />
@@ -262,37 +253,43 @@ export default function UsuariosPage() {
         {/* Paginação */}
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Mostrando {usuarios.length} de {totalItems} usuários
+            Mostrando {usuarios.length} de {pagination.total} usuários
           </div>
           
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1 || isLoading}
+              onClick={() => updateQueryParams({ 
+                page: Math.max((queryParams.page || 1) - 1, 1) 
+              })}
+              disabled={(queryParams.page || 1) <= 1 || isLoading}
             >
               Anterior
             </Button>
             <div className="text-sm text-muted-foreground">
-              Página {currentPage} de {totalPages || 1}
+              Página {queryParams.page || 1} de {pagination.totalPages || 1}
             </div>
             <Button
               variant="outline"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages || isLoading}
+              onClick={() => updateQueryParams({ 
+                page: Math.min((queryParams.page || 1) + 1, pagination.totalPages) 
+              })}
+              disabled={(queryParams.page || 1) >= pagination.totalPages || isLoading}
             >
               Próxima
             </Button>
             
             <Select 
-              value={itemsPerPage.toString()} 
+              value={String(queryParams.limit || 10)} 
               onValueChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1);
+                updateQueryParams({
+                  limit: Number(value),
+                  page: 1
+                });
               }}
             >
               <SelectTrigger className="w-[130px]">
-                <SelectValue placeholder={`${itemsPerPage} por página`} />
+                <SelectValue placeholder={`${queryParams.limit || 10} por página`} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="5">5 por página</SelectItem>

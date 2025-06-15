@@ -1,6 +1,5 @@
-import { apiClient, ApiError } from '@/lib/api-client';
-import { ENDPOINTS, buildQueryParams } from '@/config/api';
-import { Usuario } from '@/types/usuario';
+import { apiClient } from '@/lib/api-client';
+import { Usuario, CreateUsuarioInput, UpdateUsuarioInput } from '@/types/usuario';
 import { handleApiError } from '@/lib/error-utils';
 
 interface UsuarioQueryParams {
@@ -11,9 +10,9 @@ interface UsuarioQueryParams {
   status?: string;
 }
 
+// Formato de resposta padronizado para o frontend
 interface PaginatedResponse<T> {
   data: T[];
-  status: string;
   pagination: {
     total: number;
     page: number;
@@ -22,11 +21,40 @@ interface PaginatedResponse<T> {
   }
 }
 
+// Construtor de query string
+const buildQueryString = (params: Record<string, any>): string => {
+  const query = Object.entries(params)
+    .filter(([_, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  
+  return query ? `?${query}` : '';
+};
+
 export const usuarioService = {
   async getAll(params: UsuarioQueryParams = {}): Promise<PaginatedResponse<Usuario>> {
     try {
-      const queryString = buildQueryParams(params);
-      return await apiClient<PaginatedResponse<Usuario>>(`${ENDPOINTS.USERS.BASE}${queryString}`);
+      const queryString = buildQueryString(params);
+      const response = await apiClient<{
+        status: string;
+        data: Usuario[];
+        meta: {
+          total: number;
+          page: number;
+          limit: number;
+          pages: number;
+        }
+      }>(`/usuarios${queryString}`);
+      
+      return {
+        data: response.data,
+        pagination: {
+          total: response.meta.total,
+          page: response.meta.page,
+          limit: response.meta.limit,
+          totalPages: response.meta.pages
+        }
+      };
     } catch (error) {
       handleApiError(error);
       throw error;
@@ -35,7 +63,10 @@ export const usuarioService = {
 
   async getById(id: string): Promise<Usuario> {
     try {
-      const response = await apiClient<{status: string, data: Usuario}>(ENDPOINTS.USERS.BY_ID(id));
+      const response = await apiClient<{
+        status: string;
+        data: Usuario;
+      }>(`/usuarios/${id}`);
       return response.data;
     } catch (error) {
       handleApiError(error);
@@ -43,9 +74,12 @@ export const usuarioService = {
     }
   },
 
-  async create(data: Omit<Usuario, '_id' | 'createdAt' | 'updatedAt'>): Promise<Usuario> {
+  async create(data: CreateUsuarioInput): Promise<Usuario> {
     try {
-      const response = await apiClient<{status: string, data: Usuario}>(ENDPOINTS.USERS.BASE, {
+      const response = await apiClient<{
+        status: string;
+        data: Usuario;
+      }>(`/usuarios`, {
         method: 'POST',
         body: JSON.stringify(data)
       });
@@ -56,9 +90,12 @@ export const usuarioService = {
     }
   },
 
-  async update(id: string, data: Partial<Omit<Usuario, '_id' | 'createdAt' | 'updatedAt'>>): Promise<Usuario> {
+  async update(id: string, data: UpdateUsuarioInput): Promise<Usuario> {
     try {
-      const response = await apiClient<{status: string, data: Usuario}>(ENDPOINTS.USERS.BY_ID(id), {
+      const response = await apiClient<{
+        status: string;
+        data: Usuario;
+      }>(`/usuarios/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data)
       });
@@ -71,7 +108,7 @@ export const usuarioService = {
 
   async delete(id: string): Promise<void> {
     try {
-      await apiClient(ENDPOINTS.USERS.BY_ID(id), {
+      await apiClient(`/usuarios/${id}`, {
         method: 'DELETE'
       });
     } catch (error) {
@@ -82,7 +119,10 @@ export const usuarioService = {
 
   async search(query: string): Promise<Usuario[]> {
     try {
-      const response = await apiClient<{status: string, data: Usuario[]}>(ENDPOINTS.USERS.SEARCH(query));
+      const response = await apiClient<{
+        status: string;
+        data: Usuario[];
+      }>(`/usuarios/search?q=${encodeURIComponent(query)}`);
       return response.data;
     } catch (error) {
       handleApiError(error);

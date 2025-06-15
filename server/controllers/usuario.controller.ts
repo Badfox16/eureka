@@ -98,16 +98,40 @@ export const getProfile: RequestHandler = async (req, res, next) => {
  */
 export const getAllUsuarios: RequestHandler = async (req, res, next) => {
   try {
-    const { page, limit } = paginationSchema.parse({
-      page: Number(req.query.page || 1),
-      limit: Number(req.query.limit || 10)
-    });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const tipo = req.query.tipo as string;
+    const status = req.query.status as string;
     
-    const total = await Usuario.countDocuments();
+    // Construir a query
+    let query: any = {};
     
-    const usuarios = await Usuario.find()
-      .select('-password')
-      .sort({ nome: 1 })
+    // Aplicar filtro de busca
+    if (search) {
+      query.$or = [
+        { nome: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Aplicar filtro de tipo
+    if (tipo) {
+      query.tipo = tipo;
+    }
+    
+    // Aplicar filtro de status
+    if (status) {
+      query.ativo = status === 'ativo';
+    }
+    
+    // Contar o total de resultados para paginação
+    const total = await Usuario.countDocuments(query);
+    
+    // Buscar os usuários com paginação
+    const usuarios = await Usuario.find(query)
+      .select('-senha') // Excluir o campo senha
+      .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
     
@@ -122,11 +146,41 @@ export const getAllUsuarios: RequestHandler = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar usuários'
+    next(error);
+  }
+};
+
+/**
+ * Busca usuários por termo de pesquisa
+ */
+export const searchUsuarios: RequestHandler = async (req, res, next) => {
+  try {
+    const query = req.query.q as string;
+    
+    if (!query) {
+      res.status(400).json({
+        status: 'error',
+        message: 'Termo de busca é obrigatório'
+      });
+      return; // Return sem valor, apenas para encerrar a função
+    }
+    
+    const usuarios = await Usuario.find({
+      $or: [
+        { nome: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } }
+      ]
+    })
+    .select('-senha')
+    .limit(10);
+    
+    res.status(200).json({
+      status: 'success',
+      data: usuarios
     });
+    // Sem return na resposta
+  } catch (error) {
+    next(error);
   }
 };
 

@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -11,6 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -18,79 +23,68 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { TipoUsuario } from '@/types';
-import { toast } from 'sonner';
-import { 
-  createUsuarioSchema, 
-  updateUsuarioSchema 
-} from '@/schemas/usuario.schema';
-import type { z } from 'zod';
-import { Usuario } from '@/types/usuario';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { TipoUsuario } from '@/types/base';
+import { Usuario, CreateUsuarioInput, UpdateUsuarioInput } from '@/types/usuario';
 
-type CreateUsuarioInput = z.infer<typeof createUsuarioSchema>;
-type UpdateUsuarioInput = z.infer<typeof updateUsuarioSchema>;
+// Definir explicitamente o tipo para os dados do formulário
+type FormData = {
+  nome: string;
+  email: string;
+  password?: string;
+  tipo: TipoUsuario;
+};
 
 interface UsuarioFormProps {
-  usuario?: Usuario;
-  onSubmit: (data: CreateUsuarioInput | UpdateUsuarioInput) => Promise<void>;
-  trigger: React.ReactNode;
   title: string;
+  usuario?: Usuario;
+  onSubmit: (data: FormData) => Promise<void>;
+  trigger: React.ReactNode;
 }
 
-export function UsuarioForm({ 
-  usuario, 
-  onSubmit, 
-  trigger, 
-  title
-}: UsuarioFormProps) {
+export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  
-  // Determinar se é um formulário de edição ou criação
-  const isEdit = !!usuario;
-  
-  // Escolher o schema apropriado
-  const schema = isEdit ? updateUsuarioSchema : createUsuarioSchema;
-  
-  const form = useForm<CreateUsuarioInput | UpdateUsuarioInput>({
-    resolver: zodResolver(schema),
-    defaultValues: usuario 
+  const isEditMode = !!usuario;
+
+  // Schema com password opcional para edição
+  const formSchema = z.object({
+    nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
+    email: z.string().email('Email inválido'),
+    password: isEditMode 
+      ? z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional()
+      : z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+    tipo: z.nativeEnum(TipoUsuario, {
+      errorMap: () => ({ message: 'Tipo de usuário inválido' }),
+    }),
+  });
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: isEditMode
       ? {
           nome: usuario.nome,
           email: usuario.email,
-          tipo: usuario.tipo
-        } 
+          tipo: usuario.tipo,
+        }
       : {
           nome: '',
           email: '',
           password: '',
-          tipo: TipoUsuario.NORMAL
+          tipo: TipoUsuario.NORMAL,
         },
   });
 
-  async function handleSubmit(data: CreateUsuarioInput | UpdateUsuarioInput) {
+  const handleSubmit = async (data: FormData) => {
     try {
-      setLoading(true);
       await onSubmit(data);
-      form.reset();
       setOpen(false);
-      toast.success(isEdit ? 'Usuário atualizado com sucesso!' : 'Usuário criado com sucesso!');
+      form.reset();
     } catch (error) {
-      // Não precisamos tratar o erro aqui, pois o handleApiError já faz isso
-      console.error('Erro ao processar formulário:', error);
-    } finally {
-      setLoading(false);
+      // O erro já será tratado pelo hook
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -100,9 +94,6 @@ export function UsuarioForm({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Preencha os dados do usuário nos campos abaixo.
-          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -134,7 +125,7 @@ export function UsuarioForm({
               )}
             />
             
-            {!isEdit && (
+            {!isEditMode && (
               <FormField
                 control={form.control}
                 name="password"
@@ -180,22 +171,12 @@ export function UsuarioForm({
               )}
             />
             
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setOpen(false)}
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={loading}
-              >
-                {loading ? 'Processando...' : isEdit ? 'Atualizar' : 'Criar'}
-              </Button>
-            </DialogFooter>
+            <Button 
+              type="submit" 
+              className="w-full"
+            >
+              {isEditMode ? 'Atualizar Usuário' : 'Criar Usuário'}
+            </Button>
           </form>
         </Form>
       </DialogContent>
