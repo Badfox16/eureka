@@ -1,142 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usuarioService } from '@/services/usuario.service';
 import { Usuario, CreateUsuarioInput, UpdateUsuarioInput } from '@/types/usuario';
-import { toast } from 'sonner';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { TipoUsuario } from '@/types';
 
-interface UsuarioQueryParams {
+interface UseUsuariosOptions {
   page?: number;
   limit?: number;
   search?: string;
   tipo?: string;
-  status?: string;
 }
 
-// Formato de resposta padronizado para o frontend
-interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }
-}
-
-export function useUsuarios() {
+export function useUsuarios(options: UseUsuariosOptions = {}) {
   const queryClient = useQueryClient();
-  const [queryParams, setQueryParams] = useState<UsuarioQueryParams>({
-    page: 1,
-    limit: 10
+  const [queryParams, setQueryParams] = useState({
+    page: options.page || 1,
+    limit: options.limit || 10,
+    search: options.search || '',
+    tipo: options.tipo || ''
+  });
+
+  // Atualizar queryParams quando as opções mudarem
+  useEffect(() => {
+    setQueryParams(prev => ({
+      ...prev,
+      page: options.page || prev.page,
+      limit: options.limit || prev.limit,
+      search: options.search || prev.search,
+      tipo: options.tipo || prev.tipo
+    }));
+  }, [options.page, options.limit, options.search, options.tipo]);
+
+  // Consulta de usuários - usando getAll em vez de getUsuarios
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['usuarios', queryParams],
+    queryFn: () => usuarioService.getAll(queryParams)
+  });
+
+  // Mutações - ajustando para usar os métodos corretos do serviço
+  const createMutation = useMutation({
+    mutationFn: (data: CreateUsuarioInput) => usuarioService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: UpdateUsuarioInput }) => 
+      usuarioService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => usuarioService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    }
   });
 
   // Função para atualizar os parâmetros de consulta
-  const updateQueryParams = (newParams: Partial<UsuarioQueryParams>) => {
+  const updateQueryParams = (newParams: Partial<typeof queryParams>) => {
     setQueryParams(prev => ({ ...prev, ...newParams }));
   };
 
-  // Obter lista de usuários
-  const {
-    data,
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['usuarios', queryParams],
-    queryFn: () => usuarioService.getAll(queryParams),
-  });
-
-  // Criar usuário
-  const createUsuarioMutation = useMutation({
-    mutationFn: (userData: CreateUsuarioInput) => 
-      usuarioService.create(userData),
-    onSuccess: () => {
-      toast.success('Usuário criado com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Erro ao criar usuário: ${error.message || 'Tente novamente mais tarde'}`);
-    }
-  });
-
-  // Atualizar usuário
-  const updateUsuarioMutation = useMutation({
-    mutationFn: ({ id, data }: { 
-      id: string, 
-      data: UpdateUsuarioInput
-    }) => usuarioService.update(id, data),
-    onSuccess: () => {
-      toast.success('Usuário atualizado com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Erro ao atualizar usuário: ${error.message || 'Tente novamente mais tarde'}`);
-    }
-  });
-
-  // Excluir usuário
-  const deleteUsuarioMutation = useMutation({
-    mutationFn: (id: string) => usuarioService.delete(id),
-    onSuccess: () => {
-      toast.success('Usuário excluído com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    },
-    onError: (error: any) => {
-      toast.error(`Erro ao excluir usuário: ${error.message || 'Tente novamente mais tarde'}`);
-    }
-  });
-
-  // Buscar usuário por ID
-  const getUsuario = async (id: string): Promise<Usuario> => {
-    try {
-      return await usuarioService.getById(id);
-    } catch (error: any) {
-      toast.error(`Erro ao buscar detalhes do usuário: ${error.message || 'Tente novamente mais tarde'}`);
-      throw error;
-    }
-  };
-
-  // Função para limpar filtros
+  // Função para resetar filtros
   const resetFilters = () => {
     setQueryParams({
       page: 1,
-      limit: queryParams.limit || 10
+      limit: queryParams.limit,
+      search: '',
+      tipo: ''
     });
   };
 
-  // Dados default para quando data for undefined
-  const defaultData: PaginatedResponse<Usuario> = {
-    data: [],
-    pagination: {
-      total: 0,
-      page: queryParams.page || 1,
-      limit: queryParams.limit || 10,
-      totalPages: 1
-    }
-  };
-
   return {
-    // Dados e estado
     usuarios: data?.data || [],
+    pagination: data?.pagination,
     isLoading,
     error,
-    pagination: data?.pagination || defaultData.pagination,
     queryParams,
-    
-    // Ações
     updateQueryParams,
     resetFilters,
-    refetch,
-    
-    // Mutações
-    createUsuario: createUsuarioMutation.mutateAsync,
-    updateUsuario: updateUsuarioMutation.mutateAsync,
-    deleteUsuario: deleteUsuarioMutation.mutateAsync,
-    getUsuario,
-    
-    // Estados das mutações
-    isCreating: createUsuarioMutation.isPending,
-    isUpdating: updateUsuarioMutation.isPending,
-    isDeleting: deleteUsuarioMutation.isPending
+    createUsuario: createMutation.mutateAsync,
+    updateUsuario: updateMutation.mutateAsync,
+    deleteUsuario: deleteMutation.mutateAsync
   };
 }

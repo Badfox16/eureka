@@ -49,6 +49,7 @@ export interface IAvaliacao extends Document {
     classe: number; // 11 ou 12
     titulo?: string; // Título opcional para melhor identificação da avaliação
     questoes: Types.ObjectId[];
+    ativo: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -115,7 +116,12 @@ const avaliacaoSchema = new Schema<IAvaliacao>(
         questoes: [{ 
             type: Schema.Types.ObjectId, 
             ref: "Questao" 
-        }]
+        }],
+        ativo: {
+            type: Boolean,
+            required: true,
+            default: true
+        },
     },
     {
         timestamps: true

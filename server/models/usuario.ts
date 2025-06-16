@@ -12,6 +12,7 @@ export interface IUsuario extends Document {
     email: string;
     password: string;
     tipo: TipoUsuario;
+    ativo: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,7 +27,12 @@ const usuarioSchema = new Schema<IUsuario>(
             enum: Object.values(TipoUsuario),
             default: TipoUsuario.NORMAL,
             required: true 
-        }
+        },
+        ativo: {
+            type: Boolean,
+            required: true,
+            default: true
+        },
     },
     {
         timestamps: true,
