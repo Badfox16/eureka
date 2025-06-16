@@ -1,10 +1,22 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus } from "lucide-react"
+import { 
+  Plus, 
+  Loader2, 
+  Edit, 
+  Eye, 
+  Trash2,
+  FileText,
+  BookOpen, 
+  Calendar, 
+  GraduationCap 
+} from "lucide-react"
 import { 
   Table,
   TableBody,
@@ -17,214 +29,238 @@ import { TableToolbar } from "@/components/ui/table-toolbar"
 import { Pagination } from "@/components/ui/pagination"
 import { ItemsPerPage } from "@/components/ui/items-per-page"
 import { TableRowActions } from "@/components/ui/table-row-actions"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { 
+  useAvaliacoes, 
+  useCreateAvaliacao, 
+  useUpdateAvaliacao, 
+  useDeleteAvaliacao 
+} from "@/hooks/use-avaliacoes"
+import { useDisciplinas } from "@/hooks/use-disciplinas"
+import { 
+  TipoAvaliacao, 
+  Epoca, 
+  Trimestre,
+  VarianteProva,
+  AreaEstudo,
+  Avaliacao
+} from "@/types/avaliacao"
+import { AvaliacaoForm } from "@/components/avaliacoes/avaliacao-form"
+import { Disciplina } from "@/types/disciplina"
 
 export default function AvaliacoesPage() {
-  // Dados de exemplo que seriam carregados do backend
-  const allAvaliacoes = [
-    // Seus 5 exemplos existentes, mais outros para testar a paginação
-    { 
-      id: 1, 
-      titulo: "Exame Nacional de Matemática", 
-      disciplina: "Matemática", 
-      ano: 2024, 
-      tipo: "Exame Nacional", 
-      classe: 12, 
-      epoca: "1ª Época" 
-    },
-    { 
-      id: 2, 
-      titulo: "Avaliação Provincial de Física", 
-      disciplina: "Física", 
-      ano: 2024, 
-      tipo: "Avaliação Provincial", 
-      classe: 12, 
-      provincia: "Luanda",
-      trimestre: "2º Trimestre" 
-    },
-    { 
-      id: 3, 
-      titulo: "Exame Nacional de Química", 
-      disciplina: "Química", 
-      ano: 2023, 
-      tipo: "Exame Nacional", 
-      classe: 12, 
-      epoca: "2ª Época" 
-    },
-    { 
-      id: 4, 
-      titulo: "Avaliação Provincial de História", 
-      disciplina: "História", 
-      ano: 2024, 
-      tipo: "Avaliação Provincial", 
-      classe: 11, 
-      provincia: "Benguela",
-      trimestre: "1º Trimestre" 
-    },
-    { 
-      id: 5, 
-      titulo: "Exame Nacional de Biologia", 
-      disciplina: "Biologia", 
-      ano: 2023, 
-      tipo: "Exame Nacional", 
-      classe: 12,
-      epoca: "1ª Época" 
-    },
-    // Adicione mais exemplos para testar paginação
-    { 
-      id: 6, 
-      titulo: "Avaliação Provincial de Geografia", 
-      disciplina: "Geografia", 
-      ano: 2024, 
-      tipo: "Avaliação Provincial", 
-      classe: 10, 
-      provincia: "Huambo",
-      trimestre: "3º Trimestre" 
-    },
-    { 
-      id: 7, 
-      titulo: "Exame Nacional de Português", 
-      disciplina: "Português", 
-      ano: 2024, 
-      tipo: "Exame Nacional", 
-      classe: 12, 
-      epoca: "1ª Época" 
-    },
-    // adicione mais conforme necessário...
-  ]
-
-  // Estado para a tabela
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(5)
-  const [searchQuery, setSearchQuery] = useState("")
+  const router = useRouter();
+  
+  // Estado para paginação e filtros
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
+  
+  // Estado para os parâmetros de consulta
+  const [queryParams, setQueryParams] = useState({
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchQuery || undefined,
+    tipo: activeFilters["tipo"],
+    disciplina: activeFilters["disciplina"],
+    ano: activeFilters["ano"] ? parseInt(activeFilters["ano"]) : undefined,
+    classe: activeFilters["classe"] ? parseInt(activeFilters["classe"]) : undefined
+  });
+
+  // Carregar disciplinas para os filtros
+  const { 
+    data: disciplinasData,
+    isLoading: isLoadingDisciplinas 
+  } = useDisciplinas();
+  
+  const disciplinas = disciplinasData?.data || [];
+
+  // Usar o hook personalizado para gerenciar avaliações
+  const { 
+    avaliacoes, 
+    pagination, 
+    isLoading, 
+    error,
+    refetch
+  } = useAvaliacoes(queryParams);
+
+  // Hooks de mutação
+  const createAvaliacaoMutation = useCreateAvaliacao();
+  const updateAvaliacaoMutation = useUpdateAvaliacao();
+  const deleteAvaliacaoMutation = useDeleteAvaliacao();
+
+  // Atualizar os parâmetros de consulta sempre que as dependências mudarem
+  useEffect(() => {
+    setQueryParams({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery || undefined,
+      tipo: activeFilters["tipo"],
+      disciplina: activeFilters["disciplina"],
+      ano: activeFilters["ano"] ? parseInt(activeFilters["ano"]) : undefined,
+      classe: activeFilters["classe"] ? parseInt(activeFilters["classe"]) : undefined
+    });
+  }, [currentPage, itemsPerPage, searchQuery, activeFilters]);
+
+  // Gerar opções de ano (últimos 5 anos)
+  const getAnosOptions = () => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, i) => {
+      const year = currentYear - i;
+      return { value: year.toString(), label: year.toString() };
+    });
+  };
 
   // Filtros disponíveis
   const filters = [
     {
-      id: "disciplina",
-      label: "Disciplina",
-      value: activeFilters["disciplina"] || "",
-      options: [
-        { value: "Matemática", label: "Matemática" },
-        { value: "Física", label: "Física" },
-        { value: "Química", label: "Química" },
-        { value: "Biologia", label: "Biologia" },
-        { value: "História", label: "História" },
-        { value: "Geografia", label: "Geografia" },
-        { value: "Português", label: "Português" },
-      ]
-    },
-    {
       id: "tipo",
       label: "Tipo",
       value: activeFilters["tipo"] || "",
+      icon: <FileText className="h-4 w-4" />,
       options: [
-        { value: "Exame Nacional", label: "Exame Nacional" },
-        { value: "Avaliação Provincial", label: "Avaliação Provincial" },
+        { value: TipoAvaliacao.EXAME, label: "Exame Nacional" },
+        { value: TipoAvaliacao.AP, label: "Avaliação Provincial" }
       ]
+    },
+    {
+      id: "disciplina",
+      label: "Disciplina",
+      value: activeFilters["disciplina"] || "",
+      icon: <BookOpen className="h-4 w-4" />,
+      options: isLoadingDisciplinas
+        ? [{ value: "", label: "Carregando..." }]
+        : disciplinas.map((d: Disciplina) => ({
+            value: d._id,
+            label: d.nome
+          }))
     },
     {
       id: "ano",
       label: "Ano",
       value: activeFilters["ano"] || "",
-      options: [
-        { value: "2024", label: "2024" },
-        { value: "2023", label: "2023" },
-        { value: "2022", label: "2022" },
-      ]
+      icon: <Calendar className="h-4 w-4" />,
+      options: getAnosOptions()
     },
     {
       id: "classe",
       label: "Classe",
       value: activeFilters["classe"] || "",
+      icon: <GraduationCap className="h-4 w-4" />,
       options: [
         { value: "10", label: "10ª" },
         { value: "11", label: "11ª" },
-        { value: "12", label: "12ª" },
+        { value: "12", label: "12ª" }
       ]
     }
-  ]
-
-  // Aplicar filtros aos dados
-  const filteredAvaliacoes = useMemo(() => {
-    return allAvaliacoes.filter((avaliacao) => {
-      // Filtro de pesquisa em múltiplos campos
-      const matchesSearch = searchQuery
-        ? avaliacao.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          avaliacao.disciplina.toLowerCase().includes(searchQuery.toLowerCase())
-        : true
-
-      // Filtros específicos
-      const matchesDisciplina = activeFilters["disciplina"]
-        ? avaliacao.disciplina === activeFilters["disciplina"]
-        : true
-
-      const matchesTipo = activeFilters["tipo"]
-        ? avaliacao.tipo === activeFilters["tipo"]
-        : true
-
-      const matchesAno = activeFilters["ano"]
-        ? avaliacao.ano.toString() === activeFilters["ano"]
-        : true
-
-      const matchesClasse = activeFilters["classe"]
-        ? avaliacao.classe.toString() === activeFilters["classe"]
-        : true
-
-      return matchesSearch && matchesDisciplina && matchesTipo && matchesAno && matchesClasse
-    })
-  }, [allAvaliacoes, searchQuery, activeFilters])
-
-  // Paginação
-  const paginatedAvaliacoes = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredAvaliacoes.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredAvaliacoes, currentPage, itemsPerPage])
-
-  // Total de páginas
-  const totalPages = Math.ceil(filteredAvaliacoes.length / itemsPerPage)
+  ];
 
   // Funções para manipular filtros
   const handleFilterChange = (filterId: string, value: string) => {
     setActiveFilters((prev) => ({
       ...prev,
       [filterId]: value,
-    }))
-    setCurrentPage(1) // Resetar para primeira página ao filtrar
+    }));
+    setCurrentPage(1); // Resetar para primeira página ao filtrar
   }
 
-  const handleFilterClear = (filterId: string) => {
-    setActiveFilters((prev) => {
-      const newFilters = { ...prev }
-      delete newFilters[filterId]
-      return newFilters
-    })
-    setCurrentPage(1)
+const handleFilterClear = (filterId: string) => {
+  setActiveFilters((prev) => {
+    const newFilters = { ...prev };
+    delete newFilters[filterId]; 
+    return newFilters;
+  });
+  setCurrentPage(1); 
+};
+  // Funções para paginação
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   }
+
+  const handleItemsPerPageChange = (limit: number) => {
+    setItemsPerPage(limit);
+    setCurrentPage(1);
+  }
+
+  // Funções para busca
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  }
+
+  // Funções para manipulação CRUD
+  const handleCreateAvaliacao = async (data: any) => {
+    try {
+      await createAvaliacaoMutation.mutateAsync(data);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  const handleUpdateAvaliacao = async (id: string, data: any) => {
+    try {
+      await updateAvaliacaoMutation.mutateAsync({ id, data });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  const handleDeleteAvaliacao = async (id: string) => {
+    try {
+      await deleteAvaliacaoMutation.mutateAsync(id);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Funções para renderização
+  const renderTipoBadge = (tipo: TipoAvaliacao) => {
+    return tipo === TipoAvaliacao.EXAME
+      ? <Badge variant="default">Exame Nacional</Badge>
+      : <Badge variant="outline">Avaliação Provincial</Badge>
+  }
+
+  const getDisciplinaNome = (id: string) => {
+    if (isLoadingDisciplinas) return "Carregando...";
+    const disciplina = disciplinas.find((d: Disciplina) => d._id === id);
+    return disciplina ? disciplina.nome : "Disciplina não encontrada";
+  }
+
+  // Obter valores de paginação
+  const totalItems = pagination?.total || 0;
+  const totalPages = pagination?.totalPages || 1;
 
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Avaliações</h1>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Avaliação
-        </Button>
+        <AvaliacaoForm
+          onSubmit={handleCreateAvaliacao}
+          trigger={
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Avaliação
+            </Button>
+          }
+        />
       </div>
 
       <div className="space-y-4">
         <TableToolbar
           searchQuery={searchQuery}
-          onSearchChange={(value) => {
-            setSearchQuery(value)
-            setCurrentPage(1)
-          }}
+          onSearchChange={handleSearch}
+          showClearButton={true}
           filters={filters}
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
           onFilterClear={handleFilterClear}
-          itemsTotal={allAvaliacoes.length}
-          itemsFiltered={filteredAvaliacoes.length}
+          itemsTotal={totalItems}
+          itemsFiltered={avaliacoes.length}
         />
 
         <div className="rounded-md border">
@@ -240,33 +276,100 @@ export default function AvaliacoesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedAvaliacoes.length > 0 ? (
-                paginatedAvaliacoes.map((avaliacao) => (
-                  <TableRow key={avaliacao.id}>
-                    <TableCell className="font-medium">{avaliacao.titulo}</TableCell>
-                    <TableCell>{avaliacao.disciplina}</TableCell>
-                    <TableCell>{avaliacao.ano}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant={avaliacao.tipo === "Exame Nacional" ? "default" : "outline"}>
-                        {avaliacao.tipo}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{avaliacao.classe}ª</TableCell>
-                    <TableCell className="text-right">
-                      <TableRowActions
-                        onView={() => console.log(`Visualizar ${avaliacao.titulo}`)}
-                        onEdit={() => console.log(`Editar ${avaliacao.titulo}`)}
-                        onDelete={() => console.log(`Excluir ${avaliacao.titulo}`)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <div className="flex justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-destructive">
+                    Erro ao carregar avaliações. Tente novamente.
+                  </TableCell>
+                </TableRow>
+              ) : avaliacoes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
                     Nenhuma avaliação encontrada.
                   </TableCell>
                 </TableRow>
+              ) : (
+                avaliacoes.map((avaliacao: Avaliacao) => {
+                  // Determinar o título de exibição - usar o título definido ou gerar um automático
+                  const disciplinaNome = typeof avaliacao.disciplina === 'object' && avaliacao.disciplina
+                    ? (avaliacao.disciplina as any).nome 
+                    : getDisciplinaNome(avaliacao.disciplina as string);
+                  
+                  const displayTitle = avaliacao.titulo || 
+                    `${avaliacao.tipo === TipoAvaliacao.EXAME ? 'Exame' : 'AP'} de ${disciplinaNome} - ${avaliacao.ano} ${
+                      avaliacao.tipo === TipoAvaliacao.EXAME 
+                        ? `(${avaliacao.epoca} Época)` 
+                        : `(${avaliacao.trimestre} Trimestre)`
+                    }`;
+                  
+                  return (
+                    <TableRow key={avaliacao._id}>
+                      <TableCell className="font-medium">
+                        <Link href={`/dashboard/avaliacoes/${avaliacao._id}`} className="hover:underline">
+                          {displayTitle}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{disciplinaNome}</TableCell>
+                      <TableCell>{avaliacao.ano}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {renderTipoBadge(avaliacao.tipo as TipoAvaliacao)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{avaliacao.classe}ª</TableCell>
+                      <TableCell className="text-right">
+                        <TableRowActions
+                          editTrigger={
+                            <DropdownMenuItem asChild>
+                              <AvaliacaoForm
+                                avaliacao={avaliacao}
+                                onSubmit={(data) => handleUpdateAvaliacao(avaliacao._id, data)}
+                                trigger={
+                                  <button className="w-full text-left flex items-center">
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Editar</span>
+                                  </button>
+                                }
+                              />
+                            </DropdownMenuItem>
+                          }
+                          viewTrigger={
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/avaliacoes/${avaliacao._id}`} className="w-full flex items-center">
+                                <Eye className="mr-2 h-4 w-4" />
+                                <span>Ver Detalhes</span>
+                              </Link>
+                            </DropdownMenuItem>
+                          }
+                          deleteTrigger={
+                            <DropdownMenuItem asChild className="text-destructive hover:bg-destructive hover:text-white focus:bg-destructive focus:text-white">
+                              <ConfirmDialog
+                                title="Excluir Avaliação"
+                                description={`Tem certeza que deseja excluir a avaliação "${displayTitle}"? Esta ação não pode ser desfeita.`}
+                                onConfirm={() => {
+                                  handleDeleteAvaliacao(avaliacao._id);
+                                  return; // Retorna void para atender à tipagem
+                                }}
+                                trigger={
+                                  <button className="w-full text-left flex items-center">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Excluir</span>
+                                  </button>
+                                }
+                              />
+                            </DropdownMenuItem>
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
@@ -275,16 +378,13 @@ export default function AvaliacoesPage() {
         <div className="flex items-center justify-between">
           <ItemsPerPage
             value={itemsPerPage}
-            onChange={(value) => {
-              setItemsPerPage(value)
-              setCurrentPage(1)
-            }}
+            onChange={handleItemsPerPageChange}
           />
           
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
           />
         </div>
       </div>

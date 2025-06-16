@@ -17,6 +17,8 @@ export type QuestaoModel = z.infer<typeof questaoSchema>;
 
 // Interfaces adicionais específicas para a UI
 export interface Questao extends BaseModel {
+  numero?: number;          
+  valor?: number;  
   enunciado: string;
   alternativas: Alternativa[];
   disciplina: string | Disciplina;
