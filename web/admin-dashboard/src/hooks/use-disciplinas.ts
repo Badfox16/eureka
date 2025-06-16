@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { disciplinaService } from '@/services/disciplina.service';
 import { 
   Disciplina,
-  CreateDisciplinaInput, 
-  UpdateDisciplinaInput 
+  CreateDisciplinaInput, // Adicionar importação
+  UpdateDisciplinaInput  // Adicionar importação
 } from '@/types/disciplina';
-import { QueryParams, PaginatedResponse } from '@/types/api';
+import { ApiResponse, QueryParams } from '@/types/api'; // Adicionar QueryParams
 import { toast } from 'sonner';
 
 // Query key para disciplinas
@@ -13,41 +13,23 @@ const DISCIPLINAS_KEY = 'disciplinas';
 
 // Hook para buscar todas as disciplinas
 export function useDisciplinas(params?: QueryParams) {
-  const hasSearchTerm = params?.search && params.search.length >= 2;
-  
-  return useQuery<PaginatedResponse<Disciplina>>({
-    queryKey: [DISCIPLINAS_KEY, params],
-    queryFn: async () => {
-      try {
-        // Se há um termo de pesquisa válido, use o endpoint de search
-        if (hasSearchTerm && params?.search) {
-          return disciplinaService.search(params.search);
-        }
-        
-        // Não há termo de pesquisa, usar endpoint normal
-        const { search, ...restParams } = params || {};
-        return disciplinaService.getAll(restParams);
-      } catch (error) {
-        console.error("Erro ao buscar disciplinas:", error);
-        // Retorne uma estrutura vazia mas consistente em caso de erro
-        return {
-          data: [],
-          pagination: {
-            total: 0,
-            totalPages: 0,
-            currentPage: 1,
-            limit: params?.limit || 10,
-            hasPrevPage: false,
-            hasNextPage: false,
-            prevPage: null,
-            nextPage: null
-          }
-        };
-      }
-    },
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+  const {
+    data,
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['disciplinas', params],
+    queryFn: () => disciplinaService.getAll(params),
+    staleTime: 1000 * 60 * 5 // 5 minutos
   });
+
+  return {
+    data, // Retornar o objeto de resposta completo para usar com ApiResponse<Disciplina[]>
+    isLoading,
+    error,
+    refetch
+  };
 }
 
 // Hook para buscar uma disciplina por ID

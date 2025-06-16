@@ -31,11 +31,11 @@ export enum Epoca {
 }
 
 export enum VarianteProva {
+  UNICA = "UNICA",
   A = "A",
   B = "B",
   C = "C",
-  D = "D",
-  UNICA = "ÚNICA" // Para provas sem variantes
+  D = "D"
 }
 
 export enum AreaEstudo {

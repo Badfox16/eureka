@@ -46,8 +46,9 @@ import {
   AreaEstudo,
   Avaliacao
 } from "@/types/avaliacao"
-import { AvaliacaoForm } from "@/components/avaliacoes/avaliacao-form"
+import { ApiResponse } from "@/types/api" // Importar o tipo da API
 import { Disciplina } from "@/types/disciplina"
+import { AvaliacaoForm } from "@/components/avaliacoes/avaliacao-form"
 
 export default function AvaliacoesPage() {
   const router = useRouter();
@@ -75,16 +76,22 @@ export default function AvaliacoesPage() {
     isLoading: isLoadingDisciplinas 
   } = useDisciplinas();
   
-  const disciplinas = disciplinasData?.data || [];
+  // Usar o tipo correto para a resposta da API
+  const disciplinasResponse = disciplinasData as ApiResponse<Disciplina[]>;
+  const disciplinas = disciplinasResponse?.data || [];
 
   // Usar o hook personalizado para gerenciar avaliações
   const { 
-    avaliacoes, 
-    pagination, 
+    data,
     isLoading, 
     error,
     refetch
   } = useAvaliacoes(queryParams);
+
+  // Extrair dados da resposta da API
+  const apiResponse = data as ApiResponse<Avaliacao[]>;
+  const avaliacoes = apiResponse?.data || [];
+  const pagination = apiResponse?.pagination;
 
   // Hooks de mutação
   const createAvaliacaoMutation = useCreateAvaliacao();
@@ -232,7 +239,7 @@ const handleFilterClear = (filterId: string) => {
   }
 
   // Obter valores de paginação
-  const totalItems = pagination?.total || 0;
+  const totalItems = pagination?.totalItems || 0;
   const totalPages = pagination?.totalPages || 1;
 
   return (
@@ -386,6 +393,10 @@ const handleFilterClear = (filterId: string) => {
             totalPages={totalPages}
             onPageChange={handlePageChange}
           />
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Mostrando {avaliacoes.length} de {pagination?.totalItems || 0} avaliações
         </div>
       </div>
     </DashboardLayout>

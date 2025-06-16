@@ -2,26 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { avaliacaoService } from '@/services/avaliacao.service';
 import { 
   Avaliacao, 
-  CreateAvaliacaoInput, 
-  UpdateAvaliacaoInput
+  CreateAvaliacaoInput, // Adicionar importação
+  UpdateAvaliacaoInput  // Adicionar importação
 } from '@/types/avaliacao';
+import { ApiResponse, QueryParams } from '@/types/api'; // Modificar para usar QueryParams da API
 import { toast } from 'sonner';
-
-// Interface para parâmetros de consulta
-interface QueryParams {
-  page?: number;
-  limit?: number;
-  tipo?: string;
-  disciplina?: string;
-  ano?: number;
-  classe?: number;
-  trimestre?: string;
-  provincia?: string;
-  epoca?: string;
-  variante?: string;
-  areaEstudo?: string;
-  search?: string;
-}
 
 /**
  * Hook para listar avaliações com filtros e paginação
@@ -38,13 +23,15 @@ export function useAvaliacoes(params?: QueryParams) {
     staleTime: 1000 * 60 * 5 // 5 minutos
   });
 
+  const apiResponse = data as ApiResponse<Avaliacao[]>;
+
   return {
-    data,
+    data, // Retornar o objeto de resposta completo
+    avaliacoes: apiResponse?.data || [],
+    pagination: apiResponse?.pagination,
     isLoading,
     error,
-    refetch,
-    avaliacoes: data?.data || [],
-    pagination: data?.pagination
+    refetch
   };
 }
 
@@ -59,8 +46,9 @@ export function useAvaliacao(id: string) {
     staleTime: 1000 * 60 * 5 // 5 minutos
   });
 
+  // Extrair o objeto avaliação corretamente da resposta
   return {
-    avaliacao: data,
+    avaliacao: (data as ApiResponse<Avaliacao>)?.data,
     isLoading,
     error
   };

@@ -27,6 +27,7 @@ import {
   useDeleteDisciplina
 } from "@/hooks/use-disciplinas"
 import { Disciplina } from "@/types/disciplina"
+import { ApiResponse } from "@/types/api" // Importar tipo da API
 import { formatDate } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -56,11 +57,6 @@ export default function DisciplinasPage() {
 
   // Filtros disponíveis
   const filters = [
-    {
-      id: "codigo",
-      label: "Código",
-      value: activeFilters["codigo"] || "",
-    },
     {
       id: "status",
       label: "Status",
@@ -130,10 +126,13 @@ export default function DisciplinasPage() {
       : <Badge variant="secondary">Inativo</Badge>;
   }
 
-  // Disciplinas e paginação - com validação segura para evitar erros
-  const disciplinas = Array.isArray(data?.data) ? data.data : [];
-  const totalItems = data?.pagination?.total || 0;
-  const totalPages = data?.pagination?.totalPages || 1;
+  // Usar o tipo correto para a resposta da API
+  const apiResponse = data as ApiResponse<Disciplina[]>;
+  
+  // Disciplinas e paginação
+  const disciplinas = apiResponse?.data || [];
+  const totalItems = apiResponse?.pagination?.totalItems || 0;
+  const totalPages = apiResponse?.pagination?.totalPages || 1;
 
   return (
     <DashboardLayout>

@@ -1,11 +1,17 @@
 import { apiClient } from '@/lib/api-client';
 import { ENDPOINTS, buildQueryParams } from '@/config/api';
-import { 
-  Avaliacao, 
-  CreateAvaliacaoInput, 
-  UpdateAvaliacaoInput 
-} from '@/types/avaliacao';
-import { PaginatedResponse } from '@/types/api';
+import { Avaliacao, CreateAvaliacaoInput, UpdateAvaliacaoInput } from '@/types/avaliacao';
+
+interface ApiResponse<T> {
+  status: string;
+  data: T;
+  pagination?: {
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+  };
+}
 
 // Interface para parâmetros de consulta
 interface QueryParams {
@@ -27,16 +33,16 @@ class AvaliacaoService {
   /**
    * Obter todas as avaliações com paginação e filtros
    */
-  async getAll(params?: QueryParams): Promise<PaginatedResponse<Avaliacao>> {
+  async getAll(params?: QueryParams): Promise<ApiResponse<Avaliacao[]>> {
     const queryString = buildQueryParams(params || {});
-    return apiClient<PaginatedResponse<Avaliacao>>(`${ENDPOINTS.AVALIACOES.BASE}${queryString}`);
+    return apiClient<ApiResponse<Avaliacao[]>>(`${ENDPOINTS.AVALIACOES.BASE}${queryString}`);
   }
 
   /**
    * Obter uma avaliação por ID
    */
-  async getById(id: string): Promise<Avaliacao> {
-    return apiClient<Avaliacao>(ENDPOINTS.AVALIACOES.BY_ID(id));
+  async getById(id: string): Promise<ApiResponse<Avaliacao>> {
+    return apiClient<ApiResponse<Avaliacao>>(ENDPOINTS.AVALIACOES.BY_ID(id));
   }
 
   /**

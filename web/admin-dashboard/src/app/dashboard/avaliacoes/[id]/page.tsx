@@ -24,6 +24,7 @@ import { AvaliacaoForm } from '@/components/avaliacoes/avaliacao-form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { TipoAvaliacao, Trimestre, Epoca, VarianteProva, AreaEstudo } from '@/types/avaliacao'
+import { Questao } from '@/types/questao';
 
 export default function AvaliacaoDetalhesPage() {
   const params = useParams()
@@ -63,23 +64,27 @@ export default function AvaliacaoDetalhesPage() {
 
   // Funções auxiliares para renderização
   const getDisciplinaNome = () => {
-    if (!avaliacao) return ''
-    if (typeof avaliacao.disciplina === 'object' && avaliacao.disciplina) {
-      return (avaliacao.disciplina as any).nome
+    if (!avaliacao?.disciplina) return 'Disciplina não definida';
+    
+    // A disciplina já vem como objeto
+    if (typeof avaliacao.disciplina === 'object') {
+      return avaliacao.disciplina.nome || 'Nome não disponível';
     }
     
-    const disciplina = disciplinasData?.data.find(d => d._id === avaliacao.disciplina)
-    return disciplina ? disciplina.nome : 'Disciplina não encontrada'
+    // Caso venha como ID (improvável neste caso)
+    return 'Disciplina ID: ' + avaliacao.disciplina;
   }
 
   const getProvinciaNome = () => {
-    if (!avaliacao || !avaliacao.provincia) return null
+    if (!avaliacao?.provincia) return null;
+    
+    // A província já vem como objeto
     if (typeof avaliacao.provincia === 'object') {
-      return (avaliacao.provincia as any).nome
+      return avaliacao.provincia.nome || 'Nome não disponível';
     }
     
-    const provincia = provinciasData?.data.find(p => p._id === avaliacao.provincia)
-    return provincia ? provincia.nome : 'Província não encontrada'
+    // Caso venha como ID (improvável neste caso)
+    return 'Província ID: ' + avaliacao.provincia;
   }
 
   // Gerar título para exibição
@@ -204,11 +209,11 @@ export default function AvaliacaoDetalhesPage() {
                   <FileText className="mr-2 h-4 w-4" />
                   Tipo
                 </p>
-                <p className="font-medium">
-                  <Badge variant={avaliacao.tipo === TipoAvaliacao.EXAME ? 'default' : 'outline'}>
-                    {avaliacao.tipo === TipoAvaliacao.EXAME ? 'Exame Nacional' : 'Avaliação Provincial'}
+                <div className="font-medium">
+                  <Badge variant={avaliacao.tipo === "EXAME" ? 'default' : 'outline'}>
+                    {avaliacao.tipo === "EXAME" ? 'Exame Nacional' : 'Avaliação Provincial'}
                   </Badge>
-                </p>
+                </div>
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center">
@@ -256,19 +261,19 @@ export default function AvaliacaoDetalhesPage() {
             {avaliacao.variante && (
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Variante</p>
-                <p className="font-medium">
-                  {avaliacao.variante === VarianteProva.UNICA ? 'Única' : `Variante ${avaliacao.variante}`}
-                </p>
+                <div className="font-medium">
+                  {avaliacao.variante === "UNICA" ? 'Única' : `Variante ${avaliacao.variante}`}
+                </div>
               </div>
             )}
 
             {avaliacao.areaEstudo && (
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Área de Estudo</p>
-                <p className="font-medium">
-                  {avaliacao.areaEstudo === AreaEstudo.GERAL ? 'Geral' : 
-                   avaliacao.areaEstudo === AreaEstudo.CIENCIAS ? 'Ciências' : 'Letras'}
-                </p>
+                <div className="font-medium">
+                  {avaliacao.areaEstudo === "GERAL" ? 'Geral' : 
+                   avaliacao.areaEstudo === "CIÊNCIAS" ? 'Ciências' : 'Letras'}
+                </div>
               </div>
             )}
           </CardContent>
@@ -279,23 +284,49 @@ export default function AvaliacaoDetalhesPage() {
           <CardHeader>
             <CardTitle>Questões</CardTitle>
             <CardDescription>
-              Gerencie as questões associadas a esta avaliação
+              Esta avaliação possui {avaliacao.questoes?.length || 0} questões associadas
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col items-center justify-center py-6 text-center">
-              <ListChecks className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Gerenciar Questões</h3>
-              <p className="text-sm text-muted-foreground mt-2 mb-4">
-                Adicione, edite ou remova questões desta avaliação para construir o banco de questões.
-              </p>
-              <Button asChild>
-                <Link href={`/dashboard/avaliacoes/${id}/questoes`}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Gerenciar Questões
-                </Link>
-              </Button>
-            </div>
+            {avaliacao.questoes && avaliacao.questoes.length > 0 ? (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground mb-2">
+                  Primeiras questões:
+                </div>
+                {(avaliacao.questoes as Questao[]).slice(0, 3).map((questao: Questao) => (
+                  <div key={questao._id} className="p-3 border rounded-md">
+                    <div className="flex justify-between mb-2">
+                      <span className="font-medium">Questão {questao.numero}</span>
+                      <span className="text-sm text-muted-foreground">Valor: {questao.valor}</span>
+                    </div>
+                    <div className="text-sm mb-2 line-clamp-2" dangerouslySetInnerHTML={{ __html: questao.enunciado }} />
+                  </div>
+                ))}
+                
+                <div className="flex justify-center mt-4">
+                  <Button asChild>
+                    <Link href={`/dashboard/avaliacoes/${id}/questoes`}>
+                      <ListChecks className="mr-2 h-4 w-4" />
+                      {avaliacao.questoes.length <= 3 ? 'Gerenciar Questões' : 'Ver Todas as Questões'}
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <ListChecks className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">Nenhuma Questão Associada</h3>
+                <p className="text-sm text-muted-foreground mt-2 mb-4">
+                  Esta avaliação ainda não possui questões associadas.
+                </p>
+                <Button asChild>
+                  <Link href={`/dashboard/avaliacoes/${id}/questoes`}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Questões
+                  </Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

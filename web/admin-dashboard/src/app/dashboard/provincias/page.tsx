@@ -26,6 +26,8 @@ import {
   useDeleteProvincia 
 } from "@/hooks/use-provincias"
 import { toast } from "sonner"
+import { Provincia } from "@/types/provincia" // Certifique-se de importar o tipo Provincia
+import { ApiResponse, PaginationInfo } from "@/types/api" // Importar tipos da API
 
 export default function ProvinciasPage() {
   // Estado para paginação e filtros
@@ -115,10 +117,13 @@ export default function ProvinciasPage() {
     }
   }
 
+  // Usar o tipo correto para a resposta da API
+  const apiResponse = data as ApiResponse<Provincia[]>;
+  
   // Provincias e paginação
-  const provincias = data?.data || [];
-  const totalItems = data?.pagination?.total || 0;
-  const totalPages = data?.pagination?.totalPages || 1;
+  const provincias = apiResponse?.data || [];
+  const totalItems = apiResponse?.pagination?.totalItems || 0;
+  const totalPages = apiResponse?.pagination?.totalPages || 1;
 
   return (
     <DashboardLayout>
@@ -183,7 +188,7 @@ export default function ProvinciasPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                provincias.map((provincia) => (
+                provincias.map((provincia: Provincia) => (
                   <TableRow key={provincia._id}>
                     <TableCell className="font-medium">{provincia.nome}</TableCell>
                     <TableCell>{provincia.codigo}</TableCell>
