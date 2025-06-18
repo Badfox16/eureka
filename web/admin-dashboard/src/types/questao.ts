@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BaseModel } from './base';
 import {
   alternativaSchema,
   createQuestaoSchema,
@@ -6,45 +7,59 @@ import {
   questaoSchema,
   questaoPopuladaSchema,
   questaoQueryParamsSchema
-} from '@/schemas/questao.schema';
+} from '../schemas/questao.schema';
 
-/**
- * Tipo de uma alternativa de questão
- * @property letra - Identificador da alternativa (A, B, C, D, E)
- * @property texto - Conteúdo da alternativa
- * @property correta - Indica se é a alternativa correta
- * @property imagemUrl - URL opcional para imagem da alternativa
- */
+// Tipos derivados dos schemas
 export type Alternativa = z.infer<typeof alternativaSchema>;
-
-/**
- * Tipo para criação de novas questões
- */
 export type CreateQuestaoInput = z.infer<typeof createQuestaoSchema>;
-
-/**
- * Tipo para atualização de questões existentes
- * Todos os campos são opcionais
- */
 export type UpdateQuestaoInput = z.infer<typeof updateQuestaoSchema>;
-
-/**
- * Interface completa de uma Questão com metadados
- * Tipo derivado diretamente do schema Zod
- */
 export type QuestaoModel = z.infer<typeof questaoSchema>;
 
-/**
- * Tipo para questão com dados populados da avaliação
- */
-export type QuestaoPopulada = z.infer<typeof questaoPopuladaSchema>;
+// Interfaces adicionais específicas para a UI
+export interface Questao extends BaseModel {
+  _id: string;
+  numero: number;
+  enunciado: string;
+  alternativas: {
+    letra: string;
+    texto: string;
+    correta: boolean;
+    _id: string;
+  }[];
+  explicacao?: string;
+  avaliacao: string;
+  valor: number;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
 
-/**
- * Parâmetros de consulta específicos para questões
- */
-export type QuestaoQueryParams = z.infer<typeof questaoQueryParamsSchema>;
+export interface QuestaoForm {
+  numero: number;
+  enunciado: string;
+  alternativas: {
+    letra: string;
+    texto: string;
+    correta: boolean;
+  }[];
+  explicacao?: string;
+  imagemEnunciadoUrl?: string;
+  imagemUrl?: string;
+  avaliacao: string;
+  valor?: number;
+}
 
-// Re-exportar os schemas para uso em validação
+export interface QuestaoTableItem {
+  id: string | number;
+  numero: number;
+  enunciado: string;
+  avaliacaoTitulo: string;
+  alternativasCount: number;
+  valor: number;
+  dataCriacao: string;
+}
+
+
 export {
   alternativaSchema,
   createQuestaoSchema,
@@ -53,7 +68,3 @@ export {
   questaoPopuladaSchema,
   questaoQueryParamsSchema
 };
-
-// Exportando Questao como o tipo principal para uso na aplicação
-// Você pode escolher qual dos tipos abaixo é o principal e renomear o outro
-export type Questao = QuestaoModel;

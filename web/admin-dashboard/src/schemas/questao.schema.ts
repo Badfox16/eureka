@@ -31,21 +31,27 @@ export const updateQuestaoSchema = createQuestaoSchema.partial();
 // Schema completo de questão
 export const questaoSchema = baseResourceSchema.merge(createQuestaoSchema);
 
-// Schema para questão com dados populados
-export const questaoPopuladaSchema = questaoSchema.extend({
-  avaliacao: z.object({
-    _id: z.string(),
-    titulo: z.string(),
-    ano: z.number(),
-    disciplina: z.object({
-      _id: z.string(),
-      nome: z.string(),
-      codigo: z.string()
-    })
-  })
+// Schema para disciplina dentro da avaliação (referência simplificada)
+const disciplinaReferenciaSchema = z.object({
+  _id: z.string(),
+  nome: z.string(),
+  codigo: z.string()
 });
 
-// Schema para parâmetros de consulta
+// Schema para avaliação dentro da questão (referência populada)
+const avaliacaoReferenciaSchema = z.object({
+  _id: z.string(),
+  titulo: z.string(),
+  ano: z.number(),
+  disciplina: disciplinaReferenciaSchema
+});
+
+// Schema para questão com dados populados (avaliação expandida)
+export const questaoPopuladaSchema = questaoSchema.extend({
+  avaliacao: avaliacaoReferenciaSchema
+});
+
+// Schema para parâmetros de consulta específicos para questões
 export const questaoQueryParamsSchema = z.object({
   page: z.number().optional(),
   limit: z.number().optional(),
