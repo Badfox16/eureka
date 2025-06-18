@@ -157,11 +157,7 @@ export const getAllQuestoes: RequestHandler = async (req, res, next) => {
       ];
     }
 
-    // Log do filtro para debug
-    console.log('Filtro aplicado:', JSON.stringify(filtro, null, 2));
-
     const total = await Questao.countDocuments(filtro);
-    console.log('Total de questões encontradas:', total);
 
     const questoes = await Questao.find(filtro)
       .populate({
@@ -171,8 +167,6 @@ export const getAllQuestoes: RequestHandler = async (req, res, next) => {
       .sort({ avaliacao: 1, numero: 1 })
       .skip((page - 1) * limit)
       .limit(limit);
-
-    console.log('Número de questões retornadas nesta página:', questoes.length);
 
     res.status(200).json(formatResponse(questoes, { page, limit, total }));
   } catch (error) {
