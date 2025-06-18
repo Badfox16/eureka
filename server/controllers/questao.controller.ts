@@ -3,11 +3,33 @@ import { Questao } from '../models/questao';
 import { Avaliacao } from '../models/avaliacao';
 import type { CreateQuestaoInput, UpdateQuestaoInput } from '../schemas/questao.schema';
 import { HttpError } from '../utils/error.utils';
-import { formatResponse } from '../utils/response.utils';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
 import mongoose from 'mongoose';
+
+// Função para formatar a resposta padrão
+const formatResponse = (data: any, paginationData?: any) => {
+  const response: any = { data };
+  
+  if (paginationData) {
+    const { page, limit, total } = paginationData;
+    const totalPages = Math.ceil(total / limit);
+    
+    response.pagination = {
+      total,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasPrevPage: page > 1,
+      hasNextPage: page < totalPages,
+      prevPage: page > 1 ? page - 1 : null,
+      nextPage: page < totalPages ? page + 1 : null
+    };
+  }
+  
+  return response;
+};
 
 // Função auxiliar para remover arquivo do disco local
 const removeLocalFile = (filename: string | undefined | null) => {
@@ -69,7 +91,7 @@ export const createQuestao: RequestHandler = async (req, res, next) => {
       { $push: { questoes: questao._id } }
     );
 
-    res.status(201).json(formatResponse(questao));
+    res.status(201).json({ data: questao });
   } catch (error) {
     next(error);
   }
@@ -102,12 +124,19 @@ export const getAllQuestoes: RequestHandler = async (req, res, next) => {
         const avaliacoes = await Avaliacao.find({ disciplina: req.query.disciplina }).select('_id');
         if (!avaliacoes.length) {
           // Retorna vazio se não houver avaliações para a disciplina
-          res.status(200).json(formatResponse([], {
-            total: 0, 
-            page, 
-            limit, 
-            pages: 0 
-          }));
+          res.status(200).json({ 
+            data: [], 
+            pagination: {
+              total: 0,
+              totalPages: 0,
+              currentPage: page,
+              limit,
+              hasPrevPage: false,
+              hasNextPage: false,
+              prevPage: null,
+              nextPage: null
+            }
+          });
           return;
         }
         filtro.avaliacao = { $in: avaliacoes.map(a => a._id) };
@@ -128,7 +157,12 @@ export const getAllQuestoes: RequestHandler = async (req, res, next) => {
       ];
     }
 
+    // Log do filtro para debug
+    console.log('Filtro aplicado:', JSON.stringify(filtro, null, 2));
+
     const total = await Questao.countDocuments(filtro);
+    console.log('Total de questões encontradas:', total);
+
     const questoes = await Questao.find(filtro)
       .populate({
         path: 'avaliacao',
@@ -138,12 +172,9 @@ export const getAllQuestoes: RequestHandler = async (req, res, next) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    res.status(200).json(formatResponse(questoes, {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit)
-    }));
+    console.log('Número de questões retornadas nesta página:', questoes.length);
+
+    res.status(200).json(formatResponse(questoes, { page, limit, total }));
   } catch (error) {
     next(error);
   }
@@ -169,7 +200,7 @@ export const getQuestaoById: RequestHandler = async (req, res, next) => {
       throw new HttpError('Questão não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    res.status(200).json(formatResponse(questao));
+    res.status(200).json({ data: questao });
   } catch (error) {
     next(error);
   }
@@ -273,7 +304,7 @@ export const updateQuestao: RequestHandler = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
-    res.status(200).json(formatResponse(updatedQuestao));
+    res.status(200).json({ data: updatedQuestao });
   } catch (error) {
     next(error);
   }
@@ -311,11 +342,10 @@ export const deleteQuestao: RequestHandler = async (req, res, next) => {
       questao.alternativas.forEach(alt => removeLocalFile(alt.imagemUrl));
     }
 
-    res.status(200).json(formatResponse(
-      null,
-      null,
-      'Questão removida com sucesso'
-    ));
+    res.status(200).json({
+      data: null,
+      message: 'Questão removida com sucesso'
+    });
   } catch (error) {
     next(error);
   }
@@ -350,10 +380,19 @@ export const searchQuestoes: RequestHandler = async (req, res, next) => {
       populate: { path: 'disciplina' }
     }).limit(50);
 
-    res.status(200).json(formatResponse(questoes, {
-      total: questoes.length,
-      searchTerm: q
-    }));
+    res.status(200).json({
+      data: questoes,
+      pagination: {
+        total: questoes.length,
+        totalPages: 1,
+        currentPage: 1,
+        limit: 50,
+        hasPrevPage: false,
+        hasNextPage: false,
+        prevPage: null,
+        nextPage: null
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -442,14 +481,14 @@ export const importarQuestoes: RequestHandler = async (req, res, next) => {
       { $push: { questoes: { $each: questoesCriadas.map(q => q._id) } } }
     );
 
-    res.status(201).json(formatResponse(
-      questoesCriadas,
-      {
+    res.status(201).json({
+      data: questoesCriadas,
+      message: `${questoesCriadas.length} questões importadas com sucesso. ${rejeitadas.length} foram rejeitadas.`,
+      meta: {
         importadas: questoesCriadas.length,
         rejeitadas: rejeitadas.length > 0 ? rejeitadas : undefined
-      },
-      `${questoesCriadas.length} questões importadas com sucesso. ${rejeitadas.length} foram rejeitadas.`
-    ));
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -505,11 +544,10 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       );
     }
 
-    res.status(200).json(formatResponse(
-      { imageUrl },
-      null,
-      'Imagem do enunciado carregada com sucesso'
-    ));
+    res.status(200).json({
+      data: { imageUrl },
+      message: 'Imagem do enunciado carregada com sucesso'
+    });
   } catch (error) {
     // Capturar erros do Multer ou outros
     if (error instanceof multer.MulterError) {
@@ -593,11 +631,10 @@ export const uploadImagemAlternativa: RequestHandler = async (req, res, next) =>
       );
     }
 
-    res.status(200).json(formatResponse(
-      { imageUrl },
-      null,
-      `Imagem da alternativa '${alternativaOriginal.letra}' carregada com sucesso`
-    ));
+    res.status(200).json({
+      data: { imageUrl },
+      message: `Imagem da alternativa '${alternativaOriginal.letra}' carregada com sucesso`
+    });
   } catch (error) {
     if (error instanceof multer.MulterError) {
       next(new HttpError(

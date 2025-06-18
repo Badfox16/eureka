@@ -1,7 +1,8 @@
 import React from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -9,6 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 
 export interface FilterOption {
   value: string;
@@ -46,6 +52,14 @@ export function TableToolbar({
   itemsTotal,
   itemsFiltered,
 }: TableToolbarProps) {
+  // Determinar se há filtros ativos
+  const hasActiveFilters = Object.values(activeFilters).some(value => !!value);
+  
+  // Verificar se estamos filtrando (exibindo menos itens do que o total)
+  const isFiltering = typeof itemsTotal === 'number' && 
+                      typeof itemsFiltered === 'number' && 
+                      itemsTotal > itemsFiltered;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-2">
@@ -59,15 +73,22 @@ export function TableToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
           />
           {showClearButton && searchQuery && (
-            <Button
-              variant="ghost"
-              size="default"
-              className="absolute right-0 top-0 h-10 w-10"
-              onClick={() => onSearchChange("")}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Limpar busca</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="default"
+                  className="absolute right-0 top-0 h-10 w-10"
+                  onClick={() => onSearchChange("")}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Limpar busca</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Limpar busca</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
@@ -104,19 +125,22 @@ export function TableToolbar({
                   </SelectContent>
                 </Select>
                 {filter.value && (
-                  <Button
-                    variant="ghost"
-                    size="default"
-                    className="absolute right-0 top-0 h-10 w-10"
-                    onClick={() => {
-                      // Este é o ponto chave da correção:
-                      // Chamar onFilterClear quando o X for clicado
-                      onFilterClear(filter.id);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Limpar filtro</span>
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        className="absolute right-0 top-0 h-10 w-10"
+                        onClick={() => onFilterClear(filter.id)}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Limpar filtro</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Remover filtro {filter.label}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             ))}
@@ -126,10 +150,16 @@ export function TableToolbar({
 
       {(itemsTotal !== undefined || itemsFiltered !== undefined) && (
         <div className="text-sm text-muted-foreground">
-          {itemsFiltered !== undefined && itemsTotal !== undefined && itemsFiltered < itemsTotal ? (
-            <>
-              Mostrando <strong>{itemsFiltered}</strong> de <strong>{itemsTotal}</strong> itens
-            </>
+          {isFiltering ? (
+            <div className="flex items-center">
+              <Filter className="mr-2 h-4 w-4" />
+              Mostrando <strong className="mx-1">{itemsFiltered}</strong> de <strong className="mx-1">{itemsTotal}</strong> itens
+              {hasActiveFilters && (
+                <Badge variant="outline" className="ml-2">
+                  Filtros ativos
+                </Badge>
+              )}
+            </div>
           ) : itemsTotal !== undefined ? (
             <>
               Total: <strong>{itemsTotal}</strong> itens
