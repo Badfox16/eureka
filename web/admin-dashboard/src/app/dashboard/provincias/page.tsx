@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Loader2, Plus, Edit, Trash } from "lucide-react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Button } from "@/components/ui/button"
@@ -26,13 +26,13 @@ import {
   useDeleteProvincia 
 } from "@/hooks/use-provincias"
 import { toast } from "sonner"
-import { Provincia } from "@/types/provincia" // Certifique-se de importar o tipo Provincia
-import { ApiResponse, PaginationInfo } from "@/types/api" // Importar tipos da API
+import { Provincia } from "@/types/provincia"
+import { ApiResponse } from "@/types/api"
 
 export default function ProvinciasPage() {
   // Estado para paginação e filtros
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(5)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
 
@@ -47,6 +47,13 @@ export default function ProvinciasPage() {
     search: searchQuery || undefined,
     regiao: activeFilters["regiao"]
   });
+
+  // Log para depuração
+  useEffect(() => {
+    console.log('API Response:', data);
+    console.log('Pagination:', data?.pagination);
+    console.log('Total Items:', data?.pagination?.total);
+  }, [data]);
 
   // Mutations para operações CRUD
   const createMutation = useCreateProvincia();
@@ -122,7 +129,7 @@ export default function ProvinciasPage() {
   
   // Provincias e paginação
   const provincias = apiResponse?.data || [];
-  const totalItems = apiResponse?.pagination?.totalItems || 0;
+  const total = apiResponse?.pagination?.total || 0;
   const totalPages = apiResponse?.pagination?.totalPages || 1;
 
   return (
@@ -152,7 +159,7 @@ export default function ProvinciasPage() {
           activeFilters={activeFilters}
           onFilterChange={handleFilterChange}
           onFilterClear={handleFilterClear}
-          itemsTotal={totalItems}
+          itemsTotal={total}
           itemsFiltered={provincias.length}
         />
 
@@ -251,6 +258,10 @@ export default function ProvinciasPage() {
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
+        </div>
+
+        <div className="text-sm text-muted-foreground">
+          Mostrando {provincias.length} de {total} províncias
         </div>
       </div>
     </DashboardLayout>

@@ -131,7 +131,7 @@ export default function DisciplinasPage() {
   
   // Disciplinas e paginação
   const disciplinas = apiResponse?.data || [];
-  const totalItems = apiResponse?.pagination?.totalItems || 0;
+  const totalItems = apiResponse?.pagination?.total || 0;
   const totalPages = apiResponse?.pagination?.totalPages || 1;
 
   return (

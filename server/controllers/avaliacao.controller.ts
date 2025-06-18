@@ -7,7 +7,34 @@ import type { CreateAvaliacaoInput, UpdateAvaliacaoInput } from '../schemas/aval
 import { paginationSchema } from '../schemas/common.schema';
 import { Error as MongooseError } from 'mongoose';
 import { HttpError } from '../utils/error.utils';
-import { formatResponse } from '../utils/response.utils';
+import mongoose from 'mongoose';
+
+// Função para formatar a resposta padrão
+const formatResponse = (data: any, paginationData?: any, message?: string) => {
+  const response: any = { data };
+  
+  if (message) {
+    response.message = message;
+  }
+  
+  if (paginationData) {
+    const { page, limit, total } = paginationData;
+    const totalPages = Math.ceil(total / limit);
+    
+    response.pagination = {
+      total,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasPrevPage: page > 1,
+      hasNextPage: page < totalPages,
+      prevPage: page > 1 ? page - 1 : null,
+      nextPage: page < totalPages ? page + 1 : null
+    };
+  }
+  
+  return response;
+};
 
 /**
  * Cria uma nova avaliação
@@ -91,8 +118,13 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
 
     // Criar a avaliação
     const avaliacao = await Avaliacao.create(avaliacaoData);
+    
+    // Populate dos relacionamentos para a resposta
+    const avaliacaoCompleta = await Avaliacao.findById(avaliacao._id)
+      .populate('disciplina', 'nome codigo')
+      .populate('provincia', 'nome codigo');
 
-    res.status(201).json(formatResponse(avaliacao));
+    res.status(201).json({ data: avaliacaoCompleta });
   } catch (error) {
     next(error);
   }
@@ -103,10 +135,9 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
  */
 export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
   try {
-    const { page, limit } = paginationSchema.parse({
-      page: Number(req.query.page || 1),
-      limit: Number(req.query.limit || 10)
-    });
+    // Parâmetros de paginação
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
 
     // Filtros opcionais
     const filtro: any = {};
@@ -118,7 +149,11 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
 
     // Filtrar por disciplina
     if (req.query.disciplina && typeof req.query.disciplina === 'string') {
-      filtro.disciplina = req.query.disciplina;
+      if (mongoose.Types.ObjectId.isValid(req.query.disciplina)) {
+        filtro.disciplina = req.query.disciplina;
+      } else {
+        throw new HttpError('ID de disciplina inválido', 400, 'INVALID_ID');
+      }
     }
 
     // Filtrar por ano
@@ -138,21 +173,32 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
 
     // Filtrar por provincia (para AP)
     if (req.query.provincia && typeof req.query.provincia === 'string') {
-      try {
-        const provincia = await Provincia.findOne({ nome: req.query.provincia });
-        if (provincia) {
-          filtro.provincia = provincia._id;
-        } else {
-          res.status(200).json(formatResponse([], {
-            total: 0, 
-            page, 
-            limit, 
-            pages: 0
-          }));
-          return;
+      if (mongoose.Types.ObjectId.isValid(req.query.provincia)) {
+        filtro.provincia = req.query.provincia;
+      } else {
+        try {
+          const provincia = await Provincia.findOne({ nome: req.query.provincia });
+          if (provincia) {
+            filtro.provincia = provincia._id;
+          } else {
+            res.status(200).json({
+              data: [],
+              pagination: {
+                total: 0,
+                totalPages: 0,
+                currentPage: page,
+                limit,
+                hasPrevPage: false,
+                hasNextPage: false,
+                prevPage: null,
+                nextPage: null
+              }
+            });
+            return;
+          }
+        } catch (error) {
+          return next(error);
         }
-      } catch (error) {
-        return next(error);
       }
     }
 
@@ -171,24 +217,24 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
       filtro.areaEstudo = req.query.areaEstudo;
     }
 
+    // Log do filtro para debug
+    console.log('Filtro aplicado em avaliações:', JSON.stringify(filtro, null, 2));
+
     // Consulta para obter o total de avaliações com filtros
     const total = await Avaliacao.countDocuments(filtro);
+    console.log('Total de avaliações encontradas:', total);
 
     // Consulta paginada com filtros
     const avaliacoes = await Avaliacao.find(filtro)
       .populate('disciplina', 'nome codigo')
-      .populate('provincia', 'nome')
+      .populate('provincia', 'nome codigo')
       .sort({ ano: -1, tipo: 1 }) // Ordenar por ano (decrescente) e tipo
       .skip((page - 1) * limit)
       .limit(limit);
 
-    res.status(200).json(formatResponse(avaliacoes, {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit),
-      filtros: Object.keys(filtro).length > 0 ? filtro : 'nenhum'
-    }));
+    console.log('Número de avaliações retornadas nesta página:', avaliacoes.length);
+
+    res.status(200).json(formatResponse(avaliacoes, { page, limit, total }));
   } catch (error) {
     next(error);
   }
@@ -201,16 +247,23 @@ export const getAvaliacaoById: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError('ID de avaliação inválido', 400, 'INVALID_ID');
+    }
+
     const avaliacao = await Avaliacao.findById(id)
       .populate('disciplina')
       .populate('provincia')
-      .populate('questoes');
+      .populate({
+        path: 'questoes',
+        options: { sort: { numero: 1 } }
+      });
 
     if (!avaliacao) {
       throw new HttpError('Avaliação não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    res.status(200).json(formatResponse(avaliacao));
+    res.status(200).json({ data: avaliacao });
   } catch (error) {
     next(error);
   }
@@ -223,6 +276,10 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updateData = req.body as UpdateAvaliacaoInput;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError('ID de avaliação inválido', 400, 'INVALID_ID');
+    }
 
     // Verificar se a avaliação existe
     const avaliacao = await Avaliacao.findById(id);
@@ -255,11 +312,8 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
         if (!provincia) {
           throw new HttpError('Provincia não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
         }
-      } else if (avaliacao.provincia && !updateData.provincia) {
-        const provincia = await Provincia.findById(avaliacao.provincia);
-        if (!provincia) {
-          throw new HttpError('Provincia não encontrada', 404, 'RELATED_RESOURCE_NOT_FOUND');
-        }
+      } else if (!updateData.provincia && !avaliacao.provincia) {
+        throw new HttpError('O campo província é obrigatório para avaliações provinciais (AP)', 400, 'MISSING_REQUIRED_FIELDS');
       }
     } else if (tipo === TipoAvaliacao.EXAME) {
       if (!updateData.epoca && !avaliacao.epoca) {
@@ -325,9 +379,11 @@ export const updateAvaliacao: RequestHandler = async (req, res, next) => {
       id,
       updateData,
       { new: true, runValidators: true }
-    ).populate('disciplina').populate('provincia');
+    )
+    .populate('disciplina', 'nome codigo')
+    .populate('provincia', 'nome codigo');
 
-    res.status(200).json(formatResponse(updatedAvaliacao));
+    res.status(200).json({ data: updatedAvaliacao });
   } catch (error) {
     next(error);
   }
@@ -340,6 +396,10 @@ export const deleteAvaliacao: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new HttpError('ID de avaliação inválido', 400, 'INVALID_ID');
+    }
+
     // Verificar se a avaliação existe
     const avaliacao = await Avaliacao.findById(id);
     if (!avaliacao) {
@@ -349,22 +409,37 @@ export const deleteAvaliacao: RequestHandler = async (req, res, next) => {
     // Verificar se a avaliação tem questões associadas
     const questoesCount = avaliacao.questoes?.length || 0;
 
-    if (questoesCount > 0) {
-      // Remover todas as questões associadas
-      await Questao.deleteMany({ avaliacao: id });
+    // Iniciar uma transação para garantir que tudo ou nada seja executado
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      if (questoesCount > 0) {
+        // Remover todas as questões associadas
+        await Questao.deleteMany({ avaliacao: id }).session(session);
+      }
+
+      // Remover a avaliação
+      await Avaliacao.findByIdAndDelete(id).session(session);
+
+      // Confirmar transação
+      await session.commitTransaction();
+    } catch (error) {
+      // Reverter transação em caso de erro
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      // Encerrar a sessão
+      session.endSession();
     }
 
-    // Remover a avaliação
-    await Avaliacao.findByIdAndDelete(id);
-
     const message = `Avaliação removida com sucesso${questoesCount > 0 ? 
-      ` (incluindo ${questoesCount} questões)` : ''}`;
+      ` (incluindo ${questoesCount} questões associadas)` : ''}`;
       
-    res.status(200).json(formatResponse(
-      null, 
-      { questoesRemovidas: questoesCount },
+    res.status(200).json({
+      data: null,
       message
-    ));
+    });
   } catch (error) {
     next(error);
   }
@@ -404,12 +479,24 @@ export const searchAvaliacoes: RequestHandler = async (req, res, next) => {
         { areaEstudo: { $regex: regex } },
         { titulo: { $regex: regex } }
       ]
-    }).populate('disciplina').populate('provincia');
+    })
+    .populate('disciplina', 'nome codigo')
+    .populate('provincia', 'nome codigo')
+    .limit(50);
 
-    res.status(200).json(formatResponse(avaliacoes, {
-      total: avaliacoes.length,
-      searchTerm: q
-    }));
+    res.status(200).json({
+      data: avaliacoes,
+      pagination: {
+        total: avaliacoes.length,
+        totalPages: 1,
+        currentPage: 1,
+        limit: 50,
+        hasPrevPage: false,
+        hasNextPage: false,
+        prevPage: null,
+        nextPage: null
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -474,8 +561,11 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
       }
     ]);
 
-    // Novos agregados: Total por área de estudo
+    // Total por área de estudo
     const totalPorAreaEstudo = await Avaliacao.aggregate([
+      {
+        $match: { areaEstudo: { $exists: true, $ne: null } }
+      },
       {
         $group: {
           _id: '$areaEstudo',
@@ -487,8 +577,11 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
       }
     ]);
 
-    // Novos agregados: Total por variante
+    // Total por variante
     const totalPorVariante = await Avaliacao.aggregate([
+      {
+        $match: { variante: { $exists: true, $ne: null } }
+      },
       {
         $group: {
           _id: '$variante',
@@ -527,7 +620,7 @@ export const getEstatisticasAvaliacoes: RequestHandler = async (req, res, next) 
       questoes: questoesPorAvaliacao.length > 0 ? questoesPorAvaliacao[0] : { media: 0, min: 0, max: 0, total: 0 }
     };
 
-    res.status(200).json(formatResponse(estatisticas));
+    res.status(200).json({ data: estatisticas });
   } catch (error) {
     next(error);
   }

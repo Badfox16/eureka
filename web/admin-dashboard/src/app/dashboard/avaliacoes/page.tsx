@@ -239,7 +239,7 @@ const handleFilterClear = (filterId: string) => {
   }
 
   // Obter valores de paginação
-  const totalItems = pagination?.totalItems || 0;
+  const totalItems = pagination?.total || 0;
   const totalPages = pagination?.totalPages || 1;
 
   return (
@@ -396,7 +396,7 @@ const handleFilterClear = (filterId: string) => {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          Mostrando {avaliacoes.length} de {pagination?.totalItems || 0} avaliações
+          Mostrando {avaliacoes.length} de {pagination?.total || 0} avaliações
         </div>
       </div>
     </DashboardLayout>
