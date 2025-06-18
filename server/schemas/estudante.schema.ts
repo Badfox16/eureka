@@ -14,6 +14,12 @@ export const createEstudanteSchema = z.object({
 // Schema para validar atualização de estudante
 export const updateEstudanteSchema = createEstudanteSchema.partial();
 
+// Schema para validar atualização de senha
+export const updatePasswordSchema = z.object({
+  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
+  confirmPassword: z.string().min(6, "A confirmação de senha deve ter pelo menos 6 caracteres")
+});
+
 // Schema completo de estudante
 export const estudanteSchema = baseResourceSchema.merge(
   createEstudanteSchema.extend({

@@ -217,12 +217,8 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
       filtro.areaEstudo = req.query.areaEstudo;
     }
 
-    // Log do filtro para debug
-    console.log('Filtro aplicado em avaliações:', JSON.stringify(filtro, null, 2));
-
     // Consulta para obter o total de avaliações com filtros
     const total = await Avaliacao.countDocuments(filtro);
-    console.log('Total de avaliações encontradas:', total);
 
     // Consulta paginada com filtros
     const avaliacoes = await Avaliacao.find(filtro)
@@ -231,8 +227,6 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
       .sort({ ano: -1, tipo: 1 }) // Ordenar por ano (decrescente) e tipo
       .skip((page - 1) * limit)
       .limit(limit);
-
-    console.log('Número de avaliações retornadas nesta página:', avaliacoes.length);
 
     res.status(200).json(formatResponse(avaliacoes, { page, limit, total }));
   } catch (error) {
