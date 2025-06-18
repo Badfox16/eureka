@@ -1,9 +1,8 @@
-import { useImageUpload } from './use-image-upload';
 import { 
   useUploadImagemEnunciado, 
   useUploadImagemAlternativa 
 } from './use-questoes';
-import { ApiResponse } from '@/types/api';
+import { questaoService } from '@/services/questao.service';
 
 interface QuestaoImageUploadOptions {
   questaoId?: string;
@@ -11,21 +10,18 @@ interface QuestaoImageUploadOptions {
 }
 
 export function useQuestaoImageUpload(options: QuestaoImageUploadOptions = {}) {
-  // Hook genérico para upload temporário
-  const { uploadImage: uploadTempImage } = useImageUpload({
-    endpoint: "/temp/uploads"
-  });
-  
-  // Hooks específicos para questões
+  // Hooks já existentes no use-questoes.ts
   const enunciadoMutation = useUploadImagemEnunciado();
   const alternativaMutation = useUploadImagemAlternativa();
   
   // Upload para o enunciado
   const uploadEnunciadoImage = async (file: File): Promise<string> => {
     try {
-      // Se não temos ID da questão ou estamos criando, usar o upload temporário
+      // Se não temos ID da questão ou estamos criando, usar upload temporário
       if (!options.questaoId || options.useTempUpload) {
-        return uploadTempImage(file);
+        // Assumindo que existe um método uploadTempImage no service
+        const response = await questaoService.uploadTempImage(file);
+        return response.data.imageUrl;
       }
       
       // Se temos ID, usar o upload específico para o enunciado
@@ -34,11 +30,7 @@ export function useQuestaoImageUpload(options: QuestaoImageUploadOptions = {}) {
         file 
       });
       
-      // Verificar se temos a URL na resposta
-      if (!response.data || !response.data.imageUrl) {
-        throw new Error("URL da imagem não encontrada na resposta");
-      }
-      
+      // Extrair a URL da imagem da resposta
       return response.data.imageUrl;
     } catch (error: any) {
       console.error("Erro ao fazer upload da imagem do enunciado:", error);
@@ -49,9 +41,11 @@ export function useQuestaoImageUpload(options: QuestaoImageUploadOptions = {}) {
   // Upload para alternativa
   const uploadAlternativaImage = async (file: File, letra: string): Promise<string> => {
     try {
-      // Se não temos ID da questão ou estamos criando, usar o upload temporário
+      // Se não temos ID da questão ou estamos criando, usar upload temporário
       if (!options.questaoId || options.useTempUpload) {
-        return uploadTempImage(file);
+        // Assumindo que existe um método uploadTempImage no service
+        const response = await questaoService.uploadTempImage(file);
+        return response.data.imageUrl;
       }
       
       // Se temos ID, usar o upload específico para a alternativa
@@ -61,11 +55,7 @@ export function useQuestaoImageUpload(options: QuestaoImageUploadOptions = {}) {
         file 
       });
       
-      // Verificar se temos a URL na resposta
-      if (!response.data || !response.data.imageUrl) {
-        throw new Error("URL da imagem não encontrada na resposta");
-      }
-      
+      // Extrair a URL da imagem da resposta
       return response.data.imageUrl;
     } catch (error: any) {
       console.error(`Erro ao fazer upload da imagem da alternativa ${letra}:`, error);

@@ -23,7 +23,7 @@ import {
   SelectValue
 } from "@/components/ui/select"
 
-// Interface para o formulário
+// Interface para o formulário atualizada com as novas opções de upload
 interface QuestaoFormProps {
   avaliacaoId?: string
   questao?: Questao
@@ -31,7 +31,13 @@ interface QuestaoFormProps {
   trigger: React.ReactNode
   title: string
   isEditing?: boolean
+  
+  // Função genérica para upload (mantida para compatibilidade)
   onImageUpload?: (file: File) => Promise<string>
+  
+  // Funções específicas para upload (nova abordagem)
+  onEnunciadoImageUpload?: (file: File) => Promise<string>
+  onAlternativaImageUpload?: (file: File, letra: string) => Promise<string>
 }
 
 // Letras das alternativas
@@ -44,7 +50,9 @@ export function QuestaoForm({
   trigger,
   title,
   isEditing = false,
-  onImageUpload
+  onImageUpload,
+  onEnunciadoImageUpload,
+  onAlternativaImageUpload
 }: QuestaoFormProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -134,15 +142,31 @@ export function QuestaoForm({
     }
   }
 
-  // Upload de imagem para o enunciado
+  // Upload de imagem para o enunciado - Atualizado para usar a função específica ou genérica
   const handleEnunciadoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !onImageUpload) return
+    if (!e.target.files || e.target.files.length === 0) return
     
     const file = e.target.files[0]
     
+    // Verificar se alguma função de upload foi fornecida
+    if (!onEnunciadoImageUpload && !onImageUpload) {
+      setError("Função de upload não configurada")
+      return
+    }
+    
     try {
       setUploadingImage("enunciado")
-      const imageUrl = await onImageUpload(file)
+      
+      // Usar função específica ou genérica
+      let imageUrl: string
+      if (onEnunciadoImageUpload) {
+        imageUrl = await onEnunciadoImageUpload(file)
+      } else if (onImageUpload) {
+        imageUrl = await onImageUpload(file)
+      } else {
+        throw new Error("Função de upload não disponível")
+      }
+      
       form.setValue("imagemEnunciadoUrl", imageUrl)
       setUploadingImage(null)
     } catch (err: any) {
@@ -151,15 +175,32 @@ export function QuestaoForm({
     }
   }
 
-  // Upload de imagem para alternativa
+  // Upload de imagem para alternativa - Atualizado para usar a função específica ou genérica
   const handleAlternativaImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !onImageUpload) return
+    if (!e.target.files || e.target.files.length === 0) return
     
     const file = e.target.files[0]
+    const letra = LETRAS_ALTERNATIVAS[index]
+    
+    // Verificar se alguma função de upload foi fornecida
+    if (!onAlternativaImageUpload && !onImageUpload) {
+      setError("Função de upload não configurada")
+      return
+    }
     
     try {
       setUploadingImage(`alternativa-${index}`)
-      const imageUrl = await onImageUpload(file)
+      
+      // Usar função específica ou genérica
+      let imageUrl: string
+      if (onAlternativaImageUpload) {
+        imageUrl = await onAlternativaImageUpload(file, letra)
+      } else if (onImageUpload) {
+        imageUrl = await onImageUpload(file)
+      } else {
+        throw new Error("Função de upload não disponível")
+      }
+      
       const alternativas = [...form.getValues().alternativas]
       alternativas[index] = {
         ...alternativas[index],
@@ -209,6 +250,9 @@ export function QuestaoForm({
       setIsSubmitting(false)
     }
   }
+
+  // Verificar se alguma função de upload está disponível
+  const canUpload = !!onImageUpload || !!onEnunciadoImageUpload || !!onAlternativaImageUpload
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -309,7 +353,7 @@ export function QuestaoForm({
                   variant="outline"
                   size="sm"
                   onClick={() => enunciadoImageInputRef.current?.click()}
-                  disabled={!onImageUpload || !!uploadingImage}
+                  disabled={!canUpload || !!uploadingImage}
                 >
                   {uploadingImage === "enunciado" ? (
                     <>
@@ -422,7 +466,7 @@ export function QuestaoForm({
                           variant="outline"
                           size="sm"
                           onClick={() => handleFileInputClick(`alternativa-imagem-${index}`)}
-                          disabled={!onImageUpload || !!uploadingImage}
+                          disabled={!canUpload || !!uploadingImage}
                           className="h-8 text-xs"
                         >
                           {uploadingImage === `alternativa-${index}` ? (

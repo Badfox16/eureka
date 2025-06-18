@@ -106,6 +106,21 @@ class QuestaoService {
       headers: {} // Remover o Content-Type para que o navegador defina o boundary correto para o FormData
     });
   }
+
+  /**
+   * Fazer upload temporário de uma imagem
+   * Usado principalmente durante a criação de novas questões
+   */
+  async uploadTempImage(file: File): Promise<ApiResponse<{ imageUrl: string }>> {
+    const formData = new FormData();
+    formData.append('imagem', file);
+
+    return apiClient<ApiResponse<{ imageUrl: string }>>(ENDPOINTS.UPLOADS.TEMP, {
+      method: 'POST',
+      body: formData,
+      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto
+    });
+  }
 }
 
 export const questaoService = new QuestaoService();

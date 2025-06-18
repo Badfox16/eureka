@@ -32,6 +32,9 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/questoes/${id}`,
     SEARCH: (query: string) => `/questoes/search?q=${encodeURIComponent(query)}`,
   },
+   UPLOADS: {
+    TEMP: '/temp/uploads', // Endpoint para upload temporário de imagens
+  },
   PROVINCIAS: {
     BASE: '/provincias',
     BY_ID: (id: string) => `/provincias/${id}`,

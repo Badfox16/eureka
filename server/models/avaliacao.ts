@@ -120,7 +120,7 @@ const avaliacaoSchema = new Schema<IAvaliacao>(
         ativo: {
             type: Boolean,
             required: true,
-            default: true
+            default: false
         },
     },
     {
