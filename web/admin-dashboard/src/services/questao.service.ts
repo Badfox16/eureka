@@ -1,39 +1,42 @@
 import { apiClient } from '@/lib/api-client';
 import { ENDPOINTS, buildQueryParams } from '@/config/api';
-import { Questao, CreateQuestaoInput, UpdateQuestaoInput } from '@/types/questao';
-import { PaginatedResponse } from '@/types/api';
-
-// Interface para parâmetros de consulta
-interface QueryParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  disciplina?: string;
-  avaliacaoId?: string;
-  notInAvaliacao?: string;
-}
+import { 
+  Questao, 
+  CreateQuestaoInput, 
+  UpdateQuestaoInput, 
+  QuestaoQueryParams 
+} from '@/types/questao';
+import { ApiResponse, PaginatedResponse } from '@/types/api';
 
 class QuestaoService {
   /**
    * Obter todas as questões com paginação e filtros
    */
-  async getAll(params?: QueryParams): Promise<PaginatedResponse<Questao>> {
-    const queryString = buildQueryParams(params || {});
+  async getAll(params?: QuestaoQueryParams): Promise<PaginatedResponse<Questao>> {
+    // Converter avaliacaoId para avaliacao se presente (formato esperado pela API)
+    const apiParams: Record<string, any> = { ...params };
+    
+    if (params?.avaliacaoId) {
+      apiParams.avaliacao = params.avaliacaoId;
+      delete apiParams.avaliacaoId;
+    }
+    
+    const queryString = buildQueryParams(apiParams || {});
     return apiClient<PaginatedResponse<Questao>>(`${ENDPOINTS.QUESTOES.BASE}${queryString}`);
   }
 
   /**
    * Obter uma questão por ID
    */
-  async getById(id: string): Promise<Questao> {
-    return apiClient<Questao>(ENDPOINTS.QUESTOES.BY_ID(id));
+  async getById(id: string): Promise<ApiResponse<Questao>> {
+    return apiClient<ApiResponse<Questao>>(ENDPOINTS.QUESTOES.BY_ID(id));
   }
 
   /**
    * Criar uma nova questão
    */
-  async create(data: CreateQuestaoInput): Promise<Questao> {
-    return apiClient<Questao>(ENDPOINTS.QUESTOES.BASE, {
+  async create(data: CreateQuestaoInput): Promise<ApiResponse<Questao>> {
+    return apiClient<ApiResponse<Questao>>(ENDPOINTS.QUESTOES.BASE, {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -42,8 +45,8 @@ class QuestaoService {
   /**
    * Atualizar uma questão existente
    */
-  async update(id: string, data: UpdateQuestaoInput): Promise<Questao> {
-    return apiClient<Questao>(ENDPOINTS.QUESTOES.BY_ID(id), {
+  async update(id: string, data: UpdateQuestaoInput): Promise<ApiResponse<Questao>> {
+    return apiClient<ApiResponse<Questao>>(ENDPOINTS.QUESTOES.BY_ID(id), {
       method: 'PUT',
       body: JSON.stringify(data)
     });
@@ -52,8 +55,8 @@ class QuestaoService {
   /**
    * Excluir uma questão
    */
-  async delete(id: string): Promise<void> {
-    return apiClient<void>(ENDPOINTS.QUESTOES.BY_ID(id), {
+  async delete(id: string): Promise<ApiResponse<null>> {
+    return apiClient<ApiResponse<null>>(ENDPOINTS.QUESTOES.BY_ID(id), {
       method: 'DELETE'
     });
   }
@@ -61,8 +64,8 @@ class QuestaoService {
   /**
    * Adicionar uma questão a uma avaliação
    */
-  async addToAvaliacao(avaliacaoId: string, questaoId: string): Promise<any> {
-    return apiClient<any>(`${ENDPOINTS.AVALIACOES.BY_ID(avaliacaoId)}/questoes/${questaoId}`, {
+  async addToAvaliacao(avaliacaoId: string, questaoId: string): Promise<ApiResponse<any>> {
+    return apiClient<ApiResponse<any>>(`${ENDPOINTS.AVALIACOES.BY_ID(avaliacaoId)}/questoes/${questaoId}`, {
       method: 'POST'
     });
   }
@@ -70,9 +73,37 @@ class QuestaoService {
   /**
    * Remover uma questão de uma avaliação
    */
-  async removeFromAvaliacao(avaliacaoId: string, questaoId: string): Promise<any> {
-    return apiClient<any>(`${ENDPOINTS.AVALIACOES.BY_ID(avaliacaoId)}/questoes/${questaoId}`, {
+  async removeFromAvaliacao(avaliacaoId: string, questaoId: string): Promise<ApiResponse<any>> {
+    return apiClient<ApiResponse<any>>(`${ENDPOINTS.AVALIACOES.BY_ID(avaliacaoId)}/questoes/${questaoId}`, {
       method: 'DELETE'
+    });
+  }
+
+  /**
+   * Fazer upload de imagem para o enunciado da questão
+   */
+  async uploadImagemEnunciado(id: string, file: File): Promise<ApiResponse<{ imageUrl: string }>> {
+    const formData = new FormData();
+    formData.append('imagem', file);
+
+    return apiClient<ApiResponse<{ imageUrl: string }>>(`${ENDPOINTS.QUESTOES.BY_ID(id)}/imagem-enunciado`, {
+      method: 'POST',
+      body: formData,
+      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto para o FormData
+    });
+  }
+
+  /**
+   * Fazer upload de imagem para uma alternativa específica
+   */
+  async uploadImagemAlternativa(id: string, letra: string, file: File): Promise<ApiResponse<{ imageUrl: string }>> {
+    const formData = new FormData();
+    formData.append('imagem', file);
+
+    return apiClient<ApiResponse<{ imageUrl: string }>>(`${ENDPOINTS.QUESTOES.BY_ID(id)}/alternativas/${letra}/imagem`, {
+      method: 'POST',
+      body: formData,
+      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto para o FormData
     });
   }
 }

@@ -15,6 +15,11 @@ export interface ApiResponse<T> {
   pagination?: PaginationInfo;
 }
 
+// Interface para resposta paginada (mais específica que ApiResponse)
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  pagination: PaginationInfo; // Torna a paginação obrigatória
+}
+
 // Interface genérica para parâmetros de consulta
 export interface QueryParams {
   page?: number;

@@ -1,22 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { questaoService } from '@/services/questao.service';
-import { Questao, CreateQuestaoInput, UpdateQuestaoInput } from '@/types/questao';
+import { 
+  Questao, 
+  CreateQuestaoInput, 
+  UpdateQuestaoInput,
+  QuestaoQueryParams 
+} from '@/types/questao';
+import { ApiResponse } from '@/types/api';
 import { toast } from 'sonner';
-
-// Interface para parâmetros de consulta
-interface QueryParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  disciplina?: string;
-  avaliacaoId?: string;
-  notInAvaliacao?: string;
-}
 
 /**
  * Hook para listar questões com filtros e paginação
  */
-export function useQuestoes(params?: QueryParams) {
+export function useQuestoes(params?: QuestaoQueryParams) {
   const {
     data,
     isLoading,
@@ -50,7 +46,7 @@ export function useQuestao(id: string) {
   });
 
   return {
-    questao: data,
+    questao: data?.data,
     isLoading,
     error
   };
@@ -110,9 +106,10 @@ export function useCreateQuestao() {
   
   const mutation = useMutation({
     mutationFn: (data: CreateQuestaoInput) => questaoService.create(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
       toast.success("Questão criada com sucesso!");
+      return response.data; // Retorna a questão criada para uso posterior
     },
     onError: (error: any) => {
       toast.error(`Erro ao criar questão: ${error.message || "Ocorreu um erro"}`);
@@ -131,10 +128,11 @@ export function useUpdateQuestao() {
   const mutation = useMutation({
     mutationFn: ({ id, data }: { id: string, data: UpdateQuestaoInput }) => 
       questaoService.update(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
       queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
       toast.success("Questão atualizada com sucesso!");
+      return response.data; // Retorna a questão atualizada
     },
     onError: (error: any) => {
       toast.error(`Erro ao atualizar questão: ${error.message || "Ocorreu um erro"}`);
@@ -158,6 +156,50 @@ export function useDeleteQuestao() {
     },
     onError: (error: any) => {
       toast.error(`Erro ao excluir questão: ${error.message || "Ocorreu um erro"}`);
+    }
+  });
+  
+  return mutation;
+}
+
+/**
+ * Hook para upload de imagem do enunciado
+ */
+export function useUploadImagemEnunciado() {
+  const queryClient = useQueryClient();
+  
+  const mutation = useMutation({
+    mutationFn: ({ id, file }: { id: string, file: File }) => 
+      questaoService.uploadImagemEnunciado(id, file),
+    onSuccess: (response, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
+      toast.success("Imagem do enunciado carregada com sucesso!");
+      return response.data.imageUrl;
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao carregar imagem: ${error.message || "Ocorreu um erro"}`);
+    }
+  });
+  
+  return mutation;
+}
+
+/**
+ * Hook para upload de imagem de alternativa
+ */
+export function useUploadImagemAlternativa() {
+  const queryClient = useQueryClient();
+  
+  const mutation = useMutation({
+    mutationFn: ({ id, letra, file }: { id: string, letra: string, file: File }) => 
+      questaoService.uploadImagemAlternativa(id, letra, file),
+    onSuccess: (response, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
+      toast.success(`Imagem da alternativa ${variables.letra} carregada com sucesso!`);
+      return response.data.imageUrl;
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao carregar imagem: ${error.message || "Ocorreu um erro"}`);
     }
   });
   
