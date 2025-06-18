@@ -4,7 +4,7 @@ import {
   Questao, 
   CreateQuestaoInput, 
   UpdateQuestaoInput,
-  QuestaoQueryParams 
+  QuestaoQueryParams
 } from '@/types/questao';
 import { ApiResponse } from '@/types/api';
 import { toast } from 'sonner';

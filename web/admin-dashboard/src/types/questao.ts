@@ -15,19 +15,43 @@ export type CreateQuestaoInput = z.infer<typeof createQuestaoSchema>;
 export type UpdateQuestaoInput = z.infer<typeof updateQuestaoSchema>;
 export type QuestaoModel = z.infer<typeof questaoSchema>;
 
+// Interface para parâmetros de consulta
+export interface QuestaoQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  disciplina?: string;
+  avaliacaoId?: string;
+  notInAvaliacao?: string;
+}
+
+// Tipo para a avaliação quando populada
+export interface AvaliacaoPopulada {
+  _id: string;
+  titulo: string;
+  ano: number;
+  disciplina: {
+    _id: string;
+    nome: string;
+    codigo: string;
+  }
+}
+
 // Interfaces adicionais específicas para a UI
 export interface Questao extends BaseModel {
   _id: string;
   numero: number;
   enunciado: string;
+  imagemEnunciadoUrl?: string;
   alternativas: {
     letra: string;
     texto: string;
     correta: boolean;
     _id: string;
+    imagemUrl?: string;
   }[];
   explicacao?: string;
-  avaliacao: string;
+  avaliacao: string | AvaliacaoPopulada;
   valor: number;
   createdAt: Date;
   updatedAt: Date;
@@ -41,12 +65,12 @@ export interface QuestaoForm {
     letra: string;
     texto: string;
     correta: boolean;
+    imagemUrl?: string;
   }[];
   explicacao?: string;
   imagemEnunciadoUrl?: string;
-  imagemUrl?: string;
   avaliacao: string;
-  valor?: number;
+  valor: number;
 }
 
 export interface QuestaoTableItem {
@@ -58,7 +82,6 @@ export interface QuestaoTableItem {
   valor: number;
   dataCriacao: string;
 }
-
 
 export {
   alternativaSchema,
