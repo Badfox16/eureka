@@ -22,7 +22,8 @@ import {
 
 interface QuestaoCardProps {
   questao: Questao
-  onEdit?: (questao: Questao) => void
+  onEdit?: (questao: Questao) => React.ReactNode | void
+  onView?: () => React.ReactNode | void // Nova prop para visualização
   onDelete?: (questaoId: string) => void
   onAddToAvaliacao?: (questaoId: string) => void
   onRemoveFromAvaliacao?: (questaoId: string) => void
@@ -34,6 +35,7 @@ interface QuestaoCardProps {
 export function QuestaoCard({
   questao,
   onEdit,
+  onView,
   onDelete,
   onAddToAvaliacao,
   onRemoveFromAvaliacao,
@@ -75,6 +77,70 @@ export function QuestaoCard({
             <Trash className="mr-2 h-4 w-4" />
             Remover
           </Button>
+        )
+      case "view":
+        return (
+          <div className="flex space-x-2 ml-auto">
+            {onView && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      const component = onView();
+                      if (component) {
+                        return component;
+                      }
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="sr-only">Visualizar</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Visualizar detalhes</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {onEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onEdit(questao)}
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Editar questão</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {onDelete && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onDelete(questao._id)}
+                    className="text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash className="h-4 w-4" />
+                    <span className="sr-only">Excluir</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Excluir questão</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         )
       case "edit":
         return (

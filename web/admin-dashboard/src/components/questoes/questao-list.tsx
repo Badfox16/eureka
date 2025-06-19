@@ -16,6 +16,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 interface QuestaoListProps {
     avaliacaoId?: string
     disciplinaId?: string
+    questoes: Questao[] // Adicionamos esta prop para receber questões diretamente
+    isLoading?: boolean // Adicionamos esta prop para controle de carregamento externo
     onAddToAvaliacao?: (questaoId: string) => void
     onRemoveFromAvaliacao?: (questaoId: string) => void
     actionMode?: "add" | "remove" | "view" | "edit"
@@ -24,11 +26,16 @@ interface QuestaoListProps {
     onCreateSuccess?: (questao: Questao) => void
     onUpdateSuccess?: (questao: Questao) => void
     onDeleteSuccess?: () => void
+    onUpdate?: (id: string) => React.ReactNode
+    onView?: (id: string) => React.ReactNode // Nova prop para visualização
+    onDelete?: (id: string) => void
 }
 
 export function QuestaoList({
     avaliacaoId,
     disciplinaId,
+    questoes,
+    isLoading,
     onAddToAvaliacao,
     onRemoveFromAvaliacao,
     actionMode = "view",
@@ -36,7 +43,10 @@ export function QuestaoList({
     hideFilters = false,
     onCreateSuccess,
     onUpdateSuccess,
-    onDeleteSuccess
+    onDeleteSuccess,
+    onUpdate,
+    onView,
+    onDelete
 }: QuestaoListProps) {
     // Estado para paginação e filtros
     const [currentPage, setCurrentPage] = useState(1)
@@ -63,9 +73,7 @@ export function QuestaoList({
 
     // Buscar questões com React Query
     const {
-        questoes,
         pagination,
-        isLoading,
         error,
         refetch
     } = useQuestoes(queryParams)
@@ -177,19 +185,25 @@ export function QuestaoList({
                             questao={questao}
                             showActions={true}
                             actionMode={actionMode}
-                            onEdit={handleEditQuestao}
-                            onDelete={(id) => (
-                                <ConfirmDialog
-                                    title="Excluir Questão"
-                                    description="Tem certeza que deseja excluir esta questão? Esta ação não pode ser desfeita."
-                                    onConfirm={() => handleDeleteQuestao(id)}
-                                    trigger={
-                                        <Button variant="destructive" size="sm">
-                                            Excluir
-                                        </Button>
+                            onEdit={() => {
+                                if (onUpdate) {
+                                    const component = onUpdate(questao._id);
+                                    if (component) {
+                                        return component;
                                     }
-                                />
-                            )}
+                                }
+                                handleEditQuestao(questao);
+                            }}
+                            onView={() => {
+                                if (onView) {
+                                    const component = onView(questao._id);
+                                    if (component) {
+                                        return component;
+                                    }
+                                }
+                                return null;
+                            }}
+                            onDelete={() => onDelete && onDelete(questao._id)}
                             onAddToAvaliacao={onAddToAvaliacao}
                             onRemoveFromAvaliacao={onRemoveFromAvaliacao}
                         />

@@ -47,7 +47,7 @@ export enum AreaEstudo {
 export interface Avaliacao extends BaseModel {
   tipo: TipoAvaliacao;
   ano: number;
-  disciplina: string | Disciplina; // Pode ser um ID ou o objeto completo
+  disciplina: string | Disciplina; 
   trimestre?: Trimestre;
   provincia?: string | Provincia;
   variante?: VarianteProva;
