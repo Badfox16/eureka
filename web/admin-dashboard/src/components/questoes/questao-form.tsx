@@ -15,29 +15,26 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useQuestaoImageUpload } from "@/hooks/use-questao-image-upload"
 
-// Interface para o formulário atualizada com as novas opções de upload
+// Atualizar a definição da interface para incluir as propriedades necessárias
 interface QuestaoFormProps {
-  avaliacaoId?: string
-  questao?: Questao
-  onSubmit: (data: QuestaoFormValues) => Promise<void>
-  trigger: React.ReactNode
-  title: string
-  isEditing?: boolean
+  avaliacaoId: string;
+  questao?: Questao;
+  isEditing?: boolean;
+  title?: string;
+  onSubmit: (data: QuestaoFormValues) => Promise<void>;
+  trigger?: React.ReactNode;
   
-  // Função genérica para upload (mantida para compatibilidade)
-  onImageUpload?: (file: File) => Promise<string>
+  // Adicionar estas propriedades explicitamente
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   
-  // Funções específicas para upload (nova abordagem)
-  onEnunciadoImageUpload?: (file: File) => Promise<string>
-  onAlternativaImageUpload?: (file: File, letra: string) => Promise<string>
+  // Funções para upload de imagens
+  onImageUpload?: (file: File) => Promise<string>;
+  onEnunciadoImageUpload?: (file: File) => Promise<string>;
+  onAlternativaImageUpload?: (file: File, letra: string) => Promise<string>;
 }
 
 // Letras das alternativas
@@ -46,21 +43,40 @@ const LETRAS_ALTERNATIVAS = ["A", "B", "C", "D"]
 export function QuestaoForm({
   avaliacaoId,
   questao,
+  isEditing = false,
+  title = "Questão",
   onSubmit,
   trigger,
-  title,
-  isEditing = false,
-  onImageUpload,
-  onEnunciadoImageUpload,
-  onAlternativaImageUpload
+  isOpen,
+  onOpenChange
 }: QuestaoFormProps) {
-  const [open, setOpen] = useState(false)
+  // Estado interno (usado quando isOpen não é fornecido)
+  const [internalOpen, setInternalOpen] = useState(false)
+  
+  // Determinamos qual estado usar para controlar o diálogo
+  const dialogOpen = isOpen !== undefined ? isOpen : internalOpen
+  const handleDialogOpenChange = onOpenChange || setInternalOpen
+  
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState<string | null>(null)
   
   // Apenas uma ref para o enunciado
   const enunciadoImageInputRef = useRef<HTMLInputElement>(null)
+  
+  // Criar um ref para o formulário
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Usar hook de upload de imagens
+  const { 
+    uploadEnunciadoImage,
+    uploadAlternativaImage, 
+    isUploadingEnunciado,
+    isUploadingAlternativa 
+  } = useQuestaoImageUpload({
+    questaoId: questao?._id,
+    useTempUpload: !questao
+  })
   
   // Determinar se estamos editando ou criando
   const isEdit = !!questao
@@ -90,7 +106,7 @@ export function QuestaoForm({
       explicacao: questao?.explicacao || "",
       imagemEnunciadoUrl: questao?.imagemEnunciadoUrl || "",
       avaliacao: avaliacaoId || avaliacaoFromQuestao || "",
-      valor: questao?.valor || 1
+      valor: questao?.valor || 0.5
     }
   })
 
@@ -142,31 +158,15 @@ export function QuestaoForm({
     }
   }
 
-  // Upload de imagem para o enunciado - Atualizado para usar a função específica ou genérica
+  // Upload de imagem para o enunciado
   const handleEnunciadoImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
     
     const file = e.target.files[0]
     
-    // Verificar se alguma função de upload foi fornecida
-    if (!onEnunciadoImageUpload && !onImageUpload) {
-      setError("Função de upload não configurada")
-      return
-    }
-    
     try {
       setUploadingImage("enunciado")
-      
-      // Usar função específica ou genérica
-      let imageUrl: string
-      if (onEnunciadoImageUpload) {
-        imageUrl = await onEnunciadoImageUpload(file)
-      } else if (onImageUpload) {
-        imageUrl = await onImageUpload(file)
-      } else {
-        throw new Error("Função de upload não disponível")
-      }
-      
+      const imageUrl = await uploadEnunciadoImage(file)
       form.setValue("imagemEnunciadoUrl", imageUrl)
       setUploadingImage(null)
     } catch (err: any) {
@@ -175,31 +175,16 @@ export function QuestaoForm({
     }
   }
 
-  // Upload de imagem para alternativa - Atualizado para usar a função específica ou genérica
+  // Upload de imagem para alternativa
   const handleAlternativaImageUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
     
     const file = e.target.files[0]
     const letra = LETRAS_ALTERNATIVAS[index]
     
-    // Verificar se alguma função de upload foi fornecida
-    if (!onAlternativaImageUpload && !onImageUpload) {
-      setError("Função de upload não configurada")
-      return
-    }
-    
     try {
       setUploadingImage(`alternativa-${index}`)
-      
-      // Usar função específica ou genérica
-      let imageUrl: string
-      if (onAlternativaImageUpload) {
-        imageUrl = await onAlternativaImageUpload(file, letra)
-      } else if (onImageUpload) {
-        imageUrl = await onImageUpload(file)
-      } else {
-        throw new Error("Função de upload não disponível")
-      }
+      const imageUrl = await uploadAlternativaImage(file, letra)
       
       const alternativas = [...form.getValues().alternativas]
       alternativas[index] = {
@@ -236,27 +221,45 @@ export function QuestaoForm({
   }
 
   // Lidar com o envio do formulário
-  const handleFormSubmit: SubmitHandler<QuestaoFormValues> = async (data) => {
-    setIsSubmitting(true)
-    setError(null)
+  const handleFormSubmit = async (data: QuestaoFormValues) => {
+    // Adicione log para debug
+    console.log("Formulário enviado:", data);
+    console.log("Dados do formulário a serem enviados:", JSON.stringify(data, null, 2));
+    setIsSubmitting(true);
+    setError(null);
     
     try {
-      await onSubmit(data)
-      setOpen(false)
-      form.reset()
+      // Fazer log antes da chamada
+      console.log("Iniciando submissão...");
+      await onSubmit(data);
+      console.log("Submissão concluída com sucesso");
+      
+      // Fechar dialog apenas após conclusão bem-sucedida
+      handleDialogOpenChange(false);
+      form.reset();
     } catch (err: any) {
-      setError(err.message || "Ocorreu um erro ao salvar a questão")
+      console.error("Erro na submissão:", err);
+      setError(err.message || "Ocorreu um erro ao salvar a questão");
+      
+      // Se o erro tiver uma resposta detalhada
+      if (err.response?.data) {
+        console.error("Resposta da API:", err.response.data);
+        
+        // Exibir mensagem de erro mais específica se disponível
+        const detailedMessage = err.response.data.message || err.response.data.error || err.message;
+        setError(`Erro de validação: ${detailedMessage}`);
+      } else {
+        setError(err.message || "Ocorreu um erro ao salvar a questão");
+      }
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
-  // Verificar se alguma função de upload está disponível
-  const canUpload = !!onImageUpload || !!onEnunciadoImageUpload || !!onAlternativaImageUpload
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -268,7 +271,16 @@ export function QuestaoForm({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <form 
+            ref={formRef}
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log("Form onSubmit acionado!");
+              const values = form.getValues();
+              handleFormSubmit(values);
+            }} 
+            className="space-y-6"
+          >
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -353,7 +365,7 @@ export function QuestaoForm({
                   variant="outline"
                   size="sm"
                   onClick={() => enunciadoImageInputRef.current?.click()}
-                  disabled={!canUpload || !!uploadingImage}
+                  disabled={!uploadEnunciadoImage || !!uploadingImage}
                 >
                   {uploadingImage === "enunciado" ? (
                     <>
@@ -466,7 +478,7 @@ export function QuestaoForm({
                           variant="outline"
                           size="sm"
                           onClick={() => handleFileInputClick(`alternativa-imagem-${index}`)}
-                          disabled={!canUpload || !!uploadingImage}
+                          disabled={!uploadAlternativaImage || !!uploadingImage}
                           className="h-8 text-xs"
                         >
                           {uploadingImage === `alternativa-${index}` ? (
@@ -542,10 +554,30 @@ export function QuestaoForm({
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => handleDialogOpenChange(false)}
+              >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  console.log("Botão clicado");
+                  // Acessar diretamente a função handleSubmit
+                  if (formRef.current) {
+                    console.log("Formulário encontrado, disparando submit");
+                    formRef.current.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                  } else {
+                    console.log("Formulário não encontrado!");
+                    // Submit direto
+                    const values = form.getValues();
+                    handleFormSubmit(values);
+                  }
+                }}
+              >
                 {isSubmitting ? "Salvando..." : isEdit ? "Atualizar" : "Criar"}
               </Button>
             </DialogFooter>

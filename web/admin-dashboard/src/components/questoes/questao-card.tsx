@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Questao, Alternativa } from "@/types/questao"
+import { Questao, QuestaoForm as QuestaoFormData } from "@/types/questao"
 import { cn } from "@/lib/utils"
-import { Check, ChevronDown, ChevronUp, Trash, Edit, Eye, Image } from "lucide-react"
+import { Check, ChevronDown, ChevronUp, Trash, Edit, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -19,16 +19,15 @@ import {
   TooltipContent,
   TooltipTrigger 
 } from "@/components/ui/tooltip"
+import Image from 'next/image'
 
 interface QuestaoCardProps {
   questao: Questao
   onEdit?: (questao: Questao) => React.ReactNode | void
-  onView?: () => React.ReactNode | void // Nova prop para visualização
+  onView?: () => React.ReactNode | void
   onDelete?: (questaoId: string) => void
-  onAddToAvaliacao?: (questaoId: string) => void
-  onRemoveFromAvaliacao?: (questaoId: string) => void
   showActions?: boolean
-  actionMode?: "add" | "remove" | "view" | "edit"
+  actionMode?: "view" | "edit"
   expandedByDefault?: boolean
 }
 
@@ -37,8 +36,6 @@ export function QuestaoCard({
   onEdit,
   onView,
   onDelete,
-  onAddToAvaliacao,
-  onRemoveFromAvaliacao,
   showActions = true,
   actionMode = "view",
   expandedByDefault = false
@@ -50,162 +47,82 @@ export function QuestaoCard({
   const formattedEnunciado = questao.enunciado.replace(/!\[.*?\]\((.*?)\)/g, '')
   
   // Determina qual botão de ação mostrar
-  const renderActionButton = () => {
+  const renderActionButtons = () => {
     if (!showActions) return null
     
-    switch (actionMode) {
-      case "add":
-        return (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onAddToAvaliacao?.(questao._id)}
-            className="ml-auto"
-          >
-            <Check className="mr-2 h-4 w-4" />
-            Adicionar
-          </Button>
-        )
-      case "remove":
-        return (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onRemoveFromAvaliacao?.(questao._id)}
-            className="ml-auto text-destructive hover:bg-destructive/10"
-          >
-            <Trash className="mr-2 h-4 w-4" />
-            Remover
-          </Button>
-        )
-      case "view":
-        return (
-          <div className="flex space-x-2 ml-auto">
-            {onView && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      const component = onView();
-                      if (component) {
-                        return component;
-                      }
-                    }}
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span className="sr-only">Visualizar</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Visualizar detalhes</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {onEdit && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => onEdit(questao)}
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="sr-only">Editar</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Editar questão</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {onDelete && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => onDelete(questao._id)}
-                    className="text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash className="h-4 w-4" />
-                    <span className="sr-only">Excluir</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Excluir questão</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        )
-      case "edit":
-        return (
-          <div className="flex space-x-2 ml-auto">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onEdit?.(questao)}
-                >
-                  <Edit className="h-4 w-4" />
-                  <span className="sr-only">Editar</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Editar questão</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onDelete?.(questao._id)}
-                  className="text-destructive hover:bg-destructive/10"
-                >
-                  <Trash className="h-4 w-4" />
-                  <span className="sr-only">Excluir</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Excluir questão</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )
-      default:
-        return null
-    }
+    return (
+      <div className="flex space-x-2">
+        {onEdit && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onEdit(questao)}
+              >
+                <Edit className="h-4 w-4" />
+                <span className="sr-only">Editar</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Editar questão</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <span className="sr-only">{expanded ? "Menos detalhes" : "Ver detalhes"}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{expanded ? "Ocultar detalhes" : "Ver detalhes completos"}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {onDelete && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onDelete(questao._id)}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                <Trash className="h-4 w-4" />
+                <span className="sr-only">Excluir</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Excluir questão</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    )
   }
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 overflow-hidden">
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-xl">
               Questão {questao.numero}
               {questao.valor > 0 && (
-                <Badge variant="outline" className="ml-2">
+                <Badge variant="secondary" className="ml-2">
                   {questao.valor.toFixed(1)} ponto{questao.valor !== 1 ? 's' : ''}
                 </Badge>
               )}
             </CardTitle>
-            
-            {questao.avaliacao && typeof questao.avaliacao !== 'string' && (
-              <CardDescription>
-                {questao.avaliacao.titulo} ({questao.avaliacao.ano}) - {questao.avaliacao.disciplina.nome}
-              </CardDescription>
-            )}
           </div>
-          
-          {renderActionButton()}
+          {renderActionButtons()}
         </div>
       </CardHeader>
       
@@ -219,7 +136,7 @@ export function QuestaoCard({
             <Button
               variant="ghost"
               size="sm"
-              className="ml-2 h-8 w-8 p-0 flex-shrink-0"
+              className="ml-2 h-8 w-8 p-0 flex-shrink-0 md:hidden"
               onClick={() => setExpanded(!expanded)}
             >
               {expanded ? (
@@ -234,20 +151,24 @@ export function QuestaoCard({
           </div>
           
           {questao.imagemEnunciadoUrl && (
-            <div className="relative mt-2 rounded-md overflow-hidden">
-              <img 
+            <div className="relative mt-2 rounded-md overflow-hidden border h-40">
+              <Image 
                 src={questao.imagemEnunciadoUrl} 
                 alt="Imagem do enunciado" 
-                className="max-h-40 object-contain mx-auto"
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className="object-contain"
+                priority={false}
               />
             </div>
           )}
         </div>
       </CardContent>
       
+      {/* Conteúdo expandido com alternativas e explicação */}
       {expanded && (
         <>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 border-t">
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Alternativas:</h4>
               
@@ -264,11 +185,13 @@ export function QuestaoCard({
                     <div className="flex-1">
                       <div dangerouslySetInnerHTML={{ __html: alternativa.texto }} />
                       {alternativa.imagemUrl && (
-                        <div className="mt-1">
-                          <img 
+                        <div className="mt-1 relative h-20">
+                          <Image 
                             src={alternativa.imagemUrl} 
-                            alt={`Imagem alternativa ${alternativa.letra}`} 
-                            className="max-h-20 object-contain"
+                            alt={`Imagem alternativa ${alternativa.letra}`}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="object-contain" 
                           />
                         </div>
                       )}
@@ -301,9 +224,6 @@ export function QuestaoCard({
               Resposta: <strong>{alternativaCorreta.letra}</strong>
             </span>
           )}
-          <span>
-            ID: {questao._id.substring(0, 8)}...
-          </span>
         </div>
       </CardFooter>
     </Card>

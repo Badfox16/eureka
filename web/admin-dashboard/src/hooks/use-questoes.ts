@@ -108,11 +108,10 @@ export function useCreateQuestao() {
     mutationFn: (data: CreateQuestaoInput) => questaoService.create(data),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
-      toast.success("Questão criada com sucesso!");
       return response.data; // Retorna a questão criada para uso posterior
     },
     onError: (error: any) => {
-      toast.error(`Erro ao criar questão: ${error.message || "Ocorreu um erro"}`);
+      console.error("Erro na criação de questão:", error);
     }
   });
   
@@ -129,13 +128,14 @@ export function useUpdateQuestao() {
     mutationFn: ({ id, data }: { id: string, data: UpdateQuestaoInput }) => 
       questaoService.update(id, data),
     onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['questoes'] });
+      // Invalidar cache da questão específica
       queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
-      toast.success("Questão atualizada com sucesso!");
-      return response.data; // Retorna a questão atualizada
+      
+      // Invalidar cache da lista de questões
+      queryClient.invalidateQueries({ queryKey: ['questoes'] });
     },
     onError: (error: any) => {
-      toast.error(`Erro ao atualizar questão: ${error.message || "Ocorreu um erro"}`);
+      console.error("Erro na atualização de questão:", error);
     }
   });
   

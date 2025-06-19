@@ -1,177 +1,198 @@
 "use client"
 
 import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { 
-  ArrowLeft, 
-  Plus, 
-  Loader2, 
-  Edit, 
-  Eye, 
-  Trash2,
-  Search,
-  CheckCircle2,
-  XCircle
-} from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { ArrowLeft, Eye, Loader2, Pencil, Plus, Search } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ItemsPerPage } from '@/components/ui/items-per-page'
+import { Pagination } from '@/components/ui/pagination'
+import DashboardLayout from '@/components/layout/dashboard-layout'
+import { TipoAvaliacao } from '@/types/avaliacao'
+import { Questao, QuestaoForm as QuestaoFormType } from '@/types/questao'
+import { toast } from 'sonner'
+import { QuestaoForm } from '@/components/questoes/questao-form'
+import { QuestaoCard } from '@/components/questoes/questao-card'
 import { useAvaliacao } from '@/hooks/use-avaliacoes'
 import { 
-  useQuestoes, 
-  useAddQuestaoToAvaliacao, 
-  useRemoveQuestaoFromAvaliacao 
+  useQuestoes,
+  useCreateQuestao, 
+  useUpdateQuestao, 
+  useDeleteQuestao 
 } from '@/hooks/use-questoes'
-import DashboardLayout from '@/components/layout/dashboard-layout'
-import { Button } from '@/components/ui/button'
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { TableToolbar } from '@/components/ui/table-toolbar'
-import { Pagination } from '@/components/ui/pagination'
-import { ItemsPerPage } from '@/components/ui/items-per-page'
-import { TableRowActions } from '@/components/ui/table-row-actions'
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { TipoAvaliacao } from '@/types/avaliacao'
-import { Questao } from '@/types/questao'
-import { toast } from 'sonner'
-
-// Componente para o card de questão
-function QuestaoCard({ 
-  questao, 
-  isAssociated = false,
-  onAddToAvaliacao,
-  onRemoveFromAvaliacao
-}: { 
-  questao: Questao; 
-  isAssociated?: boolean;
-  onAddToAvaliacao?: (questaoId: string) => void;
-  onRemoveFromAvaliacao?: (questaoId: string) => void;
-}) {
-  return (
-    <Card className="h-full">
-      <CardContent className="p-4">
-        <div className="flex justify-between mb-2">
-          <Badge variant={isAssociated ? "default" : "outline"}>
-            Questão {questao.numero || ''}
-          </Badge>
-          {questao.valor !== undefined && (
-            <Badge variant="secondary">
-              Valor: {questao.valor}
-            </Badge>
-          )}
-        </div>
-        
-        <div className="mb-4 line-clamp-3" dangerouslySetInnerHTML={{ __html: questao.enunciado }} />
-        
-        {questao.alternativas && questao.alternativas.length > 0 && (
-          <div className="mb-4 text-sm text-muted-foreground">
-            {questao.alternativas.length} alternativas
-          </div>
-        )}
-        
-        <div className="flex justify-end mt-auto pt-2">
-          {isAssociated ? (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => onRemoveFromAvaliacao?.(questao._id)}
-              className="text-destructive hover:text-destructive"
-            >
-              <XCircle className="mr-2 h-4 w-4" />
-              Remover
-            </Button>
-          ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => onAddToAvaliacao?.(questao._id)}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Adicionar
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
 export default function AvaliacaoQuestoesPage() {
   const params = useParams()
   const router = useRouter()
   const avaliacaoId = params.id as string
   
-  // Estado para paginação e filtros
+  // Estado para paginação e busca
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("associadas")
+  
+  // Estado para controlar edição de questão
+  const [questaoEmEdicao, setQuestaoEmEdicao] = useState<Questao | null>(null)
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false)
   
   // Carregar dados da avaliação
   const { avaliacao, isLoading: isLoadingAvaliacao } = useAvaliacao(avaliacaoId)
   
-  // Carregar questões associadas
+  // Hooks de gerenciamento de questões
   const { 
-    questoes: questoesAssociadas, 
-    isLoading: isLoadingQuestoesAssociadas,
-    pagination: paginationAssociadas
+    questoes, 
+    isLoading: isLoadingQuestoes,
+    pagination,
+    refetch
   } = useQuestoes({
     avaliacaoId,
-    page: activeTab === "associadas" ? currentPage : 1,
-    limit: activeTab === "associadas" ? itemsPerPage : 100
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchQuery
   })
-  
-  // Carregar questões disponíveis (não associadas)
-  const { 
-    questoes: questoesDisponiveis, 
-    isLoading: isLoadingQuestoesDisponiveis,
-    pagination: paginationDisponiveis
-  } = useQuestoes({
-    notInAvaliacao: avaliacaoId,
-    search: searchQuery,
-    page: activeTab === "disponiveis" ? currentPage : 1,
-    limit: activeTab === "disponiveis" ? itemsPerPage : 10
-  })
-  
-  // Mutações para adicionar/remover questões
-  const addQuestaoMutation = useAddQuestaoToAvaliacao()
-  const removeQuestaoMutation = useRemoveQuestaoFromAvaliacao()
 
-  // Manipuladores de eventos
-  const handleAddQuestao = async (questaoId: string) => {
+  // Hooks de mutação
+  const createQuestaoMutation = useCreateQuestao()
+  const updateQuestaoMutation = useUpdateQuestao()
+  const deleteQuestaoMutation = useDeleteQuestao()
+
+  // Handler para criar questão
+  const handleCreateQuestao = async (data: QuestaoFormType) => {
     try {
-      await addQuestaoMutation.mutateAsync({ 
-        avaliacaoId, 
-        questaoId 
-      })
-      toast.success("Questão adicionada com sucesso!")
-    } catch (error) {
-      toast.error("Erro ao adicionar questão")
+      console.log("Dados originais:", data);
+
+      // Limpar dados para criação - remover campos sensíveis
+      const { 
+        imagemEnunciadoUrl, // URLs de imagem serão adicionadas por upload separado
+        ...createData 
+      } = data;
+
+      // Garantir que as alternativas não têm imagemUrl
+      const alternativas = createData.alternativas?.map(alt => {
+        const { imagemUrl, ...altData } = alt;
+        return altData;
+      });
+
+      // Construir objeto limpo para criação
+      const cleanCreateData = {
+        ...createData,
+        alternativas,
+        avaliacao: avaliacaoId, // Garantir que está usando o ID correto
+        numero: Number(createData.numero), // Garantir que é número
+        valor: Number(createData.valor) // Garantir que é número
+      };
+
+      console.log("Dados limpos para criação:", cleanCreateData);
+      
+      await createQuestaoMutation.mutateAsync(cleanCreateData);
+      
+      toast.success("Questão criada com sucesso!");
+      refetch();
+      return Promise.resolve();
+    } catch (error: any) {
+      // Extrair código de erro específico
+      let errorCode = error.response?.data?.code || '';
+      let errorMessage = "Ocorreu um erro";
+      
+      switch(errorCode) {
+        case 'DUPLICATE_RESOURCE':
+          errorMessage = "Já existe uma questão com este número na avaliação. Por favor, escolha outro número.";
+          break;
+        case 'RELATED_RESOURCE_NOT_FOUND':
+          errorMessage = "A avaliação associada não foi encontrada.";
+          break;
+        case 'VALIDATION_ERROR':
+          errorMessage = error.response?.data?.message || "Os dados fornecidos não são válidos.";
+          break;
+        default:
+          errorMessage = error.message || "Erro ao criar questão";
+      }
+      
+      toast.error(errorMessage);
+      return Promise.reject(error);
     }
   }
 
-  const handleRemoveQuestao = async (questaoId: string) => {
+  // Handler para abrir formulário de edição
+  const handleOpenEditForm = (questao: Questao) => {
+    setQuestaoEmEdicao(questao)
+    setIsEditFormOpen(true)
+  }
+
+  // Handler para atualizar questão
+  const handleUpdateQuestao = async (questaoId: string, data: QuestaoFormType) => {
     try {
-      await removeQuestaoMutation.mutateAsync({ 
-        avaliacaoId, 
-        questaoId 
-      })
-      toast.success("Questão removida com sucesso!")
-    } catch (error) {
-      toast.error("Erro ao remover questão")
+      // Limpar dados para atualização - remover campos sensíveis
+      const { 
+        avaliacao, // Remover avaliação para não tentar mover a questão
+        imagemEnunciadoUrl, // Remover URLs de imagem que são protegidas
+        ...updateData 
+      } = data;
+
+      // Garantir que as alternativas não têm imagemUrl
+      const alternativas = updateData.alternativas?.map(alt => {
+        const { imagemUrl, ...altData } = alt;
+        return altData;
+      });
+
+      // Construir objeto limpo para atualização
+      const cleanUpdateData = {
+        ...updateData,
+        alternativas
+      };
+
+      console.log("Dados limpos para atualização:", cleanUpdateData);
+      
+      await updateQuestaoMutation.mutateAsync({
+        id: questaoId,
+        data: cleanUpdateData
+      });
+      
+      toast.success("Questão atualizada com sucesso!");
+      setIsEditFormOpen(false);
+      setQuestaoEmEdicao(null);
+      refetch();
+      return Promise.resolve()
+    } catch (error: any) {
+      // Extrair código de erro específico
+      let errorCode = error.response?.data?.code || '';
+      let errorMessage = "Ocorreu um erro";
+      
+      switch(errorCode) {
+        case 'DUPLICATE_RESOURCE':
+          errorMessage = "Já existe uma questão com este número na avaliação";
+          break;
+        case 'VALIDATION_ERROR':
+          errorMessage = error.response?.data?.message || "Erro de validação";
+          break;
+        case 'RELATED_RESOURCE_NOT_FOUND':
+          errorMessage = "Avaliação não encontrada";
+          break;
+        default:
+          errorMessage = error.message || "Erro ao atualizar questão";
+      }
+      
+      toast.error(errorMessage);
+      return Promise.reject(error);
     }
   }
 
-  // Gerar título para exibição
+  // Handler para excluir questão
+  const handleDeleteQuestao = async (questaoId: string) => {
+    if (confirm('Tem certeza que deseja excluir esta questão?')) {
+      try {
+        await deleteQuestaoMutation.mutateAsync(questaoId)
+        toast.success("Questão excluída com sucesso!")
+        refetch()
+      } catch (error: any) {
+        toast.error(`Erro ao excluir questão: ${error.message || "Ocorreu um erro"}`)
+      }
+    }
+  }
+
+  // Gerar título para exibição com trimestre/época
   const getDisplayTitle = () => {
     if (!avaliacao) return 'Carregando...'
     
@@ -179,13 +200,20 @@ export default function AvaliacaoQuestoesPage() {
       ? (avaliacao.disciplina as any).nome 
       : 'Disciplina'
     
-    return `${avaliacao.tipo === TipoAvaliacao.EXAME ? 'Exame' : 'AP'} de ${disciplinaNome} - ${avaliacao.ano}`
-  }
+    // Extrair informação de trimestre/época
+    const trimestre = avaliacao.trimestre ? 
+      `${avaliacao.trimestre} Trimestre` : '';
+    
+    const epoca = avaliacao.epoca || '';
+    
+    // Escolher qual informação de período mostrar (trimestre ou época)
+    const periodo = trimestre || epoca || '';
 
-  // Determinar qual conjunto de questões exibir com base na aba ativa
-  const currentQuestoes = activeTab === "associadas" ? questoesAssociadas : questoesDisponiveis
-  const isLoadingQuestoes = activeTab === "associadas" ? isLoadingQuestoesAssociadas : isLoadingQuestoesDisponiveis
-  const currentPagination = activeTab === "associadas" ? paginationAssociadas : paginationDisponiveis
+    const provinciaNome = typeof avaliacao.provincia === 'object' ?
+      (avaliacao.provincia as any).nome : '';
+    // Montar o título com todas as informações
+    return `${avaliacao.tipo === TipoAvaliacao.EXAME ? 'Exame' : 'AP'} ${periodo ? `(${periodo})` : ''} de ${disciplinaNome} - ${avaliacao.ano} ${provinciaNome}`;
+  }
 
   return (
     <DashboardLayout>
@@ -202,134 +230,104 @@ export default function AvaliacaoQuestoesPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild>
-            <Link href="/dashboard/questoes/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Questão
-            </Link>
-          </Button>
+          <QuestaoForm
+            avaliacaoId={avaliacaoId}
+            onSubmit={handleCreateQuestao}
+            title="Nova Questão"
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Questão
+              </Button>
+            }
+          />
         </div>
       </div>
 
-      {/* Tabs para alternar entre questões associadas e disponíveis */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="associadas">Questões Associadas</TabsTrigger>
-          <TabsTrigger value="disponiveis">Adicionar Questões</TabsTrigger>
-        </TabsList>
-        
-        {/* Tab de Questões Associadas */}
-        <TabsContent value="associadas" className="space-y-4">
-          {isLoadingQuestoesAssociadas ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : questoesAssociadas.length === 0 ? (
-            <div className="text-center py-8 border rounded-lg">
-              <h3 className="text-lg font-medium">Nenhuma questão associada</h3>
-              <p className="text-muted-foreground mt-1 mb-4">
-                Esta avaliação ainda não possui questões associadas.
-              </p>
-              <Button onClick={() => setActiveTab("disponiveis")}>
-                Adicionar Questões
+      {/* Barra de pesquisa */}
+      <div className="relative max-w-sm mb-4">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Buscar questões..."
+          className="pl-8 w-full"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
+
+      {/* Lista de questões */}
+      {isLoadingQuestoes ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : questoes.length === 0 ? (
+        <div className="text-center py-8 border rounded-lg">
+          <h3 className="text-lg font-medium">Nenhuma questão encontrada</h3>
+          <p className="text-muted-foreground mt-1 mb-4">
+            {searchQuery ? 'Sua busca não retornou resultados.' : 'Esta avaliação ainda não possui questões.'}
+          </p>
+          <QuestaoForm
+            avaliacaoId={avaliacaoId}
+            onSubmit={handleCreateQuestao}
+            title="Nova Questão"
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Primeira Questão
               </Button>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {questoesAssociadas.map((questao: Questao) => (
-                  <QuestaoCard 
-                    key={questao._id} 
-                    questao={questao} 
-                    isAssociated={true}
-                    onRemoveFromAvaliacao={handleRemoveQuestao}
-                  />
-                ))}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <ItemsPerPage
-                  value={itemsPerPage}
-                  onChange={(value) => {
-                    setItemsPerPage(value);
-                    setCurrentPage(1);
-                  }}
-                />
-                
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={paginationAssociadas?.totalPages || 1}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
-            </>
-          )}
-        </TabsContent>
-        
-        {/* Tab de Questões Disponíveis */}
-        <TabsContent value="disponiveis" className="space-y-4">
-          <div className="relative max-w-sm mb-4">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar questões..."
-              className="pl-8 w-full"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
+            }
+          />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {questoes.map((questao: Questao) => (
+              <QuestaoCard 
+                key={questao._id} 
+                questao={questao}
+                showActions={true}
+                actionMode="edit"
+                onEdit={() => handleOpenEditForm(questao)}
+                onDelete={() => handleDeleteQuestao(questao._id)}
+                expandedByDefault={false}
+              />
+            ))}
+          </div>
+          
+          <div className="flex items-center justify-between mt-4">
+            <ItemsPerPage
+              value={itemsPerPage}
+              onChange={(value) => {
+                setItemsPerPage(value);
                 setCurrentPage(1);
               }}
             />
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pagination?.totalPages || 1}
+              onPageChange={setCurrentPage}
+            />
           </div>
-          
-          {isLoadingQuestoesDisponiveis ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : questoesDisponiveis.length === 0 ? (
-            <div className="text-center py-8 border rounded-lg">
-              <h3 className="text-lg font-medium">Nenhuma questão encontrada</h3>
-              <p className="text-muted-foreground mt-1 mb-4">
-                Não há questões disponíveis para adicionar ou sua busca não retornou resultados.
-              </p>
-              <Button asChild>
-                <Link href="/dashboard/questoes/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar Nova Questão
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {questoesDisponiveis.map((questao: Questao) => (
-                  <QuestaoCard 
-                    key={questao._id} 
-                    questao={questao}
-                    onAddToAvaliacao={handleAddQuestao}
-                  />
-                ))}
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <ItemsPerPage
-                  value={itemsPerPage}
-                  onChange={(value) => {
-                    setItemsPerPage(value);
-                    setCurrentPage(1);
-                  }}
-                />
-                
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={paginationDisponiveis?.totalPages || 1}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
+        </>
+      )}
+      
+      {/* Formulário de edição (renderizado fora da estrutura principal) */}
+      {questaoEmEdicao && (
+        <QuestaoForm
+          avaliacaoId={avaliacaoId}
+          questao={questaoEmEdicao}
+          isEditing={true}
+          title="Editar Questão"
+          onSubmit={(data) => handleUpdateQuestao(questaoEmEdicao._id, data)}
+          isOpen={isEditFormOpen}
+          onOpenChange={setIsEditFormOpen}
+        />
+      )}
     </DashboardLayout>
   )
 }
