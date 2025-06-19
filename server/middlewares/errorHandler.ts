@@ -140,6 +140,16 @@ const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     code = 'TIMEOUT_ERROR';
   }
 
+  // 7. Outros Erros Genéricos
+  else if (err.message && err.message.includes('S3')) {
+    const errorResponse = {
+      message: 'Erro no serviço de armazenamento',
+      code: 'S3_ERROR',
+      status: 500,
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    };
+  }
+
   const errorResponse: ErrorResponse = {
     status: 'error',
     message,

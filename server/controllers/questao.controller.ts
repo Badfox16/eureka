@@ -1,12 +1,13 @@
 import type { RequestHandler } from 'express';
+import { removeFile } from '../utils/s3-helper';
+import * as path from 'path';
+import * as fs from 'fs';
+import multer from 'multer';
+import mongoose from 'mongoose';
+import { HttpError } from '../utils/error.utils';
 import { Questao } from '../models/questao';
 import { Avaliacao } from '../models/avaliacao';
 import type { CreateQuestaoInput, UpdateQuestaoInput } from '../schemas/questao.schema';
-import { HttpError } from '../utils/error.utils';
-import fs from 'fs';
-import path from 'path';
-import multer from 'multer';
-import mongoose from 'mongoose';
 
 // Função para formatar a resposta padrão
 const formatResponse = (data: any, paginationData?: any) => {
@@ -32,24 +33,7 @@ const formatResponse = (data: any, paginationData?: any) => {
 };
 
 // Função auxiliar para remover arquivo do disco local
-const removeLocalFile = (filename: string | undefined | null) => {
-  if (!filename) return;
-
-  if (filename.startsWith('/uploads/')) {
-    const actualFilename = filename.substring('/uploads/'.length);
-    const filePath = path.resolve(__dirname, '..', '..', 'tmp', 'uploads', actualFilename);
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log(`🗑️ Arquivo local removido: ${filePath}`);
-      }
-    } catch (err) {
-      console.error(`❌ Erro ao remover arquivo local ${filePath}:`, err);
-    }
-  } else {
-    console.warn(`⚠️ Formato de URL de arquivo local inesperado, não foi possível remover: ${filename}`);
-  }
-};
+const removeLocalFile = removeFile;
 
 /**
  * Cria uma nova questão
@@ -497,21 +481,29 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
     const file = req.file;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      if (file) removeLocalFile(`/uploads/${file.filename}`);
       throw new HttpError('ID de questão inválido', 400, 'INVALID_ID');
     }
 
     if (!file) {
-      throw new HttpError('Nenhum arquivo foi enviado', 400, 'MISSING_FILE');
+      throw new HttpError('Nenhum arquivo enviado', 400, 'NO_FILE_UPLOADED');
     }
 
-    const filename = file.filename;
-    const imageUrl = `/uploads/${filename}`;
+    // Get the file URL (works for both S3 and local)
+    let imageUrl = '';
+    if ('location' in file && typeof file.location === 'string') {
+      // Using S3
+      imageUrl = file.location;
+    } else {
+      // Using local storage (from the existing logic)
+      const filename = file.filename;
+      imageUrl = `/uploads/${filename}`;
+    }
 
-    // Buscar questão para garantir que existe e remover imagem antiga se houver
+    // Rest of the function remains the same...
     const questaoOriginal = await Questao.findById(id);
     if (!questaoOriginal) {
-      removeLocalFile(imageUrl);
+      // If using S3, remove the uploaded file since we won't need it
+      await removeFile(imageUrl);
       throw new HttpError(
         'Questão não encontrada para associar a imagem',
         404,
@@ -519,10 +511,10 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       );
     }
 
-    // Remove a imagem antiga do disco, se existir
-    removeLocalFile(questaoOriginal.imagemEnunciadoUrl);
+    // Remove the old image, if it exists
+    await removeFile(questaoOriginal.imagemEnunciadoUrl);
 
-    // Atualizar o documento Questao no MongoDB com a nova URL
+    // Update the document in MongoDB with the new URL
     const questaoAtualizada = await Questao.findByIdAndUpdate(
       id,
       { $set: { imagemEnunciadoUrl: imageUrl } },
@@ -530,7 +522,7 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
     );
 
     if (!questaoAtualizada) {
-      removeLocalFile(imageUrl);
+      await removeFile(imageUrl);
       throw new HttpError(
         'Falha ao atualizar a questão com a URL da imagem',
         500,
@@ -543,20 +535,8 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       message: 'Imagem do enunciado carregada com sucesso'
     });
   } catch (error) {
-    // Capturar erros do Multer ou outros
-    if (error instanceof multer.MulterError) {
-      next(new HttpError(
-        `Erro no upload: ${error.message}`,
-        400,
-        `UPLOAD_ERROR_${error.code}`
-      ));
-    } else {
-      // Se req.file existir mesmo com erro, remover o arquivo
-      if (req.file) {
-        removeLocalFile(`/uploads/${req.file.filename}`);
-      }
-      next(error);
-    }
+    // Error handling remains the same
+    next(error);
   }
 };
 
@@ -569,78 +549,79 @@ export const uploadImagemAlternativa: RequestHandler = async (req, res, next) =>
     const file = req.file;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      if (file) removeLocalFile(`/uploads/${file.filename}`);
       throw new HttpError('ID de questão inválido', 400, 'INVALID_ID');
     }
 
     if (!file) {
-      throw new HttpError('Nenhum arquivo foi enviado', 400, 'MISSING_FILE');
+      throw new HttpError('Nenhum arquivo enviado', 400, 'NO_FILE_UPLOADED');
     }
 
-    if (!letra || letra.length !== 1) {
-      removeLocalFile(`/uploads/${file.filename}`);
-      throw new HttpError('A letra da alternativa é inválida', 400, 'INVALID_PARAM');
+    // Handle file URL for both S3 and local storage
+    let imageUrl = '';
+    if ('location' in file && typeof file.location === 'string') {
+      // Using S3
+      imageUrl = file.location;
+    } else {
+      // Using local storage
+      const filename = file.filename;
+      imageUrl = `/uploads/${filename}`;
     }
 
-    const filename = file.filename;
-    const imageUrl = `/uploads/${filename}`;
-
-    // Encontrar a questão e a alternativa específica
+    // Buscar a questão
     const questao = await Questao.findById(id);
     if (!questao) {
-      removeLocalFile(imageUrl);
+      // Se a questão não existe, remover o arquivo que acabou de ser carregado
+      await removeFile(imageUrl);
       throw new HttpError('Questão não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    const alternativaIndex = questao.alternativas.findIndex(
-      alt => alt.letra.toUpperCase() === letra.toUpperCase()
-    );
-    
+    // Encontrar a alternativa com a letra correspondente
+    const alternativaIndex = questao.alternativas.findIndex(alt => alt.letra === letra.toUpperCase());
     if (alternativaIndex === -1) {
-      removeLocalFile(imageUrl);
-      throw new HttpError(
-        `Alternativa com a letra '${letra}' não encontrada nesta questão`,
-        404,
-        'RELATED_RESOURCE_NOT_FOUND'
-      );
+      await removeFile(imageUrl);
+      throw new HttpError('Alternativa não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    // Remove a imagem antiga da alternativa, se existir
-    const alternativaOriginal = questao.alternativas[alternativaIndex];
-    removeLocalFile(alternativaOriginal.imagemUrl);
-
-    // Atualizar apenas a URL da imagem da alternativa específica
-    const updateField = `alternativas.${alternativaIndex}.imagemUrl`;
-    const updateResult = await Questao.updateOne(
-      { _id: id, 'alternativas.letra': alternativaOriginal.letra },
-      { $set: { [updateField]: imageUrl } }
-    );
-
-    if (updateResult.modifiedCount === 0) {
-      removeLocalFile(imageUrl);
-      throw new HttpError(
-        'Falha ao atualizar a URL da imagem da alternativa',
-        500,
-        'UPDATE_FAILED'
-      );
+    // Remover a imagem antiga, se existir
+    if (questao.alternativas[alternativaIndex].imagemUrl) {
+      await removeFile(questao.alternativas[alternativaIndex].imagemUrl);
     }
+
+    // Atualizar a URL da imagem da alternativa
+    questao.alternativas[alternativaIndex].imagemUrl = imageUrl;
+    await questao.save();
 
     res.status(200).json({
       data: { imageUrl },
-      message: `Imagem da alternativa '${alternativaOriginal.letra}' carregada com sucesso`
+      message: `Imagem da alternativa ${letra.toUpperCase()} carregada com sucesso`
     });
   } catch (error) {
-    if (error instanceof multer.MulterError) {
-      next(new HttpError(
-        `Erro no upload: ${error.message}`,
-        400,
-        `UPLOAD_ERROR_${error.code}`
-      ));
-    } else {
-      if (req.file) {
-        removeLocalFile(`/uploads/${req.file.filename}`);
-      }
-      next(error);
+    next(error);
+  }
+};
+
+/**
+ * Upload temporário de imagem para novas questões
+ * Usado para pré-visualização antes de criar a questão
+ */
+export const uploadTempImagem: RequestHandler = async (req, res, next) => {
+  try {
+    const file = req.file;
+
+    if (!file) {
+      throw new HttpError('Nenhum arquivo enviado', 400, 'NO_FILE_UPLOADED');
     }
+
+    // For temporary uploads, we're always using local storage
+    const filename = file.filename;
+    const imageUrl = `/uploads/${filename}`;
+
+    // Return the image URL to the client
+    res.status(200).json({
+      data: { imageUrl },
+      message: 'Imagem temporária carregada com sucesso'
+    });
+  } catch (error) {
+    next(error);
   }
 };

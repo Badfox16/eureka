@@ -84,12 +84,13 @@ class QuestaoService {
    */
   async uploadImagemEnunciado(id: string, file: File): Promise<ApiResponse<{ imageUrl: string }>> {
     const formData = new FormData();
-    formData.append('imagem', file);
-
+    // Usar o nome correto do campo esperado pelo backend
+    formData.append('imagemEnunciado', file);
+    
     return apiClient<ApiResponse<{ imageUrl: string }>>(`${ENDPOINTS.QUESTOES.BY_ID(id)}/imagem-enunciado`, {
       method: 'POST',
       body: formData,
-      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto para o FormData
+      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto
     });
   }
 
@@ -98,12 +99,13 @@ class QuestaoService {
    */
   async uploadImagemAlternativa(id: string, letra: string, file: File): Promise<ApiResponse<{ imageUrl: string }>> {
     const formData = new FormData();
-    formData.append('imagem', file);
-
+    // Usar o nome correto do campo esperado pelo backend
+    formData.append('imagemAlternativa', file);
+    
     return apiClient<ApiResponse<{ imageUrl: string }>>(`${ENDPOINTS.QUESTOES.BY_ID(id)}/alternativas/${letra}/imagem`, {
       method: 'POST',
       body: formData,
-      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto para o FormData
+      headers: {} // Remover o Content-Type para que o navegador defina o boundary correto
     });
   }
 
