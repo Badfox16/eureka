@@ -6,6 +6,7 @@ import { paginationSchema } from '../schemas/common.schema';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import type { Types } from 'mongoose';
+import { formatResponse } from '../utils/response.utils';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -23,10 +24,11 @@ export const createUsuario: RequestHandler = async (req, res, next) => {
     // Verificar se já existe um usuário com o mesmo email
     const exists = await Usuario.findOne({ email: usuarioData.email });
     if (exists) {
-      res.status(409).json({
-        status: 'error',
-        message: `Já existe um usuário com o email ${usuarioData.email}`
-      });
+      res.status(409).json(formatResponse(
+        null,
+        undefined,
+        `Já existe um usuário com o email ${usuarioData.email}`
+      ));
       return;
     }
     
@@ -43,16 +45,10 @@ export const createUsuario: RequestHandler = async (req, res, next) => {
     // Remover senha do objeto de resposta usando desestruturação
     const { password, ...usuarioSemSenha } = usuario.toObject();
     
-    res.status(201).json({
-      status: 'success',
-      data: usuarioSemSenha
-    });
+    res.status(201).json(formatResponse(usuarioSemSenha));
   } catch (error) {
     console.error('Erro ao criar usuário:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao criar usuário'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao criar usuário'));
   }
 };
 
@@ -64,32 +60,20 @@ export const getProfile: RequestHandler = async (req, res, next) => {
     // O middleware de autenticação já deve ter colocado o ID do usuário na request
     const userId = (req as any).userId;
     if (!userId) {
-      res.status(401).json({
-        status: 'error',
-        message: 'Não autenticado'
-      });
+      res.status(401).json(formatResponse(null, undefined, 'Não autenticado'));
       return;
     }
     
     const usuario = await Usuario.findById(userId).select('-password');
     if (!usuario) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Usuário não encontrado'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Usuário não encontrado'));
       return;
     }
     
-    res.status(200).json({
-      status: 'success',
-      data: usuario
-    });
+    res.status(200).json(formatResponse(usuario));
   } catch (error) {
     console.error('Erro ao buscar perfil:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao buscar perfil'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao buscar perfil'));
   }
 };
 
@@ -130,23 +114,18 @@ export const getAllUsuarios: RequestHandler = async (req, res, next) => {
     
     // Buscar os usuários com paginação
     const usuarios = await Usuario.find(query)
-      .select('-senha') // Excluir o campo senha
+      .select('-password')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
     
-    res.status(200).json({
-      status: 'success',
-      data: usuarios,
-      meta: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
-    });
+    res.status(200).json(formatResponse(
+      usuarios,
+      { page, limit, total }
+    ));
   } catch (error) {
-    next(error);
+    console.error('Erro ao buscar usuários:', error);
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao buscar usuários'));
   }
 };
 
@@ -158,11 +137,8 @@ export const searchUsuarios: RequestHandler = async (req, res, next) => {
     const query = req.query.q as string;
     
     if (!query) {
-      res.status(400).json({
-        status: 'error',
-        message: 'Termo de busca é obrigatório'
-      });
-      return; // Return sem valor, apenas para encerrar a função
+      res.status(400).json(formatResponse(null, undefined, 'Termo de busca é obrigatório'));
+      return;
     }
     
     const usuarios = await Usuario.find({
@@ -171,16 +147,13 @@ export const searchUsuarios: RequestHandler = async (req, res, next) => {
         { email: { $regex: query, $options: 'i' } }
       ]
     })
-    .select('-senha')
+    .select('-password')
     .limit(10);
     
-    res.status(200).json({
-      status: 'success',
-      data: usuarios
-    });
-    // Sem return na resposta
+    res.status(200).json(formatResponse(usuarios));
   } catch (error) {
-    next(error);
+    console.error('Erro ao buscar usuários:', error);
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao buscar usuários'));
   }
 };
 
@@ -195,10 +168,7 @@ export const updateUsuario: RequestHandler = async (req, res, next) => {
     // Verificar se o usuário existe
     const usuario = await Usuario.findById(id);
     if (!usuario) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Usuário não encontrado'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Usuário não encontrado'));
       return;
     }
     
@@ -210,10 +180,11 @@ export const updateUsuario: RequestHandler = async (req, res, next) => {
       });
       
       if (exists) {
-        res.status(409).json({
-          status: 'error',
-          message: `Já existe um usuário com o email ${updateData.email}`
-        });
+        res.status(409).json(formatResponse(
+          null,
+          undefined,
+          `Já existe um usuário com o email ${updateData.email}`
+        ));
         return;
       }
     }
@@ -231,16 +202,10 @@ export const updateUsuario: RequestHandler = async (req, res, next) => {
       { new: true, runValidators: true }
     ).select('-password');
     
-    res.status(200).json({
-      status: 'success',
-      data: updatedUsuario
-    });
+    res.status(200).json(formatResponse(updatedUsuario));
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao atualizar usuário'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao atualizar usuário'));
   }
 };
 
@@ -254,26 +219,17 @@ export const deleteUsuario: RequestHandler = async (req, res, next) => {
     // Verificar se o usuário existe
     const usuario = await Usuario.findById(id);
     if (!usuario) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Usuário não encontrado'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Usuário não encontrado'));
       return;
     }
     
     // Remover o usuário
     await Usuario.findByIdAndDelete(id);
     
-    res.status(200).json({
-      status: 'success',
-      message: 'Usuário removido com sucesso'
-    });
+    res.status(200).json(formatResponse(null, undefined, 'Usuário removido com sucesso'));
   } catch (error) {
     console.error('Erro ao remover usuário:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao remover usuário'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao remover usuário'));
   }
 };
 
@@ -286,30 +242,21 @@ export const changePassword: RequestHandler = async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
     
     if (!currentPassword || !newPassword) {
-      res.status(400).json({
-        status: 'error',
-        message: 'Senha atual e nova senha são obrigatórias'
-      });
+      res.status(400).json(formatResponse(null, undefined, 'Senha atual e nova senha são obrigatórias'));
       return;
     }
     
     // Verificar se o usuário existe
     const usuario = await Usuario.findById(id);
     if (!usuario) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Usuário não encontrado'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Usuário não encontrado'));
       return;
     }
     
     // Verificar senha atual
     const senhaCorreta = await bcrypt.compare(currentPassword, usuario.password);
     if (!senhaCorreta) {
-      res.status(401).json({
-        status: 'error',
-        message: 'Senha atual incorreta'
-      });
+      res.status(401).json(formatResponse(null, undefined, 'Senha atual incorreta'));
       return;
     }
     
@@ -321,15 +268,9 @@ export const changePassword: RequestHandler = async (req, res, next) => {
     usuario.password = hashedPassword;
     await usuario.save();
     
-    res.status(200).json({
-      status: 'success',
-      message: 'Senha alterada com sucesso'
-    });
+    res.status(200).json(formatResponse(null, undefined, 'Senha alterada com sucesso'));
   } catch (error) {
     console.error('Erro ao alterar senha:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao alterar senha'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao alterar senha'));
   }
 };

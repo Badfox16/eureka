@@ -47,25 +47,47 @@ export const status = {
   info: '#3b82f6'     // Azul
 } as const;
 
+// Cores do sistema
+export const system = {
+  background: '#ffffff',
+  text: {
+    primary: '#1e293b',
+    secondary: '#64748b',
+    disabled: '#94a3b8'
+  },
+  border: '#e2e8f0',
+  divider: '#f1f5f9'
+} as const;
+
 // Função para mesclar classes CSS
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Tipos de cor
-export type ColorPath = keyof typeof primary | keyof typeof slate;
-export type ColorValue = typeof primary[ColorPath] | typeof slate[ColorPath];
+// Tipos de paletas disponíveis
+type ColorType = 'primary' | 'slate';
+type StatusType = keyof typeof status;
+type SystemColorPath = 'background' | 'border' | 'divider' | `text.${keyof typeof system['text']}`;
 
 // Função para obter uma cor da paleta
-export function getColor(color: string, weight: ColorWeight): string {
+export function getColor(palette: ColorType, weight: ColorWeight): string {
   const palettes = { primary, slate };
-  const palette = palettes[color as keyof typeof palettes];
-  return palette ? palette[weight] : '';
+  return palettes[palette][weight];
 }
 
 // Função para obter uma cor de status
-export function getStatusColor(type: 'success' | 'error' | 'warning' | 'info'): string {
+export function getStatusColor(type: StatusType): string {
   return status[type];
+}
+
+// Função para obter uma cor do sistema
+export function getSystemColor(path: SystemColorPath): string {
+  const [base, subPath] = path.split('.');
+  if (subPath && base === 'text') {
+    return system.text[subPath as keyof typeof system['text']];
+  }
+  const baseValue = system[base as keyof typeof system];
+  return typeof baseValue === 'string' ? baseValue : '#1e293b'; // fallback para cor de texto padrão
 }
 
 // Exportação completa
