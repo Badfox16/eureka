@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { FcGoogle } from "react-icons/fc";
+import { cn } from "@/lib/utils";
 
 function MicrosoftIcon() {
   return (
@@ -18,7 +19,12 @@ export function SocialLoginButtons({ disabled }: { disabled?: boolean }) {
       <Button
         type="button"
         variant="outline"
-        className="w-full flex items-center gap-2 border border-orange-200 hover:bg-orange-50"
+        className={cn(
+          "w-full flex items-center gap-2",
+          "border-border bg-background hover:bg-muted",
+          "text-foreground font-medium",
+          "transition-colors duration-200"
+        )}
         aria-label="Entrar com Google"
         disabled={disabled}
       >
@@ -27,7 +33,12 @@ export function SocialLoginButtons({ disabled }: { disabled?: boolean }) {
       <Button
         type="button"
         variant="outline"
-        className="w-full flex items-center gap-2 border border-orange-200 hover:bg-orange-50"
+        className={cn(
+          "w-full flex items-center gap-2",
+          "border-border bg-background hover:bg-muted",
+          "text-foreground font-medium",
+          "transition-colors duration-200"
+        )}
         aria-label="Entrar com Microsoft"
         disabled={disabled}
       >

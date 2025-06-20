@@ -10,6 +10,7 @@ import { BookOpen, Award, Calendar, ArrowRight, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { primary } from "@/lib/colors";
 
 export default function DashboardPage() {
   const { usuario } = useAuth();
@@ -28,8 +29,8 @@ export default function DashboardPage() {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">
-          <div className="w-16 h-16 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-orange-800">Carregando seu dashboard...</p>
+          <div className={`w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin`}></div>
+          <p className="mt-4 text-primary-700">Carregando seu dashboard...</p>
         </div>
       </DashboardLayout>
     );
@@ -60,11 +61,11 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <section className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-orange-900">Olá, {perfil?.nome?.split(' ')[0]}!</h1>
-            <p className="text-orange-700">Confira seu progresso e continue estudando.</p>
+            <h1 className="text-2xl font-bold text-primary-900">Olá, {perfil?.nome?.split(' ')[0]}!</h1>
+            <p className="text-primary-700">Confira seu progresso e continue estudando.</p>
           </div>
           <Link href="/dashboard/quizzes" passHref>
-            <Button variant="default" className="bg-orange-500 hover:bg-orange-600">
+            <Button variant="default" className="bg-primary-500 hover:bg-primary-600">
               <BookOpen className="h-5 w-5 mr-2" />
               Praticar Quizzes
             </Button>
@@ -76,51 +77,51 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Quizzes</CardTitle>
-              <BookOpen className="h-4 w-4 text-orange-500" />
+              <BookOpen className="h-4 w-4 text-primary-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{stats.quizzesCompletos}</div>
-              <p className="text-xs text-orange-700">realizados até agora</p>
+              <div className="text-2xl font-bold text-primary-900">{stats.quizzesCompletos}</div>
+              <p className="text-xs text-primary-700">realizados até agora</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Média de Acertos</CardTitle>
-              <Award className="h-4 w-4 text-orange-500" />
+              <Award className="h-4 w-4 text-primary-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{stats.mediaAcertos}%</div>
-              <p className="text-xs text-orange-700">em todos os quizzes</p>
+              <div className="text-2xl font-bold text-primary-900">{stats.mediaAcertos}%</div>
+              <p className="text-xs text-primary-700">em todos os quizzes</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Disciplinas Fortes</CardTitle>
-              <BarChart2 className="h-4 w-4 text-orange-500" />
+              <BarChart2 className="h-4 w-4 text-primary-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{disciplinasFortes.length}</div>
-              <p className="text-xs text-orange-700">com aproveitamento &gt;70%</p>
+              <div className="text-2xl font-bold text-primary-900">{disciplinasFortes.length}</div>
+              <p className="text-xs text-primary-700">com aproveitamento &gt;70%</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Evolução Recente</CardTitle>
-              <Calendar className="h-4 w-4 text-orange-500" />
+              <Calendar className="h-4 w-4 text-primary-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{ultimoDesempenho}%</div>
-              <p className="text-xs text-orange-700">no último quiz</p>
+              <div className="text-2xl font-bold text-primary-900">{ultimoDesempenho}%</div>
+              <p className="text-xs text-primary-700">no último quiz</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Link para mais detalhes */}
         <div className="text-right">
-          <Link href="/dashboard/quizzes/historico" className="text-orange-500 hover:text-orange-600 inline-flex items-center">
+          <Link href="/dashboard/quizzes/historico" className="text-primary-500 hover:text-primary-600 inline-flex items-center">
             Ver histórico completo <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
         </div>

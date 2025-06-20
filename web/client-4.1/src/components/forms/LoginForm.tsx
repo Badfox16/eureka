@@ -9,6 +9,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { ApiStatus } from "@/types/api";
 import { LoginFormValues, loginSchema } from "@/types/usuario";
+import { primary, status } from "@/lib/colors";
+import { cn } from "@/lib/utils";
 
 interface LoginFormProps {
   onSubmit: (data: LoginFormValues) => Promise<void>;
@@ -16,8 +18,9 @@ interface LoginFormProps {
   error?: string | null;
 }
 
-export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
+export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {  const [showPassword, setShowPassword] = useState(false);
+  // Adicionar uma variável de estado para controlar quando o formulário foi enviado
+  const [formSubmitted, setFormSubmitted] = useState(false);
   
   const {
     register,
@@ -27,14 +30,16 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
     resolver: zodResolver(loginSchema),
     mode: "onBlur",
   });
-  
-  const isLoading = status === ApiStatus.LOADING;
-  const isSuccess = status === ApiStatus.SUCCESS;
-
+    const isLoading = status === ApiStatus.LOADING;
+  // Só mostrar mensagem de sucesso se o status for SUCCESS e o formulário tiver sido enviado
+  const isSuccess = status === ApiStatus.SUCCESS && formSubmitted;
   return (
-    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} aria-label="Formulário de login">
+    <form className="space-y-6" onSubmit={handleSubmit((data) => {
+      setFormSubmitted(true);
+      onSubmit(data);
+    })} aria-label="Formulário de login">
       <div className="flex flex-col gap-2 animate-fade-in">
-        <label htmlFor="email" className="block text-sm font-medium mb-1 text-orange-900">E-mail</label>
+        <label htmlFor="email" className="block text-sm font-semibold text-foreground">E-mail</label>
         <Input
           id="email"
           type="email"
@@ -42,11 +47,14 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
           aria-label="E-mail"
           disabled={isLoading}
           placeholder="seu@email.com"
-          className={errors.email ? "border-red-400 focus:border-red-500" : ""}
+          className={cn(
+            "bg-background text-foreground placeholder:text-muted-foreground",
+            errors.email ? "border-status-error focus:border-status-error" : "border-input"
+          )}
           {...register("email")}
         />
         {errors.email && (
-          <span className="text-xs text-red-500 flex items-center gap-1 animate-fade-in">
+          <span className="text-xs text-status-error flex items-center gap-1 animate-fade-in">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
             {errors.email.message}
           </span>
@@ -54,7 +62,7 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
       </div>
       
       <div className="flex flex-col gap-2 animate-fade-in">
-        <label htmlFor="password" className="block text-sm font-medium mb-1 text-orange-900">Senha</label>
+        <label htmlFor="password" className="block text-sm font-semibold text-foreground">Senha</label>
         <div className="relative">
           <Input
             id="password"
@@ -63,12 +71,15 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
             aria-label="Senha"
             disabled={isLoading}
             placeholder="••••••••"
-            className={errors.password ? "border-red-400 focus:border-red-500" : ""}
+            className={cn(
+              "bg-background text-foreground placeholder:text-muted-foreground",
+              errors.password ? "border-status-error focus:border-status-error" : "border-input"
+            )}
             {...register("password")}
           />
           <button
             type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-orange-400 hover:text-orange-600 p-1"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
             tabIndex={-1}
             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
             onClick={() => setShowPassword(v => !v)}
@@ -77,23 +88,23 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
           </button>
         </div>
         {errors.password && (
-          <span className="text-xs text-red-500 flex items-center gap-1 animate-fade-in">
+          <span className="text-xs text-status-error flex items-center gap-1 animate-fade-in">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
             {errors.password.message}
           </span>
         )}
-        <a href="#" className="text-xs text-orange-700 hover:underline mt-1 w-fit" tabIndex={0} aria-label="Esqueci minha senha">Esqueci minha senha?</a>
+        <a href="#" className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 w-fit" tabIndex={0} aria-label="Esqueci minha senha">Esqueci minha senha?</a>
       </div>
       
       {error && (
-        <div className="flex items-center justify-center gap-2 text-red-600 text-sm text-center animate-fade-in">
+        <div className="flex items-center justify-center gap-2 text-status-error text-sm text-center animate-fade-in">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
           {error}
         </div>
       )}
       
       {isSuccess && (
-        <div className="flex items-center justify-center gap-2 text-green-600 text-sm text-center animate-fade-in">
+        <div className="flex items-center justify-center gap-2 text-status-success text-sm text-center animate-fade-in">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
           <span>Login realizado com sucesso!</span>
         </div>
@@ -101,7 +112,7 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
       
       <Button
         type="submit"
-        className="w-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-2"
+        className="w-full bg-primary-600 hover:bg-primary-700 text-white flex items-center justify-center gap-2 dark:bg-primary-500 dark:hover:bg-primary-600"
         disabled={isLoading}
         aria-label="Entrar"
       >
@@ -111,14 +122,14 @@ export default function LoginForm({ onSubmit, status, error }: LoginFormProps) {
         {isLoading ? "Entrando..." : "Entrar"}
       </Button>
       
-      <div className="text-center text-sm mt-2">
-        Não tem conta? <a href="/register" className="text-orange-600 underline">Cadastre-se</a>
+      <div className="text-center text-sm mt-2 text-muted-foreground">
+        Não tem conta? <a href="/register" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">Cadastre-se</a>
       </div>
       
       <div className="relative flex items-center my-4">
-        <div className="flex-grow border-t border-orange-200"></div>
-        <span className="mx-2 text-xs text-orange-400">ou</span>
-        <div className="flex-grow border-t border-orange-200"></div>
+        <div className="flex-grow border-t border-border"></div>
+        <span className="mx-2 text-xs text-muted-foreground">ou</span>
+        <div className="flex-grow border-t border-border"></div>
       </div>
       
       <SocialLoginButtons disabled={isLoading} />

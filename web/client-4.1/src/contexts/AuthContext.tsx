@@ -30,10 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: logoutFn,
     alterarSenha: alterarSenhaFn
   } = useAuthHook();
-
   const value: AuthContextType = {
     usuario: usuario || null,
-    status: isLoading ? ApiStatus.LOADING : isError ? ApiStatus.ERROR : ApiStatus.SUCCESS,
+    status: isLoading ? ApiStatus.LOADING : isError ? ApiStatus.ERROR : usuario ? ApiStatus.SUCCESS : ApiStatus.IDLE,
     error: authError?.message || null,
     login: loginFn,
     register: registerFn,

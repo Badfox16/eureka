@@ -150,3 +150,22 @@ body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: var(--color-slate-600);
 }
+
+/* Força fundo sólido nos dropdowns do Radix/shadcn/ui no dark mode */
+.force-solid-bg,
+.dark .force-solid-bg,
+[data-theme="dark"] .force-solid-bg {
+  background-color: #18181b !important; /* zinc-900 */
+  color: #ededed !important;
+  opacity: 1 !important;
+}
+
+/* Força fundo sólido nos dropdowns do Radix/shadcn/ui, mesmo em portal */
+[data-radix-popper-content-wrapper] > div {
+  background-color: #fff !important;
+  color: #171717 !important;
+}
+.dark [data-radix-popper-content-wrapper] > div {
+  background-color: #18181b !important;
+  color: #ededed !important;
+}
