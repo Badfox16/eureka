@@ -38,10 +38,3 @@ export enum TipoAtividade {
   INSIGNIA_OBTIDA = 'insignia_obtida',
   PERFIL_ATUALIZADO = 'perfil_atualizado'
 }
-
-// Mantendo compatibilidade com o código existente
-// até que seja totalmente refatorado
-export type UserStats = EstatisticasUsuario;
-export type RecentActivity = AtividadeRecente;
-export type Badge = Insignia;
-export type ActivityType = TipoAtividade;

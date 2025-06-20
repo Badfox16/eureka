@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import * as quizApi from "@/api/quiz.refatorado";
+import * as quizApi from "@/api/quiz";
 import { Quiz } from "@/types/quiz";
 import { QuizSearchParams } from "@/types/search";
 

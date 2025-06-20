@@ -16,8 +16,3 @@ export type { ProvinciaSearchParams } from "./provincia";
 export type { QuizSearchParams } from "./quiz";
 export type { UsuarioSearchParams } from "./usuario";
 export type { PaginationParams } from "./api";
-
-// Mantendo compatibilidade com o código existente
-// até que seja totalmente refatorado
-export type UserSearchParams = UsuarioSearchParams;
-export type AttemptSearchParams = EstudanteQuizSearchParams;
