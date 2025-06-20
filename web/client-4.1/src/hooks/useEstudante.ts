@@ -43,7 +43,6 @@ export function useEstudantes(params?: EstudanteSearchParams) {
 
 export function useEstudante(estudanteId?: string) {
   const queryClient = useQueryClient();
-
   // Consulta para obter um estudante específico
   const {
     data: estudante,
@@ -51,16 +50,15 @@ export function useEstudante(estudanteId?: string) {
     isError,
     error,
     refetch,
-  } = useQuery<Estudante | undefined>({
+  } = useQuery<Estudante | null>({
     queryKey: ["estudante", estudanteId],
     queryFn: async () => {
-      if (!estudanteId) return undefined;
+      if (!estudanteId) return null;
       const response = await estudanteApi.getEstudante(estudanteId);
-      return response.data;
+      return response.data || null;
     },
     enabled: !!estudanteId,
   });
-
   // Consulta para obter os quizzes de um estudante
   const {
     data: quizzes,
@@ -68,12 +66,12 @@ export function useEstudante(estudanteId?: string) {
     isError: isErrorQuizzes,
     error: errorQuizzes,
     refetch: refetchQuizzes,
-  } = useQuery<EstudanteQuiz[] | undefined>({
+  } = useQuery<EstudanteQuiz[] | null>({
     queryKey: ["estudante", estudanteId, "quizzes"],
     queryFn: async () => {
-      if (!estudanteId) return undefined;
+      if (!estudanteId) return null;
       const response = await estudanteApi.getQuizzesEstudante(estudanteId);
-      return response.data;
+      return response.data || null;
     },
     enabled: !!estudanteId,
   });
@@ -104,11 +102,11 @@ export function usePerfilEstudante() {
     isError,
     error,
     refetch,
-  } = useQuery<Estudante | undefined>({
+  } = useQuery<Estudante | null>({
     queryKey: ["perfil-estudante"],
     queryFn: async () => {
       const response = await estudanteApi.getPerfilEstudante();
-      return response.data;
+      return response.data || null;
     },
   });
 

@@ -5,7 +5,6 @@ import { LoginRequest, RegisterRequest, Usuario } from "@/types/usuario";
 
 export function useAuth() {
   const queryClient = useQueryClient();
-
   // Consulta para obter o usuário atual
   const {
     data: usuario,
@@ -13,11 +12,11 @@ export function useAuth() {
     isError,
     error,
     refetch,
-  } = useQuery<Usuario | undefined>({
+  } = useQuery<Usuario | null>({
     queryKey: ["usuario"],
     queryFn: async () => {
       const response = await authApi.getCurrentUser();
-      return response.data;
+      return response.data || null;
     },
     retry: false,
     // Não exibir erro se não estiver autenticado
@@ -43,12 +42,11 @@ export function useAuth() {
       }
     },
   });
-
   // Mutação para logout
   const logoutMutation = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => {
-      queryClient.setQueryData(["usuario"], undefined);
+      queryClient.setQueryData(["usuario"], null);
       // Invalidar todas as queries no cache
       queryClient.invalidateQueries();
     },

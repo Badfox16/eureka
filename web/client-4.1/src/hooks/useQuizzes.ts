@@ -42,7 +42,6 @@ export function useQuizzes(params?: QuizSearchParams) {
 
 export function useQuiz(quizId?: string) {
   const queryClient = useQueryClient();
-
   // Consulta para obter um quiz específico
   const {
     data: quiz,
@@ -50,12 +49,12 @@ export function useQuiz(quizId?: string) {
     isError,
     error,
     refetch,
-  } = useQuery<Quiz | undefined>({
+  } = useQuery<Quiz | null>({
     queryKey: ["quiz", quizId],
     queryFn: async () => {
-      if (!quizId) return undefined;
+      if (!quizId) return null;
       const response = await quizApi.getQuiz(quizId);
-      return response.data;
+      return response.data || null;
     },
     enabled: !!quizId,
   });

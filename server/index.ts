@@ -23,7 +23,10 @@ export const app = express()
 // Configuração do CORS
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:3000', 'https://eureka-dashboard.vercel.app']
+  : ['http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'https://eureka-dashboard.vercel.app']
 
 app.use(cors({
   origin: function (origin, callback) {

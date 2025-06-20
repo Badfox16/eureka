@@ -2,36 +2,33 @@ import { useQuery } from "@tanstack/react-query";
 import * as estatisticaApi from "@/api/estatistica";
 import { Estatistica, EstatisticaDisciplina, EvolucaoDesempenho, RankingEstudante } from "@/types/estatisticas";
 
-export function useEstatisticas(estudanteId?: string) {
-  // Consulta para obter estatísticas gerais
-  const estatisticasGerais = useQuery<Estatistica | undefined>({
+export function useEstatisticas(estudanteId?: string) {  // Consulta para obter estatísticas gerais
+  const estatisticasGerais = useQuery<Estatistica | null>({
     queryKey: ["estatisticas", "estudante", estudanteId],
     queryFn: async () => {
-      if (!estudanteId) return undefined;
+      if (!estudanteId) return null;
       const response = await estatisticaApi.getEstatisticasEstudante(estudanteId);
-      return response.data;
+      return response.data || null;
     },
     enabled: !!estudanteId,
   });
-
   // Consulta para obter estatísticas por disciplina
-  const estatisticasDisciplinas = useQuery<EstatisticaDisciplina[] | undefined>({
+  const estatisticasDisciplinas = useQuery<EstatisticaDisciplina[] | null>({
     queryKey: ["estatisticas", "disciplinas", estudanteId],
     queryFn: async () => {
-      if (!estudanteId) return undefined;
+      if (!estudanteId) return null;
       const response = await estatisticaApi.getEstatisticasPorDisciplina(estudanteId);
-      return response.data;
+      return response.data || null;
     },
     enabled: !!estudanteId,
   });
-
   // Consulta para obter evolução de desempenho
-  const evolucaoDesempenho = useQuery<EvolucaoDesempenho | undefined>({
+  const evolucaoDesempenho = useQuery<EvolucaoDesempenho | null>({
     queryKey: ["estatisticas", "evolucao", estudanteId],
     queryFn: async () => {
-      if (!estudanteId) return undefined;
+      if (!estudanteId) return null;
       const response = await estatisticaApi.getEvolucaoDesempenho(estudanteId);
-      return response.data;
+      return response.data || null;
     },
     enabled: !!estudanteId,
   });
@@ -58,12 +55,11 @@ export function useEstatisticas(estudanteId?: string) {
   };
 }
 
-export function useRanking(quizId?: string) {
-  const ranking = useQuery<RankingEstudante[] | undefined>({
+export function useRanking(quizId?: string) {  const ranking = useQuery<RankingEstudante[] | null>({
     queryKey: ["ranking", quizId],
     queryFn: async () => {
       const response = await estatisticaApi.getRanking(quizId);
-      return response.data;
+      return response.data || null;
     },
   });
 

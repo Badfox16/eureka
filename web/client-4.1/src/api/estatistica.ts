@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { Estatistica, EstatisticaDisciplina, EvolucaoDesempenho, RankingEstudante } from "@/types/estatisticas";
+import { Estatistica, EstatisticaDisciplina, EvolucaoDesempenho, RankingEstudante, EstatisticasGerais } from "@/types/estatisticas";
 import { fetchApi, createAuthHeaders } from "./apiService";
 
 // Função para obter estatísticas gerais de um estudante
@@ -36,7 +35,7 @@ export async function getRanking(quizId?: string) {
 
 // Função para obter estatísticas gerais do sistema
 export async function getEstatisticasGerais() {
-  return fetchApi<any>(`/estatisticas/gerais`, {
+  return fetchApi<EstatisticasGerais>(`/estatisticas/gerais`, {
     headers: createAuthHeaders(),
   });
 }
