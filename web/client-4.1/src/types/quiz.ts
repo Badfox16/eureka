@@ -1,4 +1,21 @@
 import { Avaliacao } from "./avaliacao";
+import { Questao } from "./questao";
+
+// Modelo de opção de resposta para o quiz
+export type OpcaoQuiz = {
+  _id: string;
+  texto: string;
+  correta: boolean;
+};
+
+// Modelo de questão adaptada para o quiz
+export type QuestaoQuiz = {
+  _id: string;
+  enunciado: string;
+  opcoes: OpcaoQuiz[];
+  explicacao?: string;
+  imagem?: string;
+};
 
 // Modelo de quiz
 export type Quiz = {
@@ -6,6 +23,7 @@ export type Quiz = {
   titulo: string;
   descricao?: string;
   avaliacao: string | Avaliacao;
+  questoes: QuestaoQuiz[];
   tempoLimite?: number;
   ativo: boolean;
   createdAt: string;

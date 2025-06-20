@@ -1,43 +1,43 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import * as notificationApi from "@/api/notification";
-import { Notificacao } from "@/types/notification";
+import { Notificacao, NotificacaoContadorResponse } from "@/types/notification";
 import { NotificacaoSearchParams } from "@/types/search";
+import { ApiResponse, PaginatedResponse } from "@/types/api";
 
-export function useNotifications() {
+export function useNotifications(searchParams: NotificacaoSearchParams = { page: 1, limit: 10 }) {
   const queryClient = useQueryClient();
 
   // Consulta para obter notificações do usuário atual
   const {
-    data: notificacoes,
+    data,
     isLoading,
     isError,
     error,
     refetch,
-  } = useQuery<Notificacao[]>({
-    queryKey: ["notificacoes"],
+  } = useQuery<PaginatedResponse<Notificacao>>({
+    queryKey: ["notificacoes", searchParams],
     queryFn: async () => {
-      const response = await notificationApi.getNotificacoes();
-      return response.data || [];
+      const response = await notificationApi.getNotificacoes(searchParams);
+      return response;
     },
   });
 
   // Consulta para obter o contador de notificações não lidas
   const {
-    data: contadorNaoLidas,
+    data: contadorData,
     refetch: refetchContador,
-  } = useQuery<number>({
+  } = useQuery<ApiResponse<NotificacaoContadorResponse>>({
     queryKey: ["notificacoes-contador"],
     queryFn: async () => {
       const response = await notificationApi.getContadorNaoLidas();
-      return response.data?.contador || 0;
+      return response;
     },
   });
 
   // Mutação para marcar uma notificação como lida
-  const marcarComoLidaMutation = useMutation({
-    mutationFn: (notificacaoId: string) => 
-      notificationApi.marcarComoLida(notificacaoId),
+  const marcarComoLidaMutation = useMutation<ApiResponse<Notificacao>, Error, string>({
+    mutationFn: (id: string) => notificationApi.marcarComoLida(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
       queryClient.invalidateQueries({ queryKey: ["notificacoes-contador"] });
@@ -45,7 +45,7 @@ export function useNotifications() {
   });
 
   // Mutação para marcar todas as notificações como lidas
-  const marcarTodasComoLidasMutation = useMutation({
+  const marcarTodasComoLidasMutation = useMutation<ApiResponse<void>, Error>({
     mutationFn: () => notificationApi.marcarTodasComoLidas(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
@@ -54,42 +54,36 @@ export function useNotifications() {
   });
 
   // Mutação para excluir uma notificação
-  const excluirNotificacaoMutation = useMutation({
-    mutationFn: (notificacaoId: string) => 
-      notificationApi.excluirNotificacao(notificacaoId),
+  const excluirNotificacaoMutation = useMutation<ApiResponse<void>, Error, string>({
+    mutationFn: (id: string) => notificationApi.excluirNotificacao(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
+      queryClient.invalidateQueries({ queryKey: ["notificacoes-contador"] });
     },
   });
 
-  // Função para marcar uma notificação como lida
-  const marcarComoLida = useCallback(
-    (notificacaoId: string) => marcarComoLidaMutation.mutateAsync(notificacaoId),
-    [marcarComoLidaMutation]
-  );
+  const marcarComoLida = useCallback(async (id: string) => {
+    await marcarComoLidaMutation.mutateAsync(id);
+  }, [marcarComoLidaMutation]);
 
-  // Função para marcar todas as notificações como lidas
-  const marcarTodasComoLidas = useCallback(
-    () => marcarTodasComoLidasMutation.mutateAsync(),
-    [marcarTodasComoLidasMutation]
-  );
+  const marcarTodasComoLidas = useCallback(async () => {
+    await marcarTodasComoLidasMutation.mutateAsync();
+  }, [marcarTodasComoLidasMutation]);
 
-  // Função para excluir uma notificação
-  const excluirNotificacao = useCallback(
-    (notificacaoId: string) => excluirNotificacaoMutation.mutateAsync(notificacaoId),
-    [excluirNotificacaoMutation]
-  );
+  const excluirNotificacao = useCallback(async (id: string) => {
+    await excluirNotificacaoMutation.mutateAsync(id);
+  }, [excluirNotificacaoMutation]);
 
   return {
-    notificacoes: notificacoes || [],
-    contadorNaoLidas: contadorNaoLidas || 0,
+    notificacoes: data?.data || [],
+    pagination: data?.pagination,
+    contadorNaoLidas: contadorData?.data?.contador || 0,
     isLoading,
     isError,
     error,
+    refetch,
     marcarComoLida,
     marcarTodasComoLidas,
     excluirNotificacao,
-    refetch,
-    refetchContador,
   };
 }

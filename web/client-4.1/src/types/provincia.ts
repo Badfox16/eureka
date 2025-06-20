@@ -8,6 +8,9 @@ export type Provincia = {
   updatedAt: string;
 };
 
+// Versão simplificada para uso em selects
+export type ProvinciaSelect = Pick<Provincia, '_id' | 'nome'>;
+
 // Tipos para operações com província
 export type CreateProvinciaInput = {
   nome: string;
@@ -19,10 +22,7 @@ export type UpdateProvinciaInput = Partial<CreateProvinciaInput>;
 
 // Tipo para filtros de busca de províncias
 export type ProvinciaSearchParams = {
-  page: number;
-  limit: number;
-  search?: string;
+  nome?: string;
+  codigo?: string;
   regiao?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
 };

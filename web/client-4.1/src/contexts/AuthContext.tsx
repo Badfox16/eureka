@@ -2,17 +2,18 @@
 
 import { createContext, useContext, ReactNode } from 'react';
 import { ApiStatus } from '@/types/api';
-import { Usuario } from '@/types/usuario';
+import { Usuario, LoginRequest, RegisterRequest, AuthResponse } from '@/types/usuario';
 import { useAuth as useAuthHook } from '@/hooks/useAuth';
 
 type AuthContextType = {
   usuario: Usuario | null;
   status: ApiStatus;
   error: string | null;
-  login: (email: string, password: string) => Promise<any>;
-  register: (nome: string, email: string, password: string, tipo?: string) => Promise<any>;
+  login: (data: LoginRequest) => Promise<AuthResponse>;
+  register: (data: RegisterRequest) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  alterarSenha: (data: { senhaAtual: string; novaSenha: string; confirmarSenha: string }) => Promise<{ message: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,47 +27,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: authError, 
     login: loginFn, 
     register: registerFn, 
-    logout: logoutFn 
+    logout: logoutFn,
+    alterarSenha: alterarSenhaFn
   } = useAuthHook();
 
-  // Converter status do React Query para ApiStatus
-  let status = ApiStatus.IDLE;
-  if (isLoading) status = ApiStatus.LOADING;
-  else if (isError) status = ApiStatus.ERROR;
-  else if (usuario) status = ApiStatus.SUCCESS;
-
-  // Função de login
-  const login = async (email: string, password: string) => {
-    return loginFn({ email, password });
+  const value: AuthContextType = {
+    usuario: usuario || null,
+    status: isLoading ? ApiStatus.LOADING : isError ? ApiStatus.ERROR : ApiStatus.SUCCESS,
+    error: authError?.message || null,
+    login: loginFn,
+    register: registerFn,
+    logout: logoutFn,
+    isAuthenticated,
+    alterarSenha: alterarSenhaFn
   };
 
-  // Função de registro
-  const register = async (nome: string, email: string, password: string, tipo?: string) => {
-    return registerFn({ 
-      nome, 
-      email, 
-      password, 
-      tipo: tipo as any
-    });
-  };
-
-  // Função de logout
-  const logout = async () => {
-    return logoutFn();
-  };
-
-  return (
-    <AuthContext.Provider value={{ 
-      usuario: usuario || null, 
-      status, 
-      error: authError?.message || null, 
-      login, 
-      register, 
-      logout,
-      isAuthenticated
-    }}>
-      {children}
-    </AuthContext.Provider>  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

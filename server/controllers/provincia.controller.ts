@@ -1,23 +1,11 @@
 import { z } from 'zod';
-import type { RequestHandler } from 'express'; // Usa RequestHandler padrão
+import type { RequestHandler } from 'express';
 import { Provincia } from '../models/provincia';
 import type { CreateProvinciaInput, UpdateProvinciaInput } from '../schemas/provincia.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import { Avaliacao } from '../models/avaliacao';
-
-// Função auxiliar para criar erros (pode ser movida para um utilitário)
-class HttpError extends Error {
-  statusCode: number;
-  code?: string;
-
-  constructor(message: string, statusCode: number, code?: string) {
-    super(message);
-    this.name = 'HttpError'; // Para identificar no errorHandler
-    this.statusCode = statusCode;
-    this.code = code;
-    Object.setPrototypeOf(this, HttpError.prototype);
-  }
-}
+import { HttpError } from '../utils/error.utils';
+import { formatResponse } from '../utils/response.utils';
 
 // Schema para validar um array de criação de províncias (usado internamente)
 const createProvinciasSchema = z.array(
@@ -48,14 +36,11 @@ export const createProvinciasEmMassa: RequestHandler = async (req, res, next) =>
 
     const provincias = await Provincia.insertMany(provinciasData);
 
-    // Remove 'return'
-    res.status(201).json({ // <<< SEM RETURN AQUI
-      status: 'success',
-      data: provincias,
-      meta: {
-        total: provincias.length
-      }
-    });
+    res.status(201).json(formatResponse(
+      provincias,
+      undefined,
+      `Províncias criadas com sucesso (${provincias.length})`
+    ));
   } catch (error) {
     next(error);
   }
@@ -75,11 +60,7 @@ export const createProvincia: RequestHandler = async (req, res, next) => {
 
     const provincia = await Provincia.create(provinciaData);
 
-    // Remove 'return'
-    res.status(201).json({ // <<< SEM RETURN AQUI
-      status: 'success',
-      data: provincia
-    });
+    res.status(201).json(formatResponse(provincia));
   } catch (error) {
     next(error);
   }
@@ -98,35 +79,21 @@ export const getAllProvincias: RequestHandler = async (req, res, next) => {
 
     // Construir filtros dinâmicos com base nos query params
     const filter: any = {};
-    
-    // Adicionar filtro de região se fornecido
     if (req.query.regiao) {
       filter.regiao = req.query.regiao;
     }
-    
-    // Contar total de documentos que correspondem ao filtro
+
     const total = await Provincia.countDocuments(filter);
-    
-    // Buscar províncias com filtros aplicados
+
     const provincias = await Provincia.find(filter)
       .sort({ nome: 1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    res.status(200).json({
-      status: 'success',
-      data: provincias,
-      pagination: { // Mudei para pagination para ficar consistente com o frontend
-        total,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page,
-        limit,
-        hasPrevPage: page > 1,
-        hasNextPage: page < Math.ceil(total / limit),
-        prevPage: page > 1 ? page - 1 : null,
-        nextPage: page < Math.ceil(total / limit) ? page + 1 : null
-      }
-    });
+    res.status(200).json(formatResponse(
+      provincias,
+      { page, limit, total }
+    ));
   } catch (error) {
     next(error);
   }
@@ -144,11 +111,7 @@ export const getProvinciaById: RequestHandler = async (req, res, next) => {
       throw new HttpError('Província não encontrada', 404, 'NOT_FOUND');
     }
 
-    // Remove 'return'
-    res.status(200).json({ // <<< SEM RETURN AQUI
-      status: 'success',
-      data: provincia
-    });
+    res.status(200).json(formatResponse(provincia));
   } catch (error) {
     next(error);
   }
@@ -177,14 +140,10 @@ export const updateProvincia: RequestHandler = async (req, res, next) => {
     const updatedProvincia = await Provincia.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
 
     if (!updatedProvincia) {
-        throw new HttpError('Falha ao atualizar a província, recurso não encontrado após tentativa de atualização.', 404, 'NOT_FOUND');
+      throw new HttpError('Falha ao atualizar a província, recurso não encontrado após tentativa de atualização.', 404, 'NOT_FOUND');
     }
 
-    // Remove 'return'
-    res.status(200).json({ // <<< SEM RETURN AQUI
-      status: 'success',
-      data: updatedProvincia
-    });
+    res.status(200).json(formatResponse(updatedProvincia));
   } catch (error) {
     next(error);
   }
@@ -213,11 +172,7 @@ export const deleteProvincia: RequestHandler = async (req, res, next) => {
 
     await Provincia.findByIdAndDelete(id);
 
-    // Remove 'return'
-    res.status(200).json({ // <<< SEM RETURN AQUI
-      status: 'success',
-      message: 'Província removida com sucesso'
-    });
+    res.status(200).json(formatResponse(null, undefined, 'Província removida com sucesso'));
   } catch (error) {
     next(error);
   }
@@ -246,15 +201,11 @@ export const searchProvincias: RequestHandler = async (req, res, next) => {
     })
     .limit(50);
 
-    // Remove 'return'
-    res.status(200).json({ // <<< SEM RETURN AQUI
-      status: 'success',
-      data: provincias,
-      meta: {
-        total: provincias.length,
-        searchTerm: q
-      }
-    });
+    res.status(200).json(formatResponse(
+      provincias,
+      undefined,
+      `Resultados da busca para "${q}"`
+    ));
   } catch (error) {
     next(error);
   }

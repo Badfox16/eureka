@@ -4,37 +4,11 @@ import { Disciplina } from '../models/disciplina';
 import { Questao } from '../models/questao';
 import { Provincia } from '../models/provincia';
 import type { CreateAvaliacaoInput, UpdateAvaliacaoInput } from '../schemas/avaliacao.schema';
-import { paginationSchema } from '../schemas/common.schema';
+import { formatResponse } from '../utils/response.utils';
 import { Error as MongooseError } from 'mongoose';
 import { HttpError } from '../utils/error.utils';
 import mongoose from 'mongoose';
 
-// Função para formatar a resposta padrão
-const formatResponse = (data: any, paginationData?: any, message?: string) => {
-  const response: any = { data };
-  
-  if (message) {
-    response.message = message;
-  }
-  
-  if (paginationData) {
-    const { page, limit, total } = paginationData;
-    const totalPages = Math.ceil(total / limit);
-    
-    response.pagination = {
-      total,
-      totalPages,
-      currentPage: page,
-      limit,
-      hasPrevPage: page > 1,
-      hasNextPage: page < totalPages,
-      prevPage: page > 1 ? page - 1 : null,
-      nextPage: page < totalPages ? page + 1 : null
-    };
-  }
-  
-  return response;
-};
 
 /**
  * Cria uma nova avaliação

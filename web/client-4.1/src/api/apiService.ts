@@ -1,4 +1,4 @@
-import { PaginationData } from "@/types/api";
+import { ApiResponse, PaginationData } from "@/types/api";
 import { ErrorResponse } from "@/types/error";
 
 // URL base da API (pode ser configurada em um arquivo .env)
@@ -18,74 +18,72 @@ const defaultOptions: RequestInit = {
 export async function fetchApi<T>(
   endpoint: string, 
   options?: RequestInit
-): Promise<{
-  data?: T;
-  error?: ErrorResponse;
-  pagination?: PaginationData;
-  message?: string;
-}> {
+): Promise<T> {
   try {
     const res = await fetch(`${API_URL}${API_PREFIX}${endpoint}`, {
       ...defaultOptions,
       ...options,
     });
-    
-    const responseData = await res.json();
-    
-    // Tratando erros conforme o formato da API
+
+    const data = await res.json();
+
     if (!res.ok) {
-      return {
+      throw {
+        success: false,
         error: {
           code: res.status.toString(),
-          message: responseData.message || 'Ocorreu um erro na requisição',
-          details: responseData.details || undefined,
+          message: data.message || 'Erro desconhecido',
+          details: data.details,
         },
       };
     }
-    
+
     return {
-      data: responseData.data,
-      pagination: responseData.pagination,
-      message: responseData.message
-    };
+      success: true,
+      ...data,
+    } as T;
   } catch (error) {
-    return {
+    if (error && typeof error === 'object' && 'success' in error) {
+      throw error;
+    }
+    throw {
+      success: false,
       error: {
-        code: 'NETWORK_ERROR',
-        message: error instanceof Error 
-          ? error.message 
-          : 'Ocorreu um erro na conexão com o servidor',
+        code: 'UNKNOWN_ERROR',
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
       },
     };
   }
 }
 
-// Função para obter o token de autenticação do storage
-export function getAuthToken(): string | null {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token');
+// Função auxiliar para criar headers de autenticação
+export function createAuthHeaders(): Headers {
+  const headers = new Headers();
+  const token = localStorage.getItem('token');
+  
+  headers.append('Content-Type', 'application/json');
+  if (token) {
+    headers.append('Authorization', `Bearer ${token}`);
   }
-  return null;
+  
+  return headers;
 }
 
-// Função para converter parâmetros de busca em string de consulta
+// Função auxiliar para construir query strings
 export function buildQueryString(params: Record<string, any>): string {
-  const queryParams = new URLSearchParams();
+  const searchParams = new URLSearchParams();
   
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
-      queryParams.append(key, value.toString());
+      searchParams.append(key, String(value));
     }
   });
   
-  const queryString = queryParams.toString();
+  const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : '';
 }
 
-// Função para criar headers com autenticação
-export function createAuthHeaders(): HeadersInit {
-  return {
-    ...defaultOptions.headers,
-    'Authorization': `Bearer ${getAuthToken()}`,
-  } as HeadersInit;
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('auth_token');
 }

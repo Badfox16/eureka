@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/contexts/QueryProvider";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { QuizProvider } from "@/contexts/QuizContext";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,17 +28,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <QueryProvider>
-          <AuthProvider>
-            <NotificationsProvider>
-              <QuizProvider>{children}</QuizProvider>
-            </NotificationsProvider>
-          </AuthProvider>
-        </QueryProvider>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-sans antialiased`}>
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <NotificationsProvider>
+                <QuizProvider>
+                  {children}
+                </QuizProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

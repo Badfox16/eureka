@@ -13,6 +13,14 @@ export type EstudanteQuiz = {
   respostasCorretas: number;
   totalQuestoes: number;
   percentualAcerto: number;
+  tempoTotal: number;
+  acertos: number;
+  respostas: Array<{
+    questao: string;
+    alternativa: string;
+    correta: boolean;
+    tempo: number;
+  }>;
   createdAt: string;
   updatedAt: string;
 };

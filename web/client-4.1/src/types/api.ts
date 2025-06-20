@@ -12,15 +12,27 @@ export type RegisterRequest = {
 
 // Tipos de respostas da API
 export type ApiResponse<T> = {
-  success: boolean;
-  data?: T;
+  data: T;
   message?: string;
   pagination?: PaginationData;
-  error?: {
-    code: string;
-    message: string;
-    details?: Record<string, string[]>;
+  meta?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    pages?: number;
   };
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  pagination: PaginationData;
+  message?: string;
+};
+
+export type ErrorResponse = {
+  code: string;
+  message: string;
+  details?: Record<string, string[]>;
 };
 
 // Tipo para dados de paginação
@@ -28,11 +40,9 @@ export type PaginationData = {
   total: number;
   totalPages: number;
   currentPage: number;
-  limit: number;
-  hasPrevPage: boolean;
-  hasNextPage: boolean;
-  prevPage: number | null;
-  nextPage: number | null;
+  perPage: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 };
 
 // Parâmetros de paginação para requisições

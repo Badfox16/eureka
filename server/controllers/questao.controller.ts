@@ -1,36 +1,11 @@
 import type { RequestHandler } from 'express';
 import { removeFile } from '../utils/s3-helper';
-import * as path from 'path';
-import * as fs from 'fs';
-import multer from 'multer';
+import { formatResponse } from '../utils/response.utils';
 import mongoose from 'mongoose';
 import { HttpError } from '../utils/error.utils';
 import { Questao } from '../models/questao';
 import { Avaliacao } from '../models/avaliacao';
 import type { CreateQuestaoInput, UpdateQuestaoInput } from '../schemas/questao.schema';
-
-// Função para formatar a resposta padrão
-const formatResponse = (data: any, paginationData?: any) => {
-  const response: any = { data };
-  
-  if (paginationData) {
-    const { page, limit, total } = paginationData;
-    const totalPages = Math.ceil(total / limit);
-    
-    response.pagination = {
-      total,
-      totalPages,
-      currentPage: page,
-      limit,
-      hasPrevPage: page > 1,
-      hasNextPage: page < totalPages,
-      prevPage: page > 1 ? page - 1 : null,
-      nextPage: page < totalPages ? page + 1 : null
-    };
-  }
-  
-  return response;
-};
 
 // Função auxiliar para remover arquivo do disco local
 const removeLocalFile = removeFile;

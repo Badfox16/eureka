@@ -4,6 +4,7 @@ import { EstudanteQuiz } from '../models/estudanteQuiz';
 import { QuizResposta } from '../models/quizResposta';
 import { Quiz } from '../models/quiz';
 import mongoose from 'mongoose';
+import { formatResponse } from '../utils/response.utils'; // Importação adicionada
 
 /**
  * Obtém estatísticas gerais de um estudante (todos os quizzes)
@@ -11,14 +12,9 @@ import mongoose from 'mongoose';
 export const getEstatisticasEstudante: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
-    // Verificar se o estudante existe
     const estudante = await Estudante.findById(id);
     if (!estudante) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Estudante não encontrado'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Estudante não encontrado'));
       return;
     }
     
@@ -97,25 +93,19 @@ export const getEstatisticasEstudante: RequestHandler = async (req, res, next) =
       quiz: (eq.quiz as any).titulo
     })).reverse(); // Ordenar do mais antigo para o mais recente
     
-    res.status(200).json({
-      status: 'success',
-      data: {
-        geral: {
-          totalQuizzes,
-          totalQuestoes,
-          respostasCorretas,
-          percentualAcerto: percentualGeral
-        },
-        disciplinas: Object.values(estatisticasPorDisciplina),
-        evolucao: dadosEvolucao
-      }
-    });
+    res.status(200).json(formatResponse({
+      geral: {
+        totalQuizzes,
+        totalQuestoes,
+        respostasCorretas,
+        percentualAcerto: percentualGeral
+      },
+      disciplinas: Object.values(estatisticasPorDisciplina),
+      evolucao: dadosEvolucao
+    }));
   } catch (error) {
     console.error('Erro ao obter estatísticas do estudante:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao obter estatísticas do estudante'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao obter estatísticas do estudante'));
   }
 };
 
@@ -125,14 +115,9 @@ export const getEstatisticasEstudante: RequestHandler = async (req, res, next) =
 export const getEstatisticasQuiz: RequestHandler = async (req, res, next) => {
   try {
     const { estudanteId, quizId } = req.params;
-    
-    // Verificar se o estudante existe
     const estudante = await Estudante.findById(estudanteId);
     if (!estudante) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Estudante não encontrado'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Estudante não encontrado'));
       return;
     }
     
@@ -152,10 +137,7 @@ export const getEstatisticasQuiz: RequestHandler = async (req, res, next) => {
     });
     
     if (!estudanteQuiz) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Tentativa de quiz não encontrada ou não finalizada'
-      });
+      res.status(404).json(formatResponse(null, undefined, 'Tentativa de quiz não encontrada ou não finalizada'));
       return;
     }
     
@@ -232,48 +214,42 @@ export const getEstatisticasQuiz: RequestHandler = async (req, res, next) => {
       detalhesRespostas.filter(r => r.tempoResposta).length || 0;
     
     // Preparar a resposta
-    res.status(200).json({
-      status: 'success',
-      data: {
-        quiz: {
-          id: quizInfo?._id,
-          titulo: quizInfo?.titulo || 'Quiz sem título',
-          avaliacao: {
-            id: avaliacaoInfo?._id,
-            tipo: avaliacaoInfo?.tipo,
-            ano: avaliacaoInfo?.ano,
-            classe: avaliacaoInfo?.classe
-          },
-          disciplina: {
-            id: disciplinaInfo?._id,
-            nome: disciplinaInfo?.nome || 'Disciplina não especificada',
-            codigo: disciplinaInfo?.codigo
-          }
+    res.status(200).json(formatResponse({
+      quiz: {
+        id: quizInfo?._id,
+        titulo: quizInfo?.titulo || 'Quiz sem título',
+        avaliacao: {
+          id: avaliacaoInfo?._id,
+          tipo: avaliacaoInfo?.tipo,
+          ano: avaliacaoInfo?.ano,
+          classe: avaliacaoInfo?.classe
         },
-        estudante: {
-          id: estudante._id,
-          nome: estudante.nome,
-          classe: estudante.classe
-        },
-        tentativa: {
-          id: estudanteQuiz._id,
-          geral: dadosGerais,
-          analise: {
-            tempoMedioResposta: Math.round(tempoMedioResposta * 10) / 10, // em segundos, com 1 casa decimal
-            totalCorretas: respostasCorretas.length,
-            totalIncorretas: respostasIncorretas.length,
-            percentualAcerto: estudanteQuiz.percentualAcerto
-          }
-        },
-        respostas: detalhesRespostas.sort((a, b) => a.numero - b.numero) // Ordenar por número da questão
-      }
-    });
+        disciplina: {
+          id: disciplinaInfo?._id,
+          nome: disciplinaInfo?.nome || 'Disciplina não especificada',
+          codigo: disciplinaInfo?.codigo
+        }
+      },
+      estudante: {
+        id: estudante._id,
+        nome: estudante.nome,
+        classe: estudante.classe
+      },
+      tentativa: {
+        id: estudanteQuiz._id,
+        geral: dadosGerais,
+        analise: {
+          tempoMedioResposta: Math.round(tempoMedioResposta * 10) / 10, // em segundos, com 1 casa decimal
+          totalCorretas: respostasCorretas.length,
+          totalIncorretas: respostasIncorretas.length,
+          percentualAcerto: estudanteQuiz.percentualAcerto
+        }
+      },
+      respostas: detalhesRespostas.sort((a, b) => a.numero - b.numero) // Ordenar por número da questão
+    }));
   } catch (error) {
     console.error('Erro ao obter estatísticas do quiz:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao obter estatísticas do quiz'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao obter estatísticas do quiz'));
   }
 };
 
@@ -348,17 +324,10 @@ export const getRanking: RequestHandler = async (req, res, next) => {
     }
     
     const ranking = await EstudanteQuiz.aggregate(pipeline);
-    
-    res.status(200).json({
-      status: 'success',
-      data: ranking
-    });
+    res.status(200).json(formatResponse(ranking));
   } catch (error) {
     console.error('Erro ao obter ranking:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao obter ranking'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao obter ranking'));
   }
 };
 
@@ -422,23 +391,17 @@ export const getEstatisticasGerais: RequestHandler = async (req, res, next) => {
       { $sort: { classe: 1 } }
     ]);
     
-    res.status(200).json({
-      status: 'success',
-      data: {
-        contagens: {
-          totalEstudantes,
-          totalQuizzes,
-          totalTentativas
-        },
-        quizzesMaisPopulares,
-        estatisticasPorClasse
-      }
-    });
+    res.status(200).json(formatResponse({
+      contagens: {
+        totalEstudantes,
+        totalQuizzes,
+        totalTentativas
+      },
+      quizzesMaisPopulares,
+      estatisticasPorClasse
+    }));
   } catch (error) {
     console.error('Erro ao obter estatísticas gerais:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Erro ao obter estatísticas gerais'
-    });
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao obter estatísticas gerais'));
   }
 };

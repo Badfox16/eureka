@@ -50,7 +50,7 @@ export async function getCurrentUser() {
       },
     };
   }
-    return fetchApi<Usuario>('/auth/me', {
+    return fetchApi<{ data: Usuario }>('/auth/me', {
     headers: createAuthHeaders(),
   });
 }

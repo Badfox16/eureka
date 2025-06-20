@@ -4,39 +4,56 @@ import { Estudante } from "./estudante";
 import { Provincia } from "./provincia";
 import { Quiz } from "./quiz";
 
-// Estatísticas gerais
+// Tipos para as estatísticas retornadas pela API
 export type EstatisticasGerais = {
-  totalEstudantes: number;
-  totalQuizzes: number;
-  totalAvaliacoes: number;
-  totalTentativas: number;
-  mediaAcertos: number;
-  quizzesPopulares: QuizPopular[];
-  avaliacoesPopulares: AvaliacaoPopular[];
+  geral: {
+    totalQuizzes: number;
+    totalQuestoes: number;
+    respostasCorretas: number;
+    percentualAcerto: number;
+  };
+  disciplinas: Array<{
+    nome: string;
+    quizzes: number;
+    totalQuestoes: number;
+    respostasCorretas: number;
+    percentualAcerto: number;
+  }>;
+  evolucao: Array<{
+    data: string;
+    percentual: number;
+    quiz: string;
+  }>;
 };
 
-// Estatísticas por estudante
-export type EstatisticasEstudante = {
-  estudante: Estudante;
-  tentativas: number;
-  quizzesCompletos: number;
-  mediaAcertos: number;
+// Tipo para uma tentativa de quiz no histórico
+export type TentativaQuizHistorico = {
+  _id: string;
+  dataInicio: string;
+  dataFim?: string;
+  pontuacaoObtida: number;
   totalPontos: number;
-  disciplinasFortes: DisciplinaDesempenho[];
-  disciplinasFracas: DisciplinaDesempenho[];
-  progresso: ProgressoTempo[];
+  respostasCorretas: number;
+  totalQuestoes: number;
+  percentualAcerto: number;
+  quiz: {
+    _id: string;
+    titulo: string;
+    avaliacao: {
+      _id: string;
+      titulo: string;
+      disciplina: {
+        _id: string;
+        nome: string;
+        codigo: string;
+      };
+    };
+  };
 };
-
-// Alias para EstatisticasEstudante para compatibilidade com a API
-export type Estatistica = EstatisticasEstudante;
 
 // Estatísticas por disciplina para um estudante
 export type EstatisticaDisciplina = {
-  disciplina: {
-    _id: string;
-    nome: string;
-    codigo: string;
-  };
+  nome: string;
   quizzes: number;
   totalQuestoes: number;
   respostasCorretas: number;
@@ -44,21 +61,24 @@ export type EstatisticaDisciplina = {
 };
 
 // Evolução de desempenho ao longo do tempo
-export type EvolucaoDesempenho = {
-  periodos: {
-    periodo: string; // Mês/Ano ou semana
-    quizzes: number;
-    percentualAcerto: number;
-  }[];
-};
+export type EvolucaoDesempenho = Array<{
+  data: string;
+  percentual: number;
+  quiz: string;
+}>;
 
 // Ranking de estudantes
 export type RankingEstudante = {
-  posicao: number;
-  estudante: Estudante;
+  estudante: {
+    _id: string;
+    nome: string;
+    email: string;
+    escola: string;
+  };
   pontuacaoTotal: number;
-  percentualAcerto: number;
+  mediaAcertos: number;
   quizzesCompletos: number;
+  posicao: number;
 };
 
 // Estatísticas por quiz
@@ -96,9 +116,14 @@ export type AvaliacaoPopular = {
 };
 
 export type DisciplinaDesempenho = {
-  disciplina: Disciplina;
+  disciplina: {
+    _id: string;
+    nome: string;
+    codigo: string;
+  };
   mediaAcertos: number;
   tentativas: number;
+  percentualAcerto: number;
 };
 
 export type ProgressoTempo = {
@@ -125,4 +150,14 @@ export type ComparativoNacional = {
   posicaoRanking: number;
   mediaAcertosNacional: number;
   diferencaPercentual: number;
+};
+
+// Estatísticas específicas para um estudante
+export type EstatisticasEstudante = {
+  quizzesCompletos: number;
+  mediaAcertos: number;
+  totalPontos: number;
+  ultimaTentativa?: TentativaQuizHistorico;
+  disciplinasFortes: DisciplinaDesempenho[];
+  historico: TentativaQuizHistorico[];
 };

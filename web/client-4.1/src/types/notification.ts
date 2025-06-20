@@ -2,15 +2,15 @@ import { Usuario } from "./usuario";
 
 // Modelo de notificação
 export type Notificacao = {
-  _id: string;
+  id: string;
   usuario: string | Usuario;
   tipo: TipoNotificacao;
   titulo: string;
   mensagem: string;
   lida: boolean;
   urlAcao?: string;
-  createdAt: string;
-  updatedAt: string;
+  dataCriacao: string;
+  dataAtualizacao: string;
 };
 
 // Enum para tipos de notificação
@@ -18,34 +18,17 @@ export enum TipoNotificacao {
   CONVITE_QUIZ = 'convite_quiz',
   RESULTADO_QUIZ = 'resultado_quiz',
   CONQUISTA = 'conquista',
-  SISTEMA = 'sistema'
+  SISTEMA = 'sistema',
+  AVISO = 'aviso',
+  ALERTA = 'alerta'
 }
 
-// Tipos para operações com notificação
-export type CreateNotificacaoInput = {
-  usuario: string;
-  tipo: TipoNotificacao;
-  titulo: string;
-  mensagem: string;
-  urlAcao?: string;
+// DTO para contagem de notificações não lidas
+export type NotificacaoContadorResponse = {
+  contador: number;
 };
 
-export type UpdateNotificacaoInput = Partial<CreateNotificacaoInput> & {
-  lida?: boolean;
+// DTO para resposta de marcar como lida/excluir
+export type NotificacaoAcaoResponse = {
+  sucesso: boolean;
 };
-
-// Tipo para filtros de busca de notificações
-export type NotificacaoSearchParams = {
-  page: number;
-  limit: number;
-  usuarioId?: string;
-  tipo?: TipoNotificacao;
-  lida?: boolean;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-};
-
-// Mantendo compatibilidade com o código existente
-// até que seja totalmente refatorado
-export type Notification = Notificacao;
-export const NotificationType = TipoNotificacao;

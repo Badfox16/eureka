@@ -4,6 +4,8 @@ import * as estudanteApi from "@/api/estudante";
 import { Estudante } from "@/types/estudante";
 import { EstudanteSearchParams } from "@/types/search";
 import { EstudanteQuiz } from "@/types/estudanteQuiz";
+import { ApiResponse, PaginatedResponse } from "@/types/api";
+import { EstatisticasEstudante, EstatisticaDisciplina, EvolucaoDesempenho } from "@/types/estatisticas";
 
 export function useEstudantes(params?: EstudanteSearchParams) {
   // Valor padrão para os parâmetros de busca
@@ -15,25 +17,19 @@ export function useEstudantes(params?: EstudanteSearchParams) {
 
   // Consulta para obter estudantes
   const {
-    data: resultado,
+    data: estudantesResponse,
     isLoading,
     isError,
     error,
     refetch,
-  } = useQuery({
+  } = useQuery<PaginatedResponse<Estudante>>({
     queryKey: ["estudantes", defaultParams],
-    queryFn: async () => {
-      const response = await estudanteApi.getEstudantes(defaultParams);
-      return {
-        estudantes: response.data || [],
-        pagination: response.pagination,
-      };
-    },
+    queryFn: () => estudanteApi.getEstudantes(defaultParams),
   });
 
   return {
-    estudantes: resultado?.estudantes || [],
-    pagination: resultado?.pagination,
+    estudantes: estudantesResponse?.data || [],
+    pagination: estudantesResponse?.pagination,
     isLoading,
     isError,
     error,
@@ -41,96 +37,172 @@ export function useEstudantes(params?: EstudanteSearchParams) {
   };
 }
 
-export function useEstudante(estudanteId?: string) {
-  const queryClient = useQueryClient();
-  // Consulta para obter um estudante específico
-  const {
-    data: estudante,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery<Estudante | null>({
-    queryKey: ["estudante", estudanteId],
-    queryFn: async () => {
-      if (!estudanteId) return null;
-      const response = await estudanteApi.getEstudante(estudanteId);
-      return response.data || null;
-    },
-    enabled: !!estudanteId,
-  });
-  // Consulta para obter os quizzes de um estudante
-  const {
-    data: quizzes,
-    isLoading: isLoadingQuizzes,
-    isError: isErrorQuizzes,
-    error: errorQuizzes,
-    refetch: refetchQuizzes,
-  } = useQuery<EstudanteQuiz[] | null>({
-    queryKey: ["estudante", estudanteId, "quizzes"],
-    queryFn: async () => {
-      if (!estudanteId) return null;
-      const response = await estudanteApi.getQuizzesEstudante(estudanteId);
-      return response.data || null;
-    },
-    enabled: !!estudanteId,
-  });
-
+// Hook principal que combina todas as funcionalidades relacionadas ao estudante
+export function useEstudante() {
   return {
-    estudante,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    quizzes: {
-      data: quizzes,
-      isLoading: isLoadingQuizzes,
-      isError: isErrorQuizzes,
-      error: errorQuizzes,
-      refetch: refetchQuizzes,
-    },
+    usePerfilEstudante,
+    useQuizzesEstudante,
+    useEstudantes,
+    useQuizzes,
   };
 }
 
 export function usePerfilEstudante() {
   const queryClient = useQueryClient();
 
-  // Consulta para obter o perfil do estudante atual
+  // Consulta para obter perfil do estudante
   const {
-    data: perfil,
+    data: perfilResponse,
     isLoading,
     isError,
     error,
     refetch,
-  } = useQuery<Estudante | null>({
+  } = useQuery<ApiResponse<Estudante>>({
     queryKey: ["perfil-estudante"],
-    queryFn: async () => {
-      const response = await estudanteApi.getPerfilEstudante();
-      return response.data || null;
+    queryFn: () => estudanteApi.getPerfilEstudante(),
+  });
+
+  // Mutation para atualizar perfil
+  const updatePerfilMutation = useMutation<ApiResponse<Estudante>, Error, estudanteApi.UpdateEstudanteInput>({
+    mutationFn: (dados) => estudanteApi.updatePerfilEstudante(dados),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["perfil-estudante"] });
     },
   });
 
-  // Mutação para atualizar senha
-  const atualizarSenhaMutation = useMutation({
-    mutationFn: (dados: { senhaAtual: string; novaSenha: string }) =>
-      estudanteApi.atualizarSenhaEstudante(dados.senhaAtual, dados.novaSenha),
+  // Mutation para atualizar senha
+  const updateSenhaMutation = useMutation<ApiResponse<{ sucesso: boolean }>, Error, { senhaAtual: string; novaSenha: string }>({
+    mutationFn: ({ senhaAtual, novaSenha }) => estudanteApi.atualizarSenhaEstudante(senhaAtual, novaSenha),
   });
 
-  // Função para atualizar senha
-  const atualizarSenha = useCallback(
-    (senhaAtual: string, novaSenha: string) =>
-      atualizarSenhaMutation.mutateAsync({ senhaAtual, novaSenha }),
-    [atualizarSenhaMutation]
-  );
+  // Handler para atualizar perfil
+  const updatePerfil = useCallback(async (dados: estudanteApi.UpdateEstudanteInput) => {
+    const response = await updatePerfilMutation.mutateAsync(dados);
+    return response;
+  }, [updatePerfilMutation]);
+
+  // Handler para atualizar senha
+  const updateSenha = useCallback(async (senhaAtual: string, novaSenha: string) => {
+    const response = await updateSenhaMutation.mutateAsync({ senhaAtual, novaSenha });
+    return response;
+  }, [updateSenhaMutation]);
 
   return {
-    perfil,
+    estudante: perfilResponse?.data,
     isLoading,
     isError,
     error,
     refetch,
-    atualizarSenha,
-    isAtualizandoSenha: atualizarSenhaMutation.isPending,
-    erroAtualizarSenha: atualizarSenhaMutation.error,
+    updatePerfil,
+    updateSenha,
   };
 }
+
+export function useQuizzesEstudante(estudanteId: string) {
+  // Consulta para obter quizzes do estudante
+  const {
+    data: quizzesResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<PaginatedResponse<EstudanteQuiz>>({
+    queryKey: ["quizzes-estudante", estudanteId],
+    queryFn: () => estudanteApi.getQuizzesEstudante(estudanteId),
+  });
+
+  return {
+    quizzes: quizzesResponse?.data || [],
+    pagination: quizzesResponse?.pagination,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  };
+}
+
+export function useQuizzes(estudanteId?: string) {
+  const {
+    data: quizzes,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<PaginatedResponse<EstudanteQuiz>>({
+    queryKey: ["estudante", estudanteId, "quizzes"],
+    queryFn: async () => {
+      if (!estudanteId) return {
+        data: [],
+        pagination: {
+          total: 0,
+          totalPages: 0,
+          currentPage: 1,
+          perPage: 10,
+          hasNext: false,
+          hasPrevious: false
+        }
+      };
+      return estudanteApi.getQuizzesEstudante(estudanteId);
+    },
+    enabled: !!estudanteId,
+  });
+
+  return {
+    quizzes: quizzes?.data || [],
+    pagination: quizzes?.pagination,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  };
+}
+
+export function useEstatisticasEstudante(estudanteId: string) {
+  // Consulta para obter estatísticas gerais
+  const {
+    data: estatisticasResponse,
+    isLoading: estatisticasLoading,
+    isError: estatisticasError,
+    error: estatisticasErrorData,
+  } = useQuery<ApiResponse<EstatisticasEstudante>>({
+    queryKey: ["estatisticas-estudante", estudanteId],
+    queryFn: () => estudanteApi.getEstatisticasEstudante(estudanteId),
+  });
+
+  // Consulta para obter estatísticas por disciplina
+  const {
+    data: disciplinasResponse,
+    isLoading: disciplinasLoading,
+    isError: disciplinasError,
+    error: disciplinasErrorData,
+  } = useQuery<ApiResponse<EstatisticaDisciplina[]>>({
+    queryKey: ["estatisticas-disciplinas", estudanteId],
+    queryFn: () => estudanteApi.getEstatisticasPorDisciplina(estudanteId),
+  });
+
+  // Consulta para obter evolução de desempenho
+  const {
+    data: evolucaoResponse,
+    isLoading: evolucaoLoading,
+    isError: evolucaoError,
+    error: evolucaoErrorData,
+  } = useQuery<ApiResponse<EvolucaoDesempenho>>({
+    queryKey: ["evolucao-desempenho", estudanteId],
+    queryFn: () => estudanteApi.getEvolucaoDesempenho(estudanteId),
+  });
+
+  return {
+    estatisticas: estatisticasResponse?.data,
+    disciplinas: disciplinasResponse?.data || [],
+    evolucao: evolucaoResponse?.data,
+    isLoading: estatisticasLoading || disciplinasLoading || evolucaoLoading,
+    isError: estatisticasError || disciplinasError || evolucaoError,
+    errors: {
+      estatisticas: estatisticasErrorData,
+      disciplinas: disciplinasErrorData,
+      evolucao: evolucaoErrorData,
+    },
+  };
+}
+
+

@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import * as estatisticaApi from "@/api/estatistica";
-import { Estatistica, EstatisticaDisciplina, EvolucaoDesempenho, RankingEstudante } from "@/types/estatisticas";
+import { 
+  EstatisticaDisciplina, 
+  EvolucaoDesempenho, 
+  RankingEstudante,
+  EstatisticasEstudante 
+} from "@/types/estatisticas";
 
-export function useEstatisticas(estudanteId?: string) {  // Consulta para obter estatísticas gerais
-  const estatisticasGerais = useQuery<Estatistica | null>({
+export function useEstatisticas(estudanteId?: string) {  const estatisticasGerais = useQuery<EstatisticasEstudante | null>({
     queryKey: ["estatisticas", "estudante", estudanteId],
     queryFn: async () => {
       if (!estudanteId) return null;

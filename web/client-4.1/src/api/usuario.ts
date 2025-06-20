@@ -84,3 +84,15 @@ export async function updateEstudante(id: string, data: {
     headers: createAuthHeaders(),
   });
 }
+
+// Função para alterar a senha do usuário
+export async function alterarSenha(data: {
+  senhaAtual: string;
+  novaSenha: string;
+}) {
+  return fetchApi<{ message: string }>(`/usuarios/password`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    headers: createAuthHeaders(),
+  });
+}
