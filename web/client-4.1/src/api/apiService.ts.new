@@ -20,7 +20,8 @@ export async function fetchApi<T>(
   options?: RequestInit,
   retryCount: number = 0
 ): Promise<T> {
-  try {    // Verificar e renovar o token se necessário antes de cada requisição
+  try {
+    // Verificar e renovar o token se necessário antes de cada requisição
     await checkAndRefreshToken();
     
     // Usar as opções fornecidas ou criar novas com headers de autenticação
@@ -29,43 +30,26 @@ export async function fetchApi<T>(
       ...options,
     };
     
-    // Sempre recria os headers com o token mais recente
-    // Isso é crucial para garantir que estamos usando o token atualizado após renovação
-    if (!finalOptions.headers || finalOptions.headers instanceof Headers) {
-      // Se não há headers ou são do tipo Headers, substituir por nossos headers
+    // Se não há headers personalizados, adicionar headers de autenticação
+    if (!finalOptions.headers) {
       finalOptions.headers = createAuthHeaders();
-    } else if (typeof finalOptions.headers === 'object') {
-      // Se são headers em formato de objeto, garantir que tem Authorization
-      const headersObj = finalOptions.headers as Record<string, string>;
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        headersObj['Authorization'] = `Bearer ${token}`;
-      }
-    }    // Log para depuração
-    console.log(`fetchApi: Iniciando requisição para ${endpoint} (método: ${finalOptions.method || 'GET'})`);
-    
+    }
+
     const res = await fetch(`${API_URL}${API_PREFIX}${endpoint}`, finalOptions);
-    
-    console.log(`fetchApi: Resposta de ${endpoint} - Status: ${res.status}`);
     
     const data = await res.json();
 
     if (!res.ok) {
       // Se recebeu 401 Unauthorized e ainda não tentou retry
-      if (res.status === 401 && retryCount < 1) {        console.log(`Recebeu 401 Unauthorized para endpoint ${endpoint}, tentando renovar token...`);
+      if (res.status === 401 && retryCount < 1) {
+        console.log(`Recebeu 401 Unauthorized para endpoint ${endpoint}, tentando renovar token...`);
         
         // Forçar uma renovação de token e tentar novamente
         const newToken = await refreshToken();
         if (newToken) {
           console.log('Token renovado, tentando requisição novamente...');
-          // Cria novas opções com o token atualizado
-          const updatedOptions = {...options};
-          // Remove os headers existentes para garantir que usaremos o novo token
-          if (updatedOptions.headers) {
-            delete updatedOptions.headers;
-          }
           // Tenta a requisição novamente com o novo token
-          return fetchApi<T>(endpoint, updatedOptions, retryCount + 1);
+          return fetchApi<T>(endpoint, options, retryCount + 1);
         } else {
           console.error('Falha ao renovar token, requisição será rejeitada com 401');
         }
@@ -104,13 +88,9 @@ export function createAuthHeaders(): Headers {
   const headers = new Headers();
   headers.append('Content-Type', 'application/json');
   
-  // Obter o token mais recente diretamente do localStorage
-  const token = localStorage.getItem('auth_token');
+  const token = getAuthToken();
   if (token) {
-    console.log('Adicionando token aos headers:', token.substring(0, 15) + '...');
     headers.append('Authorization', `Bearer ${token}`);
-  } else {
-    console.log('Nenhum token disponível para adicionar aos headers');
   }
   
   return headers;
@@ -118,19 +98,13 @@ export function createAuthHeaders(): Headers {
 
 // Função para verificar e renovar o token se necessário
 export async function checkAndRefreshToken(): Promise<void> {
-  const token = localStorage.getItem('auth_token');
+  const token = getAuthToken();
   
   // Se não há token, não há o que renovar
-  if (!token) {
-    console.log('Nenhum token encontrado no localStorage');
-    return;
-  }
-  
-  console.log('Verificando se o token precisa ser renovado...');
+  if (!token) return;
   
   // Se o token está expirado ou expirando em breve, tenta renovar
   if (isTokenExpiringSoon(token)) {
-    console.log('Token está expirado ou expirando em breve, tentando renovar...');
     try {
       // Tentar renovar o token
       const newToken = await refreshToken();
@@ -148,8 +122,6 @@ export async function checkAndRefreshToken(): Promise<void> {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
     }
-  } else {
-    console.log('Token ainda é válido, não precisa renovar');
   }
 }
 
@@ -164,8 +136,8 @@ async function refreshToken(): Promise<string | null> {
     
     console.log('Tentando renovar token com refresh token...');
     
-    // Usando o endpoint correto para refresh token conforme definido no backend
-    const refreshUrl = `${API_URL}${API_PREFIX}/auth/refresh`;
+    // Certifique-se que está usando o endpoint correto conforme definido no backend
+    const refreshUrl = `${API_URL}${API_PREFIX}/auth/refresh-token`;
     console.log(`Enviando refresh para: ${refreshUrl}`);
     
     const response = await fetch(refreshUrl, {
@@ -186,11 +158,9 @@ async function refreshToken(): Promise<string | null> {
     console.log('Resposta do refresh token:', data);
     
     if (data.data && data.data.token) {
-      console.log('Token renovado com sucesso, salvando no localStorage');
-      // Salvar o novo token e refresh token imediatamente
+      console.log('Token renovado com sucesso');
       localStorage.setItem('auth_token', data.data.token);
       if (data.data.refreshToken) {
-        console.log('Salvando novo refresh token também');
         localStorage.setItem('refresh_token', data.data.refreshToken);
       }
       return data.data.token;
@@ -248,17 +218,11 @@ export function decodeToken(token: string): { exp?: number } | null {
 
 // Função para verificar se o token está prestes a expirar (dentro de 5 minutos) ou já expirou
 export function isTokenExpiringSoon(token: string | null): boolean {
-  if (!token) {
-    console.log('isTokenExpiringSoon: Nenhum token fornecido');
-    return true;
-  }
+  if (!token) return true;
   
   try {
     const decodedToken = decodeToken(token);
-    if (!decodedToken || !decodedToken.exp) {
-      console.warn('isTokenExpiringSoon: Token inválido ou sem informação de expiração');
-      return true;
-    }
+    if (!decodedToken || !decodedToken.exp) return true;
     
     // Verificar se o token expira nos próximos 5 minutos ou já expirou
     const expirationTime = decodedToken.exp * 1000; // Converter para milissegundos
@@ -266,7 +230,7 @@ export function isTokenExpiringSoon(token: string | null): boolean {
     
     // Se o token já expirou, retorna true
     if (expirationTime <= currentTime) {
-      console.log(`Token já expirado (expirou em ${new Date(expirationTime).toISOString()})`);
+      console.log('Token já expirado');
       return true;
     }
     
@@ -275,10 +239,7 @@ export function isTokenExpiringSoon(token: string | null): boolean {
     const isExpiringSoon = timeUntilExpiration < 5 * 60 * 1000; // 5 minutos em milissegundos
     
     if (isExpiringSoon) {
-      console.log(`Token expirando em ${Math.floor(timeUntilExpiration / 1000)} segundos (${timeUntilExpiration}ms)`);
-    } else {
-      const minutesLeft = Math.floor(timeUntilExpiration / (60 * 1000));
-      console.log(`Token ainda válido por ${minutesLeft} minutos`);
+      console.log(`Token expirando em ${Math.floor(timeUntilExpiration / 1000)} segundos`);
     }
     
     return isExpiringSoon;

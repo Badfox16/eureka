@@ -13,6 +13,9 @@ export type RegisterRequest = {
 };
 
 export type AuthResponse = {
-  usuario: Usuario;
-  token: string;
+  data: {
+    usuario: Usuario;
+    token: string;
+    refreshToken: string;
+  };
 };

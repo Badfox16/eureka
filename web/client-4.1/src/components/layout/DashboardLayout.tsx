@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,27 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { usuario, logout } = useAuth();
   const { contadorNaoLidas } = useNotifications();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
+  // Verificar autenticação no carregamento da página
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+      setIsAuthChecking(false);
+    };
+    
+    checkAuth();
+  }, [router]);
+
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
+    router.replace("/login");
   };
 
   const toggleSidebar = () => {

@@ -45,6 +45,7 @@ export type AuthResponse = {
   data: {
     usuario: Usuario;
     token: string;
+    refreshToken: string;
   };
 };
 

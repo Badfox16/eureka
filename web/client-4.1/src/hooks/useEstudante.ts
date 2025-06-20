@@ -57,9 +57,10 @@ export function usePerfilEstudante() {
     isError,
     error,
     refetch,
-  } = useQuery<ApiResponse<Estudante>>({
+  } = useQuery<ApiResponse<Estudante | null>>({
     queryKey: ["perfil-estudante"],
     queryFn: () => estudanteApi.getPerfilEstudante(),
+    retry: false, // Não tentar novamente em caso de erro
   });
 
   // Mutation para atualizar perfil

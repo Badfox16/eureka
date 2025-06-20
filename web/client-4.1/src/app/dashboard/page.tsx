@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useEstudante } from "@/hooks/useEstudante";
 import { useEstatisticas } from "@/hooks/useEstatisticas";
@@ -8,29 +9,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Award, Calendar, ArrowRight, BarChart2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { primary } from "@/lib/colors";
 
 export default function DashboardPage() {
-  const { usuario } = useAuth();
+  const { usuario, isAuthenticatedSync } = useAuth();
   const { estudante: perfil, isLoading: isLoadingPerfil } = useEstudante().usePerfilEstudante();
   const { estatisticasGerais, estatisticasDisciplinas, evolucaoDesempenho } = useEstatisticas(perfil?._id);
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Redirecionar se não estiver autenticado
+  // Verificar autenticação de forma síncrona no carregamento da página
+  useEffect(() => {
+    if (!isAuthenticatedSync()) {
+      router.replace('/login');
+    } else {
+      // Se estiver autenticado, permitir que a página continue carregando
+      setIsLoading(false);
+    }
+  }, [router, isAuthenticatedSync]);
+  
+  // Redirecionar se não estiver autenticado (verificação assíncrona)
   useEffect(() => {
     if (!usuario) {
-      router.push('/login');
+      router.replace('/login');
     }
-  }, [usuario, router]);
-
-  if (isLoadingPerfil || !perfil || estatisticasGerais.isLoading) {
+  }, [usuario, router]);  if (isLoading || isLoadingPerfil || estatisticasGerais.isLoading) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">
           <div className={`w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin`}></div>
           <p className="mt-4 text-primary-700">Carregando seu dashboard...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+  
+  // Verificar se o usuário é um estudante
+  if (!perfil) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <div className="p-6 bg-orange-50 border border-orange-200 rounded-lg text-center max-w-md">
+            <h1 className="text-xl font-bold text-orange-800 mb-3">Acesso Limitado</h1>
+            <p className="text-orange-700 mb-4">
+              Sua conta não tem perfil de estudante associado. Algumas funcionalidades podem não estar disponíveis.
+            </p>
+            <p className="text-sm text-orange-600">
+              Entre em contato com o administrador para mais informações.
+            </p>
+          </div>
         </div>
       </DashboardLayout>
     );

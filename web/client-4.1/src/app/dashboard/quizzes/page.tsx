@@ -89,10 +89,9 @@ export default function QuizzesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-orange-900">Quizzes disponíveis</h1>
-            <p className="text-orange-700">Escolha um quiz para testar seus conhecimentos</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">          <div>
+            <h1 className="text-2xl font-bold text-primary-900">Quizzes disponíveis</h1>
+            <p className="text-primary-700">Escolha um quiz para testar seus conhecimentos</p>
           </div>
           
           <div className="flex items-center gap-2">

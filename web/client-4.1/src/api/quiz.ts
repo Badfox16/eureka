@@ -1,6 +1,6 @@
 import { Quiz } from "@/types/quiz";
 import { QuizSearchParams } from "@/types/search";
-import { fetchApi, buildQueryString, createAuthHeaders } from "./apiService";
+import { fetchApi, buildQueryString } from "./apiService";
 
 // Função para listar quizzes com suporte a paginação e filtros
 export async function getQuizzes(params: QuizSearchParams) {
@@ -12,18 +12,12 @@ export async function getQuizzes(params: QuizSearchParams) {
     ativo: params.ativo,
     sortBy: params.sortBy,
     sortOrder: params.sortOrder
-  });
-  
-  return fetchApi<Quiz[]>(`/quizzes${queryString}`, {
-    headers: createAuthHeaders(),
-  });
+  });  
+  return fetchApi<Quiz[]>(`/quizzes${queryString}`);
 }
 
 // Função para obter um quiz específico
-export async function getQuiz(id: string) {
-  return fetchApi<Quiz>(`/quizzes/${id}`, {
-    headers: createAuthHeaders(),
-  });
+export async function getQuiz(id: string) {  return fetchApi<Quiz>(`/quizzes/${id}`);
 }
 
 // Função para criar um novo quiz
@@ -33,11 +27,9 @@ export async function createQuiz(quizData: {
   avaliacao: string;
   tempoLimite?: number;
   ativo?: boolean;
-}) {
-  return fetchApi<Quiz>('/quizzes', {
+}) {  return fetchApi<Quiz>('/quizzes', {
     method: 'POST',
-    body: JSON.stringify(quizData),
-    headers: createAuthHeaders(),
+    body: JSON.stringify(quizData)
   });
 }
 
@@ -48,26 +40,20 @@ export async function updateQuiz(id: string, quizData: Partial<{
   avaliacao: string;
   tempoLimite?: number;
   ativo?: boolean;
-}>) {
-  return fetchApi<Quiz>(`/quizzes/${id}`, {
+}>) {  return fetchApi<Quiz>(`/quizzes/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(quizData),
-    headers: createAuthHeaders(),
+    body: JSON.stringify(quizData)
   });
 }
 
 // Função para excluir um quiz
-export async function deleteQuiz(id: string) {
-  return fetchApi<{ success: boolean }>(`/quizzes/${id}`, {
-    method: 'DELETE',
-    headers: createAuthHeaders(),
+export async function deleteQuiz(id: string) {  return fetchApi<{ success: boolean }>(`/quizzes/${id}`, {
+    method: 'DELETE'
   });
 }
 
 // Função para alternar o status de um quiz (ativo/inativo)
-export async function toggleQuizStatus(id: string) {
-  return fetchApi<Quiz>(`/quizzes/${id}/toggle-status`, {
-    method: 'PATCH',
-    headers: createAuthHeaders(),
+export async function toggleQuizStatus(id: string) {  return fetchApi<Quiz>(`/quizzes/${id}/toggle-status`, {
+    method: 'PATCH'
   });
 }

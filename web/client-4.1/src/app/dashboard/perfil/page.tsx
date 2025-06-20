@@ -52,13 +52,38 @@ export default function PerfilPage() {
     { _id: "uige", nome: "Uíge" },
     { _id: "zaire", nome: "Zaire" }
   ];
-
-  if (isLoading || !estudante) {
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">
-          <div className="w-16 h-16 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-orange-800">Carregando seu perfil...</p>
+          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-primary-700">Carregando seu perfil...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Verificar se o usuário é um estudante
+  if (!estudante) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <div className="p-6 bg-orange-50 border border-orange-200 rounded-lg text-center max-w-md">
+            <h1 className="text-xl font-bold text-orange-800 mb-3">Acesso Limitado</h1>
+            <p className="text-orange-700 mb-4">
+              Sua conta não tem perfil de estudante associado. Não é possível gerenciar perfil.
+            </p>
+            <p className="text-sm text-orange-600 mb-4">
+              Entre em contato com o administrador para mais informações.
+            </p>
+            <Button 
+              variant="default" 
+              className="bg-primary-500 hover:bg-primary-600"
+              onClick={() => router.push('/dashboard')}
+            >
+              Voltar ao Dashboard
+            </Button>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -90,9 +115,8 @@ export default function PerfilPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-orange-900">Meu Perfil</h1>
-          <p className="text-orange-700">Gerencie suas informações e senha</p>
+        <div>          <h1 className="text-2xl font-bold text-primary-900">Meu Perfil</h1>
+          <p className="text-primary-700">Gerencie suas informações e senha</p>
         </div>
 
         <Tabs defaultValue="perfil" className="space-y-4">

@@ -1,29 +1,22 @@
 import { Usuario } from "@/types/usuario";
 import { Estudante } from "@/types/estudante";
 import { EstudanteSearchParams, UsuarioSearchParams } from "@/types/search";
-import { fetchApi, buildQueryString, createAuthHeaders } from "./apiService";
+import { fetchApi, buildQueryString } from "./apiService";
 
 // Função para listar usuários com suporte a paginação e filtros
 export async function getUsuarios(params: UsuarioSearchParams) {
   const queryString = buildQueryString(params);
-  
-  return fetchApi<Usuario[]>(`/usuarios${queryString}`, {
-    headers: createAuthHeaders(),
-  });
+  return fetchApi<Usuario[]>(`/usuarios${queryString}`);
 }
 
 // Função para obter um usuário específico
 export async function getUsuario(id: string) {
-  return fetchApi<Usuario>(`/usuarios/${id}`, {
-    headers: createAuthHeaders(),
-  });
+  return fetchApi<Usuario>(`/usuarios/${id}`);
 }
 
 // Função para buscar o perfil do usuário atual
 export async function getPerfilUsuario() {
-  return fetchApi<Usuario>(`/usuarios/profile`, {
-    headers: createAuthHeaders(),
-  });
+  return fetchApi<Usuario>(`/usuarios/profile`);
 }
 
 // Função para atualizar perfil do usuário
@@ -34,7 +27,6 @@ export async function updatePerfilUsuario(data: {
   return fetchApi<Usuario>(`/usuarios/profile`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    headers: createAuthHeaders(),
   });
 }
 
@@ -51,23 +43,17 @@ export async function getEstudantes(params: EstudanteSearchParams) {
     sortOrder: params.sortOrder
   });
   
-  return fetchApi<Estudante[]>(`/estudantes${queryString}`, {
-    headers: createAuthHeaders(),
-  });
+  return fetchApi<Estudante[]>(`/estudantes${queryString}`);
 }
 
 // Função para obter um estudante específico
 export async function getEstudante(id: string) {
-  return fetchApi<Estudante>(`/estudantes/${id}`, {
-    headers: createAuthHeaders(),
-  });
+  return fetchApi<Estudante>(`/estudantes/${id}`);
 }
 
 // Função para buscar o perfil do estudante atual
 export async function getPerfilEstudante() {
-  return fetchApi<Estudante>(`/estudantes/me`, {
-    headers: createAuthHeaders(),
-  });
+  return fetchApi<Estudante>(`/estudantes/me`);
 }
 
 // Função para atualizar dados do estudante
@@ -81,7 +67,6 @@ export async function updateEstudante(id: string, data: {
   return fetchApi<Estudante>(`/estudantes/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    headers: createAuthHeaders(),
   });
 }
 
@@ -93,6 +78,5 @@ export async function alterarSenha(data: {
   return fetchApi<{ message: string }>(`/usuarios/password`, {
     method: 'PUT',
     body: JSON.stringify(data),
-    headers: createAuthHeaders(),
   });
 }

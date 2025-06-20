@@ -42,15 +42,15 @@ const perfilSchema = z.object({
 type PerfilFormData = z.infer<typeof perfilSchema>;
 
 interface PerfilFormProps {
-  estudante: Estudante | null;
+  estudante: Estudante;
   provincias: Array<{ _id: string; nome: string; }>;
   onSubmit: (data: PerfilFormData) => Promise<void>;
   status?: ApiStatus;
   error?: string | null;
 }
 
-export function PerfilForm({ estudante, provincias, onSubmit, status }: PerfilFormProps) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
+export function PerfilForm({ estudante, provincias, onSubmit, status, error }: PerfilFormProps) {
+  const [submitError, setSubmitError] = useState<string | null>(error || null);
   
   const { 
     register, 
