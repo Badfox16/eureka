@@ -22,7 +22,12 @@ export type UpdateProvinciaInput = Partial<CreateProvinciaInput>;
 
 // Tipo para filtros de busca de províncias
 export type ProvinciaSearchParams = {
+  page?: number;
+  limit?: number;
   nome?: string;
   codigo?: string;
   regiao?: string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 };

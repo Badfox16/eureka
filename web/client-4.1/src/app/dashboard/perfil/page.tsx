@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { ProvinciaSelect } from "@/types/provincia";
+import { useProvincias } from "@/hooks/useProvincias";
 
 export default function PerfilPage() {
   const router = useRouter();
@@ -24,6 +24,18 @@ export default function PerfilPage() {
   const [perfilError, setPerfilError] = useState<string | null>(null);
   const [senhaError, setSenhaError] = useState<string | null>(null);
   
+  // Buscar províncias dinâmicas da API
+  const provinciasQuery = useProvincias({
+    page: 1,
+    limit: 100,
+    sortBy: 'nome',
+    sortOrder: 'asc'
+  });
+  
+  // Lista de províncias de Angola da API
+  const provincias = provinciasQuery.data?.provincias || [];
+  const isLoadingProvincias = provinciasQuery.isLoading;
+  
   // Redirecionar se não estiver autenticado
   useEffect(() => {
     if (!usuario) {
@@ -31,28 +43,7 @@ export default function PerfilPage() {
     }
   }, [usuario, router]);
 
-  // Lista de províncias de Angola
-  const provincias: ProvinciaSelect[] = [
-    { _id: "bengo", nome: "Bengo" },
-    { _id: "benguela", nome: "Benguela" },
-    { _id: "bie", nome: "Bié" },
-    { _id: "cabinda", nome: "Cabinda" },
-    { _id: "cuando_cubango", nome: "Cuando Cubango" },
-    { _id: "cuanza_norte", nome: "Cuanza Norte" },
-    { _id: "cuanza_sul", nome: "Cuanza Sul" },
-    { _id: "cunene", nome: "Cunene" },
-    { _id: "huambo", nome: "Huambo" },
-    { _id: "huila", nome: "Huíla" },
-    { _id: "luanda", nome: "Luanda" },
-    { _id: "lunda_norte", nome: "Lunda Norte" },
-    { _id: "lunda_sul", nome: "Lunda Sul" },
-    { _id: "malanje", nome: "Malanje" },
-    { _id: "moxico", nome: "Moxico" },
-    { _id: "namibe", nome: "Namibe" },
-    { _id: "uige", nome: "Uíge" },
-    { _id: "zaire", nome: "Zaire" }
-  ];
-  if (isLoading) {
+  if (isLoading || isLoadingProvincias) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">

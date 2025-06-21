@@ -14,13 +14,11 @@ export type RegisterRequest = {
 export type ApiResponse<T> = {
   data: T;
   message?: string;
-  pagination?: PaginationData;
-  meta?: {
-    total?: number;
-    page?: number;
-    limit?: number;
-    pages?: number;
-  };
+  meta?: Record<string, any>;
+};
+
+export type ApiResponsePaginated<T> = ApiResponse<T> & {
+  pagination: PaginationData;
 };
 
 export type PaginatedResponse<T> = {

@@ -2,10 +2,10 @@ import type { Request, Response, NextFunction } from 'express';
 import { Estudante } from '../models/estudante';
 import { Usuario, TipoUsuario } from '../models/usuario';
 import { EstudanteQuiz } from '../models/estudanteQuiz';
-import { 
-  createEstudanteSchema, 
-  updateEstudanteSchema, 
-  updatePasswordSchema 
+import {
+  createEstudanteSchema,
+  updateEstudanteSchema,
+  updatePasswordSchema
 } from '../schemas/estudante.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import bcrypt from 'bcrypt';
@@ -31,7 +31,7 @@ export const createEstudante = async (req: Request, res: Response, next: NextFun
   try {
     // Validar entrada com Zod - manter a lógica original
     const validatedData = createEstudanteSchema.safeParse(req.body);
-    
+
     if (!validatedData.success) {
       throw new HttpError(
         'Dados inválidos',
@@ -40,9 +40,9 @@ export const createEstudante = async (req: Request, res: Response, next: NextFun
         validatedData.error.format()
       );
     }
-    
+
     const estudanteData = validatedData.data;
-    
+
     // Verificações originais
     const existsEstudante = await Estudante.findOne({ email: estudanteData.email });
     if (existsEstudante) {
@@ -52,7 +52,7 @@ export const createEstudante = async (req: Request, res: Response, next: NextFun
         'DUPLICATE_EMAIL'
       );
     }
-    
+
     const existsUsuario = await Usuario.findOne({ email: estudanteData.email });
     if (existsUsuario) {
       throw new HttpError(
@@ -61,19 +61,19 @@ export const createEstudante = async (req: Request, res: Response, next: NextFun
         'DUPLICATE_EMAIL'
       );
     }
-    
+
     // Criar um usuário para o estudante - manter a lógica original
     const saltRounds = 10;
     const password = estudanteData.password || generatePassword();
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    
+
     const novoUsuario = await Usuario.create({
       nome: estudanteData.nome,
       email: estudanteData.email,
       password: hashedPassword,
       tipo: TipoUsuario.NORMAL
     });
-    
+
     // Criar o estudante - manter a lógica original
     const estudante = await Estudante.create({
       nome: estudanteData.nome,
@@ -83,7 +83,7 @@ export const createEstudante = async (req: Request, res: Response, next: NextFun
       provincia: estudanteData.provincia,
       usuario: novoUsuario._id
     });
-    
+
     // Remover senha do objeto de resposta - manter a lógica original
     const usuarioResponse = {
       _id: novoUsuario._id,
@@ -91,10 +91,10 @@ export const createEstudante = async (req: Request, res: Response, next: NextFun
       email: novoUsuario.email,
       tipo: novoUsuario.tipo
     };
-    
+
     // Determinar se deve retornar a senha temporária na resposta
     const senhaTemporaria = estudanteData.password ? undefined : password;
-    
+
     // Apenas alterar o formato da resposta
     res.status(201).json(formatResponse({
       estudante,
@@ -114,43 +114,43 @@ export const getAllEstudantes = async (req: Request, res: Response, next: NextFu
     // Validar parâmetros de paginação - manter a lógica original
     const validatedQuery = paginationSchema.parse(req.query);
     const { page, limit } = validatedQuery;
-    
+
     // Filtros originais
     const filtro: any = {};
-    
+
     if (req.query.nome) {
       filtro.nome = { $regex: req.query.nome, $options: 'i' };
     }
-    
+
     if (req.query.email) {
       filtro.email = { $regex: req.query.email, $options: 'i' };
     }
-    
+
     if (req.query.classe) {
       filtro.classe = parseInt(req.query.classe as string);
     }
-    
+
     if (req.query.escola) {
       filtro.escola = { $regex: req.query.escola, $options: 'i' };
     }
-    
+
     if (req.query.provincia) {
       filtro.provincia = req.query.provincia;
     }
-    
+
     if (req.query.ativo !== undefined) {
       filtro.ativo = req.query.ativo === 'true';
     }
-    
+
     // Consulta original
     const total = await Estudante.countDocuments(filtro);
-    
+
     const estudantes = await Estudante.find(filtro)
       .populate('usuario', 'nome email tipo')
       .sort({ nome: 1 })
       .skip((page - 1) * limit)
       .limit(limit);
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(estudantes, {
       page,
@@ -168,18 +168,18 @@ export const getAllEstudantes = async (req: Request, res: Response, next: NextFu
 export const getEstudanteById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Consulta original
     const estudante = await Estudante.findById(id).populate('usuario', 'nome email tipo');
-    
+
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(estudante));
   } catch (error) {
@@ -193,14 +193,14 @@ export const getEstudanteById = async (req: Request, res: Response, next: NextFu
 export const updateEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Validação original
     const validatedData = updateEstudanteSchema.safeParse(req.body);
-    
+
     if (!validatedData.success) {
       throw new HttpError(
         'Dados inválidos',
@@ -209,22 +209,22 @@ export const updateEstudante = async (req: Request, res: Response, next: NextFun
         validatedData.error.format()
       );
     }
-    
+
     const updateData = validatedData.data;
-    
+
     // Verificação original
     const estudante = await Estudante.findById(id);
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Verificações de email - manter a lógica original
     if (updateData.email && updateData.email !== estudante.email) {
-      const emailExists = await Estudante.findOne({ 
+      const emailExists = await Estudante.findOne({
         email: updateData.email,
         _id: { $ne: id }
       });
-      
+
       if (emailExists) {
         throw new HttpError(
           `O email ${updateData.email} já está em uso por outro estudante`,
@@ -232,12 +232,12 @@ export const updateEstudante = async (req: Request, res: Response, next: NextFun
           'DUPLICATE_EMAIL'
         );
       }
-      
+
       const emailExistsUser = await Usuario.findOne({
         email: updateData.email,
         _id: { $ne: estudante.usuario }
       });
-      
+
       if (emailExistsUser) {
         throw new HttpError(
           `O email ${updateData.email} já está em uso por outro usuário`,
@@ -245,27 +245,27 @@ export const updateEstudante = async (req: Request, res: Response, next: NextFun
           'DUPLICATE_EMAIL'
         );
       }
-      
+
       // Atualizar o email no usuário
       await Usuario.findByIdAndUpdate(estudante.usuario, {
         email: updateData.email
       });
     }
-    
+
     // Atualizar nome no usuário - manter a lógica original
     if (updateData.nome) {
       await Usuario.findByIdAndUpdate(estudante.usuario, {
         nome: updateData.nome
       });
     }
-    
+
     // Atualizar o estudante - manter a lógica original
     const updatedEstudante = await Estudante.findByIdAndUpdate(
       id,
       updateData,
       { new: true, runValidators: true }
     ).populate('usuario', 'nome email tipo');
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(updatedEstudante));
   } catch (error) {
@@ -279,31 +279,31 @@ export const updateEstudante = async (req: Request, res: Response, next: NextFun
 export const deleteEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Verificação original
     const estudante = await Estudante.findById(id);
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Manter a lógica original de transação
     const session = await mongoose.startSession();
     session.startTransaction();
-    
+
     try {
       // Remover todos os quizzes do estudante
       await EstudanteQuiz.deleteMany({ estudante: id }).session(session);
-      
+
       // Remover o estudante
       await Estudante.findByIdAndDelete(id).session(session);
-      
+
       // Remover o usuário associado
       await Usuario.findByIdAndDelete(estudante.usuario).session(session);
-      
+
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -311,7 +311,7 @@ export const deleteEstudante = async (req: Request, res: Response, next: NextFun
     } finally {
       session.endSession();
     }
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(
       null,
@@ -329,15 +329,15 @@ export const deleteEstudante = async (req: Request, res: Response, next: NextFun
 export const searchEstudantes = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { q } = req.query;
-    
+
     if (!q || typeof q !== 'string') {
       throw new HttpError('Termo de busca é obrigatório', 400, 'MISSING_QUERY_PARAM');
     }
-    
+
     // Manter a lógica de busca original
     const searchTerm = q.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const regex = new RegExp(searchTerm, 'i');
-    
+
     const estudantes = await Estudante.find({
       $or: [
         { nome: { $regex: regex } },
@@ -345,7 +345,7 @@ export const searchEstudantes = async (req: Request, res: Response, next: NextFu
         { escola: { $regex: regex } }
       ]
     }).populate('usuario', 'nome email tipo').limit(50);
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(estudantes, {
       page: 1,
@@ -363,41 +363,42 @@ export const searchEstudantes = async (req: Request, res: Response, next: NextFu
 export const getQuizzesEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Verificação original
     const estudante = await Estudante.findById(id);
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Manter a lógica original de filtros
     const filtro: any = { estudante: id };
-    if (req.query.disciplina) {
-      filtro.disciplina = req.query.disciplina;
-    }
-    
-    if (req.query.finalizado !== undefined) {
-      filtro.finalizado = req.query.finalizado === 'true';
-    }
     
     // Paginação original
     const validatedQuery = paginationSchema.parse(req.query);
     const { page, limit } = validatedQuery;
-    
+
     const total = await EstudanteQuiz.countDocuments(filtro);
-    
+
+    // Corrigir o populate para seguir a estrutura correta dos documentos
     const quizzes = await EstudanteQuiz.find(filtro)
-      .populate('disciplina', 'nome codigo')
-      .populate('avaliacao', 'titulo tipo ano classe')
+      .populate({
+        path: 'quiz',
+        populate: {
+          path: 'avaliacao',
+          populate: {
+            path: 'disciplina'
+          }
+        }
+      })
       .sort({ dataInicio: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
-    
-    // Apenas alterar o formato da resposta
+
+    // Formatar a resposta com os dados necessários
     res.status(200).json(formatResponse(quizzes, {
       page,
       limit,
@@ -414,17 +415,17 @@ export const getQuizzesEstudante = async (req: Request, res: Response, next: Nex
 export const getEstatisticasPorDisciplina = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Verificação original
     const estudante = await Estudante.findById(id);
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Manter a lógica original da agregação
     const estatisticasPorDisciplina = await EstudanteQuiz.aggregate([
       {
@@ -474,7 +475,7 @@ export const getEstatisticasPorDisciplina = async (req: Request, res: Response, 
         $sort: { pontuacaoMedia: -1 }
       }
     ]);
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(estatisticasPorDisciplina));
   } catch (error) {
@@ -488,27 +489,27 @@ export const getEstatisticasPorDisciplina = async (req: Request, res: Response, 
 export const getEvolucaoDesempenho = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Verificação original
     const estudante = await Estudante.findById(id);
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Manter a lógica original de filtros
     const match: any = {
       estudante: new mongoose.Types.ObjectId(id),
       finalizado: true
     };
-    
+
     if (req.query.disciplina && mongoose.Types.ObjectId.isValid(req.query.disciplina as string)) {
       match.disciplina = new mongoose.Types.ObjectId(req.query.disciplina as string);
     }
-    
+
     // Manter a agregação original
     const evolucaoDesempenho = await EstudanteQuiz.aggregate([
       {
@@ -560,7 +561,7 @@ export const getEvolucaoDesempenho = async (req: Request, res: Response, next: N
         }
       }
     ]);
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(evolucaoDesempenho));
   } catch (error) {
@@ -574,19 +575,19 @@ export const getEvolucaoDesempenho = async (req: Request, res: Response, next: N
 export const getPerfilEstudante = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.id;
-    
+
     if (!userId) {
       throw new HttpError('Usuário não autenticado', 401, 'UNAUTHORIZED');
     }
-    
+
     // Consulta original
     const estudante = await Estudante.findOne({ usuario: userId })
       .populate('usuario', '-password');
-    
+
     if (!estudante) {
       throw new HttpError('Perfil de estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(estudante));
   } catch (error) {
@@ -600,14 +601,14 @@ export const getPerfilEstudante = async (req: Request, res: Response, next: Next
 export const updatePassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de estudante inválido', 400, 'INVALID_ID');
     }
-    
+
     // Validação original
     const validatedData = updatePasswordSchema.safeParse(req.body);
-    
+
     if (!validatedData.success) {
       throw new HttpError(
         'Dados inválidos',
@@ -616,9 +617,9 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
         validatedData.error.format()
       );
     }
-    
+
     const { password, confirmPassword } = validatedData.data;
-    
+
     if (password !== confirmPassword) {
       throw new HttpError(
         'As senhas não coincidem',
@@ -626,21 +627,21 @@ export const updatePassword = async (req: Request, res: Response, next: NextFunc
         'PASSWORD_MISMATCH'
       );
     }
-    
+
     // Verificação original
     const estudante = await Estudante.findById(id);
     if (!estudante) {
       throw new HttpError('Estudante não encontrado', 404, 'RESOURCE_NOT_FOUND');
     }
-    
+
     // Lógica original
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    
+
     await Usuario.findByIdAndUpdate(estudante.usuario, {
       password: hashedPassword
     });
-    
+
     // Apenas alterar o formato da resposta
     res.status(200).json(formatResponse(
       null,

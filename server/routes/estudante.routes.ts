@@ -15,8 +15,8 @@ const asyncHandler = (fn: Function) => (req: Request, res: Response, next: NextF
 };
 
 // Rotas que exigem autenticação (a rota /me deve vir ANTES de /:id)
-router.get('/me', authenticate, asyncHandler(estudanteController.getEstudanteProfile));
-router.post('/me/alterar-senha', authenticate, asyncHandler(estudanteController.alterarSenhaEstudante));
+// router.get('/me', authenticate, asyncHandler(estudanteController.getEstudanteProfile));
+// router.post('/me/alterar-senha', authenticate, asyncHandler(estudanteController.alterarSenhaEstudante));
 
 // Rotas de busca sem parâmetro de ID
 router.get('/search', asyncHandler(estudanteController.searchEstudantes));

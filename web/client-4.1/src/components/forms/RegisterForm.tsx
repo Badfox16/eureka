@@ -11,6 +11,7 @@ import { SocialLoginButtons } from "@/components/SocialLoginButtons";
 import { ApiStatus } from "@/types/api";
 import { RegisterFormValues, registerSchema } from "@/lib/validations";
 import { cn } from "@/lib/utils";
+import { useProvincias } from "@/hooks/useProvincias";
 
 interface RegisterFormProps {
   onSubmit: (data: RegisterFormValues) => Promise<void>;
@@ -18,25 +19,22 @@ interface RegisterFormProps {
   error?: string | null;
 }
 
-// Lista de províncias de Moçambique
-const provincias = [
-  "Maputo",
-  "Gaza",
-  "Inhambane",
-  "Manica",
-  "Sofala",
-  "Tete",
-  "Zambézia",
-  "Nampula",
-  "Cabo Delgado",
-  "Niassa"
-];
-
 // Lista de classes válidas (10-12)
 const classes = [10, 11, 12];
 
 export default function RegisterForm({ onSubmit, status, error }: RegisterFormProps) {
   const [showPassword, setShowPassword] = useState(false);
+
+  // Buscar províncias da API
+  const provinciasQuery = useProvincias({
+    page: 1,
+    limit: 100,
+    sortBy: 'nome',
+    sortOrder: 'asc'
+  });
+  
+  const provincias = provinciasQuery.data?.provincias || [];
+  const isLoadingProvincias = provinciasQuery.isLoading;
 
   const {
     register,
@@ -46,7 +44,9 @@ export default function RegisterForm({ onSubmit, status, error }: RegisterFormPr
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     mode: "onBlur",
-  });  const isLoading = status === ApiStatus.LOADING;
+  });  
+  
+  const isLoading = status === ApiStatus.LOADING || isLoadingProvincias;
   // Adicionar uma variável de estado para controlar quando o formulário foi enviado
   const [formSubmitted, setFormSubmitted] = useState(false);
   // Só mostrar mensagem de sucesso se o status for SUCCESS e o formulário tiver sido enviado
@@ -163,11 +163,11 @@ export default function RegisterForm({ onSubmit, status, error }: RegisterFormPr
           >
             {provincias.map((provincia) => (
               <SelectItem
-                key={provincia}
-                value={provincia}
+                key={provincia._id}
+                value={provincia._id}
                 className="bg-white text-foreground dark:bg-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 focus:bg-zinc-100 dark:focus:bg-zinc-800 data-[highlighted]:bg-zinc-100 dark:data-[highlighted]:bg-zinc-800"
               >
-                {provincia}
+                {provincia.nome}
               </SelectItem>
             ))}
           </SelectContent>

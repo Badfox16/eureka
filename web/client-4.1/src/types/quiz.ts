@@ -1,9 +1,10 @@
 import { Avaliacao } from "./avaliacao";
 import { Questao } from "./questao";
 
-// Modelo de opção de resposta para o quiz
-export type OpcaoQuiz = {
+// Tipo para alternativa de questão
+export type AlternativaQuiz = {
   _id: string;
+  letra: string;
   texto: string;
   correta: boolean;
 };
@@ -11,10 +12,11 @@ export type OpcaoQuiz = {
 // Modelo de questão adaptada para o quiz
 export type QuestaoQuiz = {
   _id: string;
+  numero: number;
   enunciado: string;
-  opcoes: OpcaoQuiz[];
-  explicacao?: string;
-  imagem?: string;
+  alternativas: AlternativaQuiz[];
+  explicacao: string;
+  valor: number;
 };
 
 // Modelo de quiz
@@ -22,9 +24,38 @@ export type Quiz = {
   _id: string;
   titulo: string;
   descricao?: string;
-  avaliacao: string | Avaliacao;
-  questoes: QuestaoQuiz[];
-  tempoLimite?: number;
+  avaliacao: {
+    _id: string;
+    tipo: string;
+    ano: number;
+    disciplina: {
+      _id: string;
+      nome: string;
+      codigo: string;
+      descricao: string;
+      ativo: boolean;
+    };
+    questoes: {
+      _id: string;
+      numero: number;
+      enunciado: string;
+      alternativas: {
+        _id: string;
+        letra: string;
+        texto: string;
+        correta: boolean;
+      }[];
+      explicacao: string;
+      valor: number;
+    }[];
+    trimestre: string;
+    provincia: string;
+    variante: string;
+    areaEstudo: string;
+    classe: number;
+    ativo: boolean;
+  };
+  tempoLimite: number;
   ativo: boolean;
   createdAt: string;
   updatedAt: string;

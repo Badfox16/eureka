@@ -3,10 +3,10 @@ import { useCallback } from "react";
 import * as quizRespostaApi from "@/api/quizResposta";
 import { EstudanteQuiz } from "@/types/estudanteQuiz";
 import { QuizResposta } from "@/types/quizResposta";
+import { ApiResponse } from "@/types/api";
 
 export function useQuizResposta(estudanteQuizId?: string) {
   const queryClient = useQueryClient();
-
   // Consulta para obter detalhes de um quiz em andamento
   const {
     data: tentativaAtual,
@@ -14,27 +14,24 @@ export function useQuizResposta(estudanteQuizId?: string) {
     isError,
     error,
     refetch,
-  } = useQuery<EstudanteQuiz | undefined>({
+  } = useQuery<ApiResponse<EstudanteQuiz> | undefined>({
     queryKey: ["tentativa", estudanteQuizId],
     queryFn: async () => {
       if (!estudanteQuizId) return undefined;
-      const response = await quizRespostaApi.getQuizEmAndamento(estudanteQuizId);
-      return response.data;
+      return await quizRespostaApi.getQuizEmAndamento(estudanteQuizId);
     },
     enabled: !!estudanteQuizId, // Só executa se houver um ID de tentativa
     retry: false,
   });
-
   // Mutação para iniciar uma tentativa
   const iniciarMutation = useMutation({
     mutationFn: (quizId: string) => quizRespostaApi.iniciarQuiz(quizId),
-    onSuccess: (response) => {
+    onSuccess: (response: ApiResponse<EstudanteQuiz>) => {
       if (response.data) {
-        queryClient.setQueryData(["tentativa", response.data._id], response.data);
+        queryClient.setQueryData(["tentativa", response.data._id], response);
       }
     },
   });
-
   // Mutação para registrar uma resposta
   const responderMutation = useMutation({
     mutationFn: ({ 
@@ -62,7 +59,6 @@ export function useQuizResposta(estudanteQuizId?: string) {
       }
     },
   });
-
   // Mutação para finalizar uma tentativa
   const finalizarMutation = useMutation({
     mutationFn: () => {
@@ -71,9 +67,9 @@ export function useQuizResposta(estudanteQuizId?: string) {
       }
       return quizRespostaApi.finalizarQuiz(estudanteQuizId);
     },
-    onSuccess: (response) => {
+    onSuccess: (response: ApiResponse<EstudanteQuiz>) => {
       if (response.data && estudanteQuizId) {
-        queryClient.setQueryData(["tentativa", estudanteQuizId], response.data);
+        queryClient.setQueryData(["tentativa", estudanteQuizId], response);
         // Invalidar a lista de tentativas para atualizar histórico
         queryClient.invalidateQueries({
           queryKey: ["tentativas"],
@@ -106,9 +102,8 @@ export function useQuizResposta(estudanteQuizId?: string) {
     () => finalizarMutation.mutateAsync(),
     [finalizarMutation]
   );
-
   return {
-    tentativaAtual,
+    tentativaAtual: tentativaAtual?.data,
     isLoading,
     isError,
     error,

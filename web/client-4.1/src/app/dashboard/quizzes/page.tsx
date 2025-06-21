@@ -13,28 +13,45 @@ import { Quiz } from "@/types/quiz";
 import { QuizSearchParams } from "@/types/search";
 import { Badge } from "@/components/ui/badge";
 import { primary } from "@/lib/colors";
+import { useDisciplinas } from "@/hooks/useDisciplinas";
 
-export default function QuizzesPage() {
-  const [searchParams, setSearchParams] = useState<QuizSearchParams>({
+export default function QuizzesPage() {  const [searchParams, setSearchParams] = useState<QuizSearchParams>({
     page: 1,
     limit: 9,
     ativo: true
   });
-  
-  const [searchText, setSearchText] = useState("");
-  const [disciplinaFiltro, setDisciplinaFiltro] = useState<string>("");
+    const [searchText, setSearchText] = useState("");
+  const [disciplinaFiltro, setDisciplinaFiltro] = useState<string>("todas");
   const [showFilters, setShowFilters] = useState(false);
   
   const { quizzes, pagination, isLoading, refetch } = useQuizzes(searchParams);
+    // Obter as disciplinas para o filtro
+  const disciplinasQuery = useDisciplinas({
+    page: 1,
+    limit: 100,
+    ativo: true,
+    sortBy: 'nome',
+    sortOrder: 'asc'
+  });
   
-  const handleSearch = (e: React.FormEvent) => {
+  const disciplinas = disciplinasQuery.data?.disciplinas || [];
+    const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearchParams({
+    const params = {
       ...searchParams,
       search: searchText,
-      disciplina: disciplinaFiltro,
       page: 1
-    });
+    };
+    
+    // Adiciona o filtro de disciplina apenas se não for "todas"
+    if (disciplinaFiltro && disciplinaFiltro !== "todas") {
+      params.disciplina = disciplinaFiltro;
+    } else {
+      // Remove o parâmetro disciplina se for "todas"
+      delete params.disciplina;
+    }
+    
+    setSearchParams(params);
   };
   
   const handleChangePage = (page: number) => {
@@ -98,7 +115,7 @@ export default function QuizzesPage() {
           <div className="flex items-center gap-2">
             <form onSubmit={handleSearch} className="flex w-full md:w-auto">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-500" />
                 <Input
                   type="text"
                   placeholder="Buscar quizzes..."
@@ -107,7 +124,7 @@ export default function QuizzesPage() {
                   onChange={(e) => setSearchText(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="ml-2 bg-orange-500 hover:bg-orange-600 text-white">
+              <Button type="submit" className="ml-2 bg-primary-500 hover:bg-primary-600 text-white">
                 Buscar
               </Button>
             </form>
@@ -124,28 +141,24 @@ export default function QuizzesPage() {
         </div>
         
         {showFilters && (
-          <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 animate-fadeIn">
+          <div className="bg-primary-50 p-4 rounded-lg border border-primary-100 animate-fadeIn">
             <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="w-full md:w-auto flex-1">
-                <label htmlFor="disciplina" className="block text-sm font-medium mb-1 text-orange-900">
+                <label htmlFor="disciplina" className="block text-sm font-medium mb-1 text-primary-900">
                   Disciplina
                 </label>
                 <Select
                   value={disciplinaFiltro}
                   onValueChange={setDisciplinaFiltro}
-                >
-                  <SelectTrigger className="w-full">
+                >                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Todas as disciplinas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Todas as disciplinas</SelectItem>
-                    <SelectItem value="matematica">Matemática</SelectItem>
-                    <SelectItem value="portugues">Português</SelectItem>
-                    <SelectItem value="fisica">Física</SelectItem>
-                    <SelectItem value="quimica">Química</SelectItem>
-                    <SelectItem value="biologia">Biologia</SelectItem>
-                    <SelectItem value="historia">História</SelectItem>
-                    <SelectItem value="geografia">Geografia</SelectItem>
+                  </SelectTrigger>                  <SelectContent>
+                    <SelectItem value="todas">Todas as disciplinas</SelectItem>
+                    {disciplinas.map((disciplina) => (
+                      <SelectItem key={disciplina._id} value={disciplina._id}>
+                        {disciplina.nome}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -161,7 +174,7 @@ export default function QuizzesPage() {
                 </Button>
                 <Button 
                   type="button" 
-                  className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white"
+                  className="w-full md:w-auto bg-primary-500 hover:bg-primary-600 text-white"
                   onClick={handleSearch}
                 >
                   Aplicar filtros
@@ -177,9 +190,9 @@ export default function QuizzesPage() {
           </div>
         ) : quizzes.length === 0 ? (
           <div className="text-center py-12">
-            <BookOpen className="w-12 h-12 mx-auto text-orange-400 mb-4" />
-            <h2 className="text-lg font-semibold text-orange-900 mb-2">Nenhum quiz encontrado</h2>
-            <p className="text-orange-700 mb-6">Tente ajustar os filtros de busca ou tente novamente mais tarde.</p>
+            <BookOpen className="w-12 h-12 mx-auto text-primary-400 mb-4" />
+            <h2 className="text-lg font-semibold text-primary-900 mb-2">Nenhum quiz encontrado</h2>
+            <p className="text-primary-700 mb-6">Tente ajustar os filtros de busca ou tente novamente mais tarde.</p>
             
             {(searchParams.search || searchParams.disciplina) && (
               <Button 
@@ -198,17 +211,17 @@ export default function QuizzesPage() {
                 <Card key={quiz._id} className="flex flex-col h-full hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start gap-2">
-                      <CardTitle className="text-lg font-bold text-orange-900 line-clamp-2">{quiz.titulo}</CardTitle>
-                      <Badge className="bg-orange-100 hover:bg-orange-200 text-orange-800 text-xs">
+                      <CardTitle className="text-lg font-bold text-primary-900 line-clamp-2">{quiz.titulo}</CardTitle>
+                      <Badge className="bg-primary-100 hover:bg-primary-200 text-primary-800 text-xs">
                         {getDisciplinaNome(quiz)}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1">
-                    <p className="text-orange-700 text-sm line-clamp-3 mb-4">
+                    <p className="text-primary-700 text-sm line-clamp-3 mb-4">
                       {quiz.descricao || "Sem descrição disponível."}
                     </p>
-                    <div className="flex flex-wrap gap-y-2 text-xs text-orange-600">
+                    <div className="flex flex-wrap gap-y-2 text-xs text-primary-600">
                       <div className="flex items-center mr-4">
                         <Calendar className="w-4 h-4 mr-1" />
                         {formatarData(quiz.createdAt)}
@@ -220,7 +233,7 @@ export default function QuizzesPage() {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button asChild className="w-full bg-orange-500 hover:bg-orange-600 text-white">
+                    <Button asChild className="w-full bg-primary-500 hover:bg-primary-600 text-white">
                       <Link href={`/dashboard/quizzes/${quiz._id}`}>
                         Iniciar quiz <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
@@ -241,7 +254,7 @@ export default function QuizzesPage() {
                   Anterior
                 </Button>
                 
-                <span className="text-sm text-orange-700">
+                <span className="text-sm text-primary-700">
                   Página {searchParams.page} de {pagination.totalPages}
                 </span>
                 
