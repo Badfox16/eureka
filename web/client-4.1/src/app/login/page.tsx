@@ -10,6 +10,7 @@ import { SocialLinks } from "@/components/SocialLinks";
 import { useRouter } from "next/navigation";
 import { ApiStatus } from "@/types/api";
 import { primary } from "@/lib/colors";
+import Footer from "@/components/layout/Footer";
 
 export default function LoginPage() {  
   const { login, status, error, usuario, isAuthenticatedSync } = useAuth();
@@ -68,10 +69,10 @@ export default function LoginPage() {
                 status={status} 
                 error={error} 
               />
-            </CardContent>
-          </Card>
+            </CardContent>          </Card>
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

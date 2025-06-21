@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ApiStatus } from "@/types/api";
 import { primary } from "@/lib/colors";
+import Footer from "@/components/layout/Footer";
 
 export default function RegisterPage() {  const { register, status, error, usuario } = useAuth();
   const router = useRouter();
@@ -57,10 +58,10 @@ export default function RegisterPage() {  const { register, status, error, usuar
                 status={status} 
                 error={error} 
               />
-            </CardContent>
-          </Card>
+            </CardContent>          </Card>
         </main>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -67,13 +67,12 @@ export default function PerfilPage() {
   if (!estudante) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-[60vh]">
-          <div className="p-6 bg-orange-50 border border-orange-200 rounded-lg text-center max-w-md">
-            <h1 className="text-xl font-bold text-orange-800 mb-3">Acesso Limitado</h1>
-            <p className="text-orange-700 mb-4">
+        <div className="flex flex-col items-center justify-center h-[60vh]">          <div className="p-6 bg-primary-50 border border-primary-200 rounded-lg text-center max-w-md">
+            <h1 className="text-xl font-bold text-primary-800 mb-3">Acesso Limitado</h1>
+            <p className="text-primary-700 mb-4">
               Sua conta não tem perfil de estudante associado. Não é possível gerenciar perfil.
             </p>
-            <p className="text-sm text-orange-600 mb-4">
+            <p className="text-sm text-primary-600 mb-4">
               Entre em contato com o administrador para mais informações.
             </p>
             <Button 

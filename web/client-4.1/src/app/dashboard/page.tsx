@@ -48,14 +48,13 @@ export default function DashboardPage() {
   // Verificar se o usuário é um estudante
   if (!perfil) {
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-[60vh]">
-          <div className="p-6 bg-orange-50 border border-orange-200 rounded-lg text-center max-w-md">
-            <h1 className="text-xl font-bold text-orange-800 mb-3">Acesso Limitado</h1>
-            <p className="text-orange-700 mb-4">
+      <DashboardLayout>        <div className="flex flex-col items-center justify-center h-[60vh]">
+          <div className="p-6 bg-primary-50 border border-primary-200 rounded-lg text-center max-w-md">
+            <h1 className="text-xl font-bold text-primary-800 mb-3">Acesso Limitado</h1>
+            <p className="text-primary-700 mb-4">
               Sua conta não tem perfil de estudante associado. Algumas funcionalidades podem não estar disponíveis.
             </p>
-            <p className="text-sm text-orange-600">
+            <p className="text-sm text-primary-600">
               Entre em contato com o administrador para mais informações.
             </p>
           </div>

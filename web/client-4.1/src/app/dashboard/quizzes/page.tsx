@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Quiz } from "@/types/quiz";
 import { QuizSearchParams } from "@/types/search";
 import { Badge } from "@/components/ui/badge";
+import { primary } from "@/lib/colors";
 
 export default function QuizzesPage() {
   const [searchParams, setSearchParams] = useState<QuizSearchParams>({
@@ -171,9 +172,8 @@ export default function QuizzesPage() {
         )}
         
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-orange-800">Carregando quizzes...</p>
+          <div className="flex flex-col items-center justify-center py-12">            <div className="w-16 h-16 border-4 border-primary-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-primary-800">Carregando quizzes...</p>
           </div>
         ) : quizzes.length === 0 ? (
           <div className="text-center py-12">

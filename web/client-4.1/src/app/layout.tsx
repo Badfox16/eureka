@@ -6,7 +6,6 @@ import { QueryProvider } from "@/contexts/QueryProvider";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { QuizProvider } from "@/contexts/QuizContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import Footer from "@/components/layout/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +38,6 @@ export default function RootLayout({
                   <main className="flex-1 flex flex-col">
                     {children}
                   </main>
-                  <Footer />
                 </QuizProvider>
               </NotificationsProvider>
             </AuthProvider>
