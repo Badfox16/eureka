@@ -13,11 +13,12 @@ import { primary } from "@/lib/colors";
 export default function DashboardPage() {
   const { usuario } = useAuth();
   const { estudante: perfil, isLoading: isLoadingPerfil } = useEstudante().usePerfilEstudante();
-  const { estatisticasGerais, estatisticasDisciplinas, evolucaoDesempenho } = useEstatisticas(perfil?._id);
+  const { quizzes: quizzesRealizados, isLoading: isLoadingQuizzes } = useEstudante().useQuizzes(perfil?._id);
+  const { estatisticasDisciplinas, evolucaoDesempenho } = useEstatisticas(perfil?._id);
   
   // O middleware agora protege esta rota, então não precisamos verificar autenticação manualmente
   
-  if (isLoadingPerfil || estatisticasGerais.isLoading) {
+  if (isLoadingPerfil || isLoadingQuizzes || estatisticasDisciplinas.isLoading) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">
@@ -50,21 +51,22 @@ export default function DashboardPage() {
   const formatarData = (dataString: string) => {
     const data = new Date(dataString);
     return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };  // Calcular disciplinas fortes com base nas estatísticas por disciplina
+  const disciplinasFortes = estatisticasDisciplinas.data?.filter(disciplina => 
+    disciplina.pontuacaoMedia >= 70
+  ) || [];  // Calcular estatísticas com base nos quizzes realizados
+  const quizzesFinalizados = quizzesRealizados?.filter(quiz => quiz.dataFim) || [];
+  
+  const stats = {
+    quizzesCompletos: quizzesFinalizados.length,
+    mediaAcertos: quizzesFinalizados.length > 0 
+      ? Math.round(quizzesFinalizados.reduce((acc, quiz) => acc + (quiz.percentualAcerto || 0), 0) / quizzesFinalizados.length)
+      : 0,
+    totalPontos: quizzesFinalizados.reduce((acc, quiz) => acc + (quiz.pontuacaoObtida || 0), 0)
   };
-
-  // Calcular disciplinas fortes (com percentual de acerto > 70%)
-  const disciplinasFortes = estatisticasGerais.data?.disciplinasFortes || [];
-
-  // Pegar estatísticas gerais
-  const stats = estatisticasGerais.data || {
-    quizzesCompletos: 0,
-    mediaAcertos: 0,
-    totalPontos: 0
-  };
-
   // Pegar evolução de desempenho
   const evolucao = evolucaoDesempenho.data || [];
-  const ultimoDesempenho = evolucao[evolucao.length - 1]?.percentual || 0;
+  const ultimoDesempenho = evolucao.length > 0 ? Math.round(evolucao[evolucao.length - 1]?.percentualAcertos || 0) : 0;
 
   return (
     <DashboardLayout>

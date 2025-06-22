@@ -8,7 +8,8 @@ import {
 import { fetchApi } from "./apiService";
 
 // Função para obter estatísticas gerais de um estudante
-export async function getEstatisticasEstudante(estudanteId: string) {  return fetchApi<{ data: EstatisticasEstudante }>(`/estatisticas/estudantes/${estudanteId}/estatisticas`);
+export async function getEstatisticasEstudante(estudanteId: string) {
+  return fetchApi<{ data: EstatisticasEstudante }>(`/estudantes/${estudanteId}/estatisticas`);
 }
 
 // Função para obter estatísticas por disciplina
