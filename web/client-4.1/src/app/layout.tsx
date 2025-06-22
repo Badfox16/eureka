@@ -6,6 +6,7 @@ import { QueryProvider } from "@/contexts/QueryProvider";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { QuizProvider } from "@/contexts/QuizContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { TokenSyncProvider } from "@/components/providers/TokenSyncProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col`}>
         <ThemeProvider>
+          <TokenSyncProvider />
           <QueryProvider>
             <AuthProvider>
               <NotificationsProvider>

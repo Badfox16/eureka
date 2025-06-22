@@ -39,3 +39,60 @@ export type RegistrarRespostaInput = {
   respostaEscolhida: string;
   tempoResposta?: number;
 };
+
+// Tipo específico para resposta de iniciar quiz (baseado no backend)
+export type IniciarQuizResponse = {
+  tentativa: EstudanteQuiz;
+  questoes?: Questao[];
+  totalQuestoes: number;
+  questoesPendentes?: Questao[];
+  totalRespondidas?: number;
+};
+
+// Tipo para resposta de quiz em andamento (baseado no backend)
+export type QuizEmAndamentoResponse = {
+  quiz: {
+    id: string;
+    titulo: string;
+    descricao?: string;
+    avaliacao: {
+      id: string;
+      tipo: string;
+      classe: number;
+      ano: number;
+    };
+    disciplina: {
+      id: string;
+      nome: string;
+      codigo: string;
+    };
+    tempoLimite?: number;
+  };
+  tentativa: {
+    id: string;
+    estudante: {
+      id: string;
+      nome: string;
+    };
+    dataInicio: string;
+    tempo: {
+      decorrido: number;
+      restante: number | null;
+      excedido: boolean;
+      limiteEmMinutos?: number;
+    };
+  };
+  progresso: {
+    respondidas: number;
+    total: number;
+    pendentes: number;
+    percentualConcluido: number;
+  };
+  questoesPendentes: Questao[];
+  questoesRespondidas: {
+    id: string;
+    numero: number;
+    respostaEscolhida: string;
+    estaCorreta: boolean;
+  }[];
+};

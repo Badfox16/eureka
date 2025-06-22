@@ -13,17 +13,15 @@ type AuthContextType = {
   register: (data: RegisterRequest) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
-  isAuthenticatedSync: () => boolean; // Adicionado método síncrono
   alterarSenha: (data: { senhaAtual: string; novaSenha: string; confirmarSenha: string }) => Promise<{ message: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {  
   const { 
     usuario, 
     isAuthenticated, 
-    isAuthenticatedSync,
     isLoading, 
     isError, 
     error: authError, 
@@ -32,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: logoutFn,
     alterarSenha: alterarSenhaFn
   } = useAuthHook();
+
   const value: AuthContextType = {
     usuario: usuario || null,
     status: isLoading ? ApiStatus.LOADING : isError ? ApiStatus.ERROR : usuario ? ApiStatus.SUCCESS : ApiStatus.IDLE,
@@ -40,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register: registerFn,
     logout: logoutFn,
     isAuthenticated,
-    isAuthenticatedSync,
     alterarSenha: alterarSenhaFn
   };
 

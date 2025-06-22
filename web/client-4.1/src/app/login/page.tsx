@@ -1,46 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import LoginForm from "@/components/forms/LoginForm";
 import { LoginFormValues } from "@/types/usuario";
 import Image from "next/image";
-import { SocialLinks } from "@/components/SocialLinks";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiStatus } from "@/types/api";
-import { primary } from "@/lib/colors";
 import Footer from "@/components/layout/Footer";
 
-export default function LoginPage() {  
-  const { login, status, error, usuario, isAuthenticatedSync } = useAuth();
+export default function LoginPage() {
+  const { login, status, error, usuario } = useAuth();
   const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  
-  // Verificar autenticação de forma síncrona no carregamento da página
+  const searchParams = useSearchParams();
+  // Este useEffect garante que, uma vez que o login seja bem-sucedido
+  // (o estado do 'usuario' é atualizado), o usuário seja redirecionado.
   useEffect(() => {
-    // Verificar token diretamente usando a função isAuthenticatedSync
-    if (isAuthenticatedSync()) {
-      setIsRedirecting(true);
-      router.replace('/dashboard');
+    if (usuario) {
+      const nextUrl = searchParams.get("next") || "/dashboard";
+      router.replace(nextUrl);
     }
-  }, [router, isAuthenticatedSync]);
-  
-  // Redirecionar quando o usuário for carregado
-  useEffect(() => {
-    if (usuario && status === ApiStatus.SUCCESS) {
-      setIsRedirecting(true);
-      router.replace('/dashboard');
-    }
-  }, [usuario, status, router]);
+  }, [usuario, router, searchParams]);
 
   const handleLogin = async (data: LoginFormValues) => {
     await login({
       email: data.email,
-      password: data.password
+      password: data.password,
     });
-  };  return (
-    <div className={`min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary-100/20 dark:to-primary-950/20 transition-opacity duration-300 ${isRedirecting ? 'opacity-0' : 'opacity-100'}`}>
+    // O redirecionamento agora é tratado pelo useEffect acima.
+  };
+
+  return (
+    <div className={`min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary-100/20 dark:to-primary-950/20`}>
       <div className="flex-1 flex flex-col md:flex-row overflow-auto">
         {/* Splash Illustration */}
         <div className="hidden md:flex w-full md:w-1/2 items-center justify-center p-8 relative">
@@ -64,12 +56,13 @@ export default function LoginPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <LoginForm 
-                onSubmit={handleLogin} 
-                status={status} 
-                error={error} 
+              <LoginForm
+                onSubmit={handleLogin}
+                status={status}
+                error={error}
               />
-            </CardContent>          </Card>
+            </CardContent>
+          </Card>
         </main>
       </div>
       <Footer />

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useEstudante } from "@/hooks/useEstudante";
 import { useEstatisticas } from "@/hooks/useEstatisticas";
@@ -9,32 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Award, Calendar, ArrowRight, BarChart2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { primary } from "@/lib/colors";
 
 export default function DashboardPage() {
-  const { usuario, isAuthenticatedSync } = useAuth();
+  const { usuario } = useAuth();
   const { estudante: perfil, isLoading: isLoadingPerfil } = useEstudante().usePerfilEstudante();
   const { estatisticasGerais, estatisticasDisciplinas, evolucaoDesempenho } = useEstatisticas(perfil?._id);
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Verificar autenticação de forma síncrona no carregamento da página
-  useEffect(() => {
-    if (!isAuthenticatedSync()) {
-      router.replace('/login');
-    } else {
-      // Se estiver autenticado, permitir que a página continue carregando
-      setIsLoading(false);
-    }
-  }, [router, isAuthenticatedSync]);
+  // O middleware agora protege esta rota, então não precisamos verificar autenticação manualmente
   
-  // Redirecionar se não estiver autenticado (verificação assíncrona)
-  useEffect(() => {
-    if (!usuario) {
-      router.replace('/login');
-    }
-  }, [usuario, router]);  if (isLoading || isLoadingPerfil || estatisticasGerais.isLoading) {
+  if (isLoadingPerfil || estatisticasGerais.isLoading) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center h-[60vh]">

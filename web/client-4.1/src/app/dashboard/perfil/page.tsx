@@ -35,13 +35,7 @@ export default function PerfilPage() {
   // Lista de províncias de Angola da API
   const provincias = provinciasQuery.data?.provincias || [];
   const isLoadingProvincias = provinciasQuery.isLoading;
-  
-  // Redirecionar se não estiver autenticado
-  useEffect(() => {
-    if (!usuario) {
-      router.push('/login');
-    }
-  }, [usuario, router]);
+
 
   if (isLoading || isLoadingProvincias) {
     return (

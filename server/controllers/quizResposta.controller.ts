@@ -5,6 +5,7 @@ import { Questao } from '../models/questao';
 import { Estudante } from '../models/estudante';
 import { Quiz } from '../models/quiz';
 import { formatResponse } from '../utils/response.utils';
+import { HttpError } from '../utils/error.utils';
 
 /**
  * Inicia um quiz para um estudante
@@ -17,15 +18,13 @@ export const iniciarQuiz: RequestHandler = async (req, res, next) => {
     // Verificar se estudante existe
     const estudante = await Estudante.findById(estudanteId);
     if (!estudante) {
-      res.status(404).json(formatResponse(null, undefined, 'Estudante não encontrado'));
-      return;
+      throw new HttpError('Estudante não encontrado', 404, 'NOT_FOUND');
     }
 
     // Verificar se quiz existe e está ativo
     const quiz = await Quiz.findOne({ _id: quizId, ativo: true }).populate('avaliacao');
     if (!quiz) {
-      res.status(404).json(formatResponse(null, undefined, 'Quiz não encontrado ou não está ativo'));
-      return;
+      throw new HttpError('Quiz não encontrado ou não está ativo', 404, 'NOT_FOUND');
     }
 
     // Verificar se o estudante já tem uma tentativa em andamento para este quiz
@@ -41,10 +40,10 @@ export const iniciarQuiz: RequestHandler = async (req, res, next) => {
         estudanteQuiz: tentativaEmAndamento._id
       });
 
-      // Buscar todas as questões do quiz através da avaliação
+      // Buscar todas as questões do quiz através da avaliação com imagens
       const todasQuestoes = await Questao.find({
         avaliacao: quiz.avaliacao
-      }).select('_id numero enunciado alternativas');
+      }).select('_id numero enunciado alternativas imagemEnunciadoUrl explicacao valor');
 
       // Filtrar questões não respondidas
       const questoesRespondidas = new Set(respostasExistentes.map(r => r.questao.toString()));
@@ -63,14 +62,13 @@ export const iniciarQuiz: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    // Obter todas as questões para o quiz
+    // Obter todas as questões para o quiz incluindo imagens
     const questoes = await Questao.find({
       avaliacao: quiz.avaliacao
-    }).select('_id numero enunciado alternativas');
+    }).select('_id numero enunciado alternativas imagemEnunciadoUrl valor');
 
     if (questoes.length === 0) {
-      res.status(400).json(formatResponse(null, undefined, 'Este quiz não possui questões cadastradas'));
-      return;
+      throw new HttpError('Este quiz não possui questões cadastradas', 400, 'NO_QUESTIONS');
     }
 
     // Criar uma nova tentativa
@@ -79,7 +77,7 @@ export const iniciarQuiz: RequestHandler = async (req, res, next) => {
       quiz: quizId,
       dataInicio: new Date(),
       respostasCorretas: 0,
-      totalQuestoes: 0,
+      totalQuestoes: questoes.length, // Já definimos o número total de questões
       percentualAcerto: 0
     });
 
@@ -91,7 +89,6 @@ export const iniciarQuiz: RequestHandler = async (req, res, next) => {
       }
     ));
   } catch (error) {
-    console.error('Erro ao iniciar quiz:', error);
     next(error);
   }
 };
@@ -106,21 +103,18 @@ export const registrarResposta: RequestHandler = async (req, res, next) => {
     // Verificar se a tentativa de quiz existe e está ativa
     const estudanteQuiz = await EstudanteQuiz.findById(estudanteQuizId);
     if (!estudanteQuiz) {
-      res.status(404).json(formatResponse(null, undefined, 'Tentativa de quiz não encontrada'));
-      return;
+      throw new HttpError('Tentativa de quiz não encontrada', 404, 'NOT_FOUND');
     }
 
     // Verificar se o quiz já foi finalizado
     if (estudanteQuiz.dataFim) {
-      res.status(400).json(formatResponse(null, undefined, 'Este quiz já foi finalizado e não pode receber novas respostas'));
-      return;
+      throw new HttpError('Este quiz já foi finalizado e não pode receber novas respostas', 400, 'QUIZ_FINISHED');
     }
 
-    // Verificar se a questão existe
+    // Verificar se a questão existe com detalhes
     const questao = await Questao.findById(questaoId);
     if (!questao) {
-      res.status(404).json(formatResponse(null, undefined, 'Questão não encontrada'));
-      return;
+      throw new HttpError('Questão não encontrada', 404, 'NOT_FOUND');
     }
 
     // Verificar se já existe uma resposta para esta questão neste quiz
@@ -130,15 +124,13 @@ export const registrarResposta: RequestHandler = async (req, res, next) => {
     });
 
     if (respostaExistente) {
-      res.status(409).json(formatResponse(null, undefined, 'Já existe uma resposta registrada para esta questão'));
-      return;
+      throw new HttpError('Já existe uma resposta registrada para esta questão', 409, 'DUPLICATE_ANSWER');
     }
 
     // Verificar se a resposta está correta
     const alternativaCorreta = questao.alternativas.find(alt => alt.correta === true);
     if (!alternativaCorreta) {
-      res.status(500).json(formatResponse(null, undefined, 'Questão mal configurada: nenhuma alternativa marcada como correta'));
-      return;
+      throw new HttpError('Questão mal configurada: nenhuma alternativa marcada como correta', 500, 'INVALID_QUESTION');
     }
 
     const letraCorreta = alternativaCorreta.letra;
@@ -157,32 +149,58 @@ export const registrarResposta: RequestHandler = async (req, res, next) => {
       pontuacaoObtida
     });
 
-    // Buscar todas as questões do quiz
-    const quiz = await EstudanteQuiz.findById(estudanteQuizId).populate('quiz');
-    if (!quiz) {
-      res.status(404).json(formatResponse(null, undefined, 'Quiz não encontrado'));
-      return;
+    // Buscar o quiz para obter a avaliação
+    const quiz = await EstudanteQuiz.findById(estudanteQuizId)
+      .populate({
+        path: 'quiz',
+        select: '_id avaliacao',
+        populate: {
+          path: 'avaliacao',
+          select: '_id'
+        }
+      });
+
+    if (!quiz || !quiz.quiz) {
+      throw new HttpError('Quiz não encontrado', 404, 'NOT_FOUND');
     }
 
-    // Verificar quantas questões faltam
-    const avaliacao = await Quiz.findById(quiz.quiz).populate('avaliacao');
-    if (!avaliacao) {
-      res.status(404).json(formatResponse(null, undefined, 'Avaliação não encontrada'));
-      return;
+    const avaliacaoId = (quiz.quiz as any).avaliacao._id;
+    if (!avaliacaoId) {
+      throw new HttpError('Avaliação não encontrada', 404, 'NOT_FOUND');
     }
 
-    const todasQuestoes = await Questao.countDocuments({ avaliacao: (avaliacao as any).avaliacao });
+    // Buscar informações atualizadas de progresso
+    const todasQuestoes = await Questao.countDocuments({ avaliacao: avaliacaoId });
     const respostasAtuais = await QuizResposta.countDocuments({ estudanteQuiz: estudanteQuizId });
     const questoesPendentes = todasQuestoes - respostasAtuais;
 
+    // Retornar informações da resposta incluindo detalhes completos
+    const alternativaEscolhida = questao.alternativas.find(a => a.letra === respostaEscolhida);
+
     res.status(201).json(formatResponse(
       {
-        resposta: novaResposta,
+        resposta: {
+          ...novaResposta.toObject(),
+          questao: {
+            id: questao._id,
+            numero: questao.numero,
+            enunciado: questao.enunciado,
+            imagemEnunciadoUrl: questao.imagemEnunciadoUrl,
+            valor: questao.valor
+          }
+        },
         estaCorreta,
+        alternativaEscolhida: alternativaEscolhida ? {
+          letra: alternativaEscolhida.letra,
+          texto: alternativaEscolhida.texto,
+          imagemUrl: alternativaEscolhida.imagemUrl
+        } : null,
         alternativaCorreta: {
           letra: letraCorreta,
-          texto: alternativaCorreta.texto
+          texto: alternativaCorreta.texto,
+          imagemUrl: alternativaCorreta.imagemUrl
         },
+        explicacao: questao.explicacao,
         progresso: {
           respondidas: respostasAtuais,
           total: todasQuestoes,
@@ -192,7 +210,6 @@ export const registrarResposta: RequestHandler = async (req, res, next) => {
       }
     ));
   } catch (error) {
-    console.error('Erro ao registrar resposta:', error);
     next(error);
   }
 };
@@ -207,39 +224,36 @@ export const finalizarQuiz: RequestHandler = async (req, res, next) => {
     // Buscar a tentativa de quiz
     const estudanteQuiz = await EstudanteQuiz.findById(estudanteQuizId);
     if (!estudanteQuiz) {
-      res.status(404).json(formatResponse(null, undefined, 'Tentativa de quiz não encontrada'));
-      return;
+      throw new HttpError('Tentativa de quiz não encontrada', 404, 'NOT_FOUND');
     }
 
     // Verificar se o quiz já foi finalizado
     if (estudanteQuiz.dataFim) {
-      res.status(400).json(formatResponse(null, undefined, 'Este quiz já foi finalizado'));
-      return;
+      throw new HttpError('Este quiz já foi finalizado', 400, 'ALREADY_FINISHED');
     }
 
     // Buscar informações do quiz
     const quiz = await Quiz.findById(estudanteQuiz.quiz).populate('avaliacao');
     if (!quiz) {
-      res.status(404).json(formatResponse(null, undefined, 'Quiz não encontrado'));
-      return;
+      throw new HttpError('Quiz não encontrado', 404, 'NOT_FOUND');
     }
 
-    // Buscar todas as questões do quiz
+    // Buscar todas as questões do quiz com detalhes completos
     const todasQuestoes = await Questao.find({ 
       avaliacao: (quiz as any).avaliacao 
-    });
+    }).select('_id numero enunciado alternativas imagemEnunciadoUrl valor explicacao');
 
-    // Buscar todas as respostas do estudante neste quiz
+    // Buscar todas as respostas do estudante neste quiz com detalhes
     const respostas = await QuizResposta.find({
       estudanteQuiz: estudanteQuizId
-    });
+    }).populate('questao');
 
     // Calcular estatísticas
     const totalQuestoes = todasQuestoes.length;
     const questoesRespondidas = respostas.length;
     const respostasCorretas = respostas.filter(r => r.estaCorreta).length;
     const percentualAcerto = questoesRespondidas > 0
-      ? (respostasCorretas / questoesRespondidas) * 100
+      ? Math.round((respostasCorretas / questoesRespondidas) * 100 * 10) / 10 // Arredondar para 1 casa decimal
       : 0;
 
     // Somar pontuação total possível (valor de todas as questões)
@@ -247,18 +261,25 @@ export const finalizarQuiz: RequestHandler = async (req, res, next) => {
 
     // Somar pontuação obtida
     const pontuacaoObtida = respostas.reduce((acc, r) => acc + r.pontuacaoObtida, 0);
+    
+    // Percentual em relação à pontuação máxima
+    const percentualPontuacao = totalPontosPossiveis > 0
+      ? Math.round((pontuacaoObtida / totalPontosPossiveis) * 100 * 10) / 10
+      : 0;
 
     // Verificar se todas as questões foram respondidas
-    const percentualConcluido = (questoesRespondidas / totalQuestoes) * 100;
+    const percentualConcluido = Math.round((questoesRespondidas / totalQuestoes) * 100);
 
-    // Lista de questões não respondidas
+    // Lista de questões não respondidas com detalhes
     const questoesRespondidasIds = new Set(respostas.map(r => r.questao.toString()));
     const questoesNaoRespondidas = todasQuestoes
       .filter(q => !questoesRespondidasIds.has(q._id.toString()))
       .map(q => ({
         id: q._id,
         numero: q.numero,
-        enunciado: q.enunciado
+        enunciado: q.enunciado,
+        imagemEnunciadoUrl: q.imagemEnunciadoUrl,
+        valor: q.valor
       }));
 
     // Atualizar a tentativa de quiz
@@ -275,6 +296,40 @@ export const finalizarQuiz: RequestHandler = async (req, res, next) => {
       { new: true }
     );
 
+    // Estruturar respostas detalhadas do estudante
+    const detalhesRespostas = await Promise.all(respostas.map(async (resposta) => {
+      const questao = resposta.questao as any;
+      const alternativaEscolhida = questao.alternativas.find((a: { letra: string; }) => a.letra === resposta.respostaEscolhida);
+      const alternativaCorreta = questao.alternativas.find((a: { correta: any; }) => a.correta);
+
+      return {
+        questao: {
+          id: questao._id,
+          numero: questao.numero,
+          enunciado: questao.enunciado,
+          imagemEnunciadoUrl: questao.imagemEnunciadoUrl,
+          valor: questao.valor
+        },
+        resposta: {
+          escolhida: resposta.respostaEscolhida,
+          estaCorreta: resposta.estaCorreta,
+          pontuacao: resposta.pontuacaoObtida,
+          tempoResposta: resposta.tempoResposta
+        },
+        alternativaEscolhida: alternativaEscolhida ? {
+          letra: alternativaEscolhida.letra,
+          texto: alternativaEscolhida.texto,
+          imagemUrl: alternativaEscolhida.imagemUrl
+        } : null,
+        alternativaCorreta: alternativaCorreta ? {
+          letra: alternativaCorreta.letra,
+          texto: alternativaCorreta.texto,
+          imagemUrl: alternativaCorreta.imagemUrl
+        } : null,
+        explicacao: questao.explicacao
+      };
+    }));
+
     res.status(200).json(formatResponse(
       {
         tentativa: quizAtualizado,
@@ -287,13 +342,14 @@ export const finalizarQuiz: RequestHandler = async (req, res, next) => {
           respostasCorretas,
           percentualAcerto,
           pontuacaoObtida,
-          totalPontosPossiveis
+          totalPontosPossiveis,
+          percentualPontuacao
         },
+        respostas: detalhesRespostas.sort((a, b) => a.questao.numero - b.questao.numero),
         questoesNaoRespondidas: questoesNaoRespondidas.length > 0 ? questoesNaoRespondidas : null
       }
     ));
   } catch (error) {
-    console.error('Erro ao finalizar quiz:', error);
     next(error);
   }
 };
@@ -311,23 +367,26 @@ export const getQuizEmAndamento: RequestHandler = async (req, res, next) => {
         path: 'quiz',
         populate: {
           path: 'avaliacao',
-          populate: 'disciplina'
+          populate: {
+            path: 'disciplina',
+            select: '_id nome codigo'
+          }
         }
       })
       .populate('estudante');
 
     if (!estudanteQuiz) {
-      res.status(404).json(formatResponse(null, undefined, 'Tentativa de quiz não encontrada'));
-      return;
+      throw new HttpError('Tentativa de quiz não encontrada', 404, 'NOT_FOUND');
     }
 
     // Verificar se o quiz já foi finalizado
     if (estudanteQuiz.dataFim) {
-      res.status(400).json(formatResponse(
+      res.status(200).json(formatResponse(
         {
           id: estudanteQuiz._id,
           dataInicio: estudanteQuiz.dataInicio,
-          dataFim: estudanteQuiz.dataFim
+          dataFim: estudanteQuiz.dataFim,
+          status: 'FINALIZADO'
         },
         undefined,
         'Este quiz já foi finalizado'
@@ -335,22 +394,24 @@ export const getQuizEmAndamento: RequestHandler = async (req, res, next) => {
       return;
     }
 
-    // Obter as questões respondidas
+    // Obter as questões respondidas com todos os detalhes
     const respostasRegistradas = await QuizResposta.find({
       estudanteQuiz: estudanteQuizId
-    }).populate('questao');
+    }).populate({
+      path: 'questao',
+      select: '_id numero enunciado alternativas imagemEnunciadoUrl valor'
+    });
 
-    // Obter todas as questões do quiz
+    // Obter todas as questões do quiz com detalhes
     const quizInfo = estudanteQuiz.quiz as any;
     const avaliacaoId = quizInfo?.avaliacao?._id;
 
     if (!avaliacaoId) {
-      res.status(500).json(formatResponse(null, undefined, 'Erro na estrutura do quiz: avaliação não encontrada'));
-      return;
+      throw new HttpError('Erro na estrutura do quiz: avaliação não encontrada', 500, 'INVALID_QUIZ_STRUCTURE');
     }
 
     const todasQuestoes = await Questao.find({ avaliacao: avaliacaoId })
-      .select('_id numero enunciado alternativas');
+      .select('_id numero enunciado alternativas imagemEnunciadoUrl valor');
 
     // Calcular tempo decorrido
     const dataInicio = estudanteQuiz.dataInicio;
@@ -396,28 +457,160 @@ export const getQuizEmAndamento: RequestHandler = async (req, res, next) => {
           tempo: {
             decorrido: tempoDecorrido, // em segundos
             restante: tempoRestante, // em segundos, null se não houver limite
-            excedido: tempoExcedido
+            excedido: tempoExcedido,
+            limiteEmMinutos: quizInfo.tempoLimite
           }
         },
         progresso: {
           respondidas: respostasRegistradas.length,
           total: todasQuestoes.length,
           pendentes: questoesPendentes.length,
-          percentualConcluido: (respostasRegistradas.length / todasQuestoes.length) * 100
+          percentualConcluido: Math.round((respostasRegistradas.length / todasQuestoes.length) * 100)
         },
         questoesPendentes: questoesPendentes.map(q => ({
           id: q._id,
           numero: q.numero,
           enunciado: q.enunciado,
+          imagemEnunciadoUrl: q.imagemEnunciadoUrl,
+          valor: q.valor,
           alternativas: q.alternativas.map(a => ({
             letra: a.letra,
-            texto: a.texto
+            texto: a.texto,
+            imagemUrl: a.imagemUrl
           }))
+        })),
+        questoesRespondidas: respostasRegistradas.map(r => ({
+          id: r.questao._id,
+          numero: (r.questao as any).numero,
+          respostaEscolhida: r.respostaEscolhida,
+          estaCorreta: r.estaCorreta
         }))
       }
     ));
   } catch (error) {
-    console.error('Erro ao buscar quiz em andamento:', error);
+    next(error);
+  }
+};
+
+/**
+ * Obtém os detalhes completos de um quiz finalizado
+ */
+export const getQuizFinalizado: RequestHandler = async (req, res, next) => {
+  try {
+    const { estudanteQuizId } = req.params;
+
+    // Buscar a tentativa de quiz com todos os dados relacionados
+    const estudanteQuiz = await EstudanteQuiz.findById(estudanteQuizId)
+      .populate({
+        path: 'quiz',
+        populate: {
+          path: 'avaliacao',
+          populate: {
+            path: 'disciplina',
+            select: '_id nome codigo'
+          }
+        }
+      })
+      .populate('estudante');
+
+    if (!estudanteQuiz) {
+      throw new HttpError('Tentativa de quiz não encontrada', 404, 'NOT_FOUND');
+    }
+
+    // Verificar se o quiz foi realmente finalizado
+    if (!estudanteQuiz.dataFim) {
+      throw new HttpError('Este quiz ainda não foi finalizado', 400, 'QUIZ_NOT_FINISHED');
+    }
+
+    // Obter todas as respostas do estudante com detalhes das questões
+    const respostas = await QuizResposta.find({
+      estudanteQuiz: estudanteQuizId
+    }).populate({
+      path: 'questao',
+      select: '_id numero enunciado alternativas imagemEnunciadoUrl valor explicacao'
+    });
+
+    // Estruturar respostas detalhadas
+    const detalhesRespostas = respostas.map(resposta => {
+      const questao = resposta.questao as any;
+      const alternativaEscolhida = questao.alternativas.find((a: { letra: string; }) => a.letra === resposta.respostaEscolhida);
+      const alternativaCorreta = questao.alternativas.find((a: { correta: any; }) => a.correta);
+
+      return {
+        questao: {
+          id: questao._id,
+          numero: questao.numero,
+          enunciado: questao.enunciado,
+          imagemEnunciadoUrl: questao.imagemEnunciadoUrl,
+          valor: questao.valor
+        },
+        resposta: {
+          escolhida: resposta.respostaEscolhida,
+          estaCorreta: resposta.estaCorreta,
+          pontuacao: resposta.pontuacaoObtida,
+          tempoResposta: resposta.tempoResposta
+        },
+        alternativas: questao.alternativas.map((a: { letra: any; texto: any; correta: any; imagemUrl: any; }) => ({
+          letra: a.letra,
+          texto: a.texto,
+          correta: a.correta,
+          imagemUrl: a.imagemUrl
+        })),
+        alternativaEscolhida: alternativaEscolhida ? {
+          letra: alternativaEscolhida.letra,
+          texto: alternativaEscolhida.texto,
+          imagemUrl: alternativaEscolhida.imagemUrl
+        } : null,
+        alternativaCorreta: alternativaCorreta ? {
+          letra: alternativaCorreta.letra,
+          texto: alternativaCorreta.texto,
+          imagemUrl: alternativaCorreta.imagemUrl
+        } : null,
+        explicacao: questao.explicacao
+      };
+    });
+
+    // Calcular duração do quiz
+    const dataInicio = new Date(estudanteQuiz.dataInicio).getTime();
+    const dataFim = new Date(estudanteQuiz.dataFim).getTime();
+    const duracaoSegundos = Math.floor((dataFim - dataInicio) / 1000);
+    
+    // Formatando a resposta
+    res.status(200).json(formatResponse({
+      quiz: {
+        id: (estudanteQuiz.quiz as any)._id,
+        titulo: (estudanteQuiz.quiz as any).titulo,
+        descricao: (estudanteQuiz.quiz as any).descricao,
+        avaliacao: {
+          id: (estudanteQuiz.quiz as any).avaliacao._id,
+          tipo: (estudanteQuiz.quiz as any).avaliacao.tipo,
+          classe: (estudanteQuiz.quiz as any).avaliacao.classe,
+          ano: (estudanteQuiz.quiz as any).avaliacao.ano
+        },
+        disciplina: {
+          id: (estudanteQuiz.quiz as any).avaliacao.disciplina?._id,
+          nome: (estudanteQuiz.quiz as any).avaliacao.disciplina?.nome,
+          codigo: (estudanteQuiz.quiz as any).avaliacao.disciplina?.codigo
+        }
+      },
+      tentativa: {
+        id: estudanteQuiz._id,
+        estudante: {
+          id: (estudanteQuiz.estudante as any)._id,
+          nome: (estudanteQuiz.estudante as any).nome
+        },
+        dataInicio: estudanteQuiz.dataInicio,
+        dataFim: estudanteQuiz.dataFim,
+        duracao: duracaoSegundos,
+        percentualAcerto: estudanteQuiz.percentualAcerto,
+        pontuacaoObtida: estudanteQuiz.pontuacaoObtida,
+        totalPontos: estudanteQuiz.totalPontos,
+        respostasCorretas: estudanteQuiz.respostasCorretas,
+        totalQuestoes: estudanteQuiz.totalQuestoes
+      },
+      respostas: detalhesRespostas.sort((a, b) => a.questao.numero - b.questao.numero)
+    }));
+  } catch (error) {
     next(error);
   }
 };

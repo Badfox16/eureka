@@ -24,4 +24,10 @@ router.get('/:estudanteQuizId/andamento',
   quizRespostaController.getQuizEmAndamento
 );
 
+// Obter detalhes completos de um quiz finalizado
+router.get('/:estudanteQuizId/resultado', 
+  validateId('estudanteQuizId'), 
+  quizRespostaController.getQuizFinalizado
+);
+
 export default router;

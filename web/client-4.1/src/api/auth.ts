@@ -11,13 +11,23 @@ export async function login(data: LoginRequest) {
   const response = await fetchApi<AuthResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(data),
-  });
-  
-  // Se autenticação bem-sucedida, salvar token
+  });  // Se autenticação bem-sucedida, salvar token
   if (response.data) {
     console.log('Login bem-sucedido, salvando tokens');
     localStorage.setItem('auth_token', response.data.token);
     localStorage.setItem('refresh_token', response.data.refreshToken);
+    
+    // Salvar dados do usuário para acesso rápido
+    // Nota: No login pode não vir os dados do estudante, será obtido depois via /auth/me
+    if (response.data.usuario) {
+      localStorage.setItem('user_data', JSON.stringify(response.data.usuario));
+    }
+    
+    // Também salvar nos cookies para o middleware
+    document.cookie = `auth_token=${response.data.token}; path=/; max-age=${30 * 24 * 60 * 60}; secure; samesite=strict`;
+    if (response.data.refreshToken) {
+      document.cookie = `refresh_token=${response.data.refreshToken}; path=/; max-age=${30 * 24 * 60 * 60}; secure; samesite=strict`;
+    }
   } else {
     console.warn('Login retornou resposta sem dados:', response);
   }
@@ -31,13 +41,23 @@ export async function register(data: RegisterRequest) {
   const response = await fetchApi<AuthResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(data),
-  });
-  
-  // Se registro bem-sucedido, salvar token
+  });  // Se registro bem-sucedido, salvar token
   if (response.data) {
     console.log('Registro bem-sucedido, salvando tokens');
     localStorage.setItem('auth_token', response.data.token);
     localStorage.setItem('refresh_token', response.data.refreshToken);
+    
+    // Salvar dados do usuário para acesso rápido
+    // Nota: No registro pode não vir os dados do estudante, será obtido depois via /auth/me
+    if (response.data.usuario) {
+      localStorage.setItem('user_data', JSON.stringify(response.data.usuario));
+    }
+    
+    // Também salvar nos cookies para o middleware
+    document.cookie = `auth_token=${response.data.token}; path=/; max-age=${30 * 24 * 60 * 60}; secure; samesite=strict`;
+    if (response.data.refreshToken) {
+      document.cookie = `refresh_token=${response.data.refreshToken}; path=/; max-age=${30 * 24 * 60 * 60}; secure; samesite=strict`;
+    }
   } else {
     console.warn('Registro retornou resposta sem dados:', response);
   }
@@ -48,6 +68,11 @@ export async function register(data: RegisterRequest) {
 export async function logout(): Promise<void> {
   localStorage.removeItem('auth_token');
   localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user_data');
+  
+  // Também remover dos cookies
+  document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   
   try {
     await fetchApi('/auth/logout', {
@@ -76,10 +101,19 @@ export async function getCurrentUser() {
   try {
     console.log('getCurrentUser: Tentando obter dados do usuário com token atual');
     // Tenta obter os dados do usuário
-    const response = await fetchApi<{ status: string, data: { usuario: Usuario, estudante: any } }>('/auth/me');
-    
-    if (response.status === 'success' && response.data && response.data.usuario) {
+    const response = await fetchApi<{ status: string, data: { usuario: Usuario, estudante: any } }>('/auth/me');      if (response.status === 'success' && response.data && response.data.usuario) {
       console.log('Usuário obtido com sucesso:', response.data.usuario);
+      console.log('Dados do estudante:', response.data.estudante);
+      
+      // Salvar dados do usuário com informações do estudante no localStorage
+      const dadosParaSalvar = {
+        ...response.data.usuario,
+        estudanteId: response.data.estudante?._id || null, // Adicionar estudanteId para fácil acesso
+        estudante: response.data.estudante || null // Salvar dados completos do estudante
+      };
+      
+      localStorage.setItem('user_data', JSON.stringify(dadosParaSalvar));
+      
       return {
         data: response.data.usuario
       };
