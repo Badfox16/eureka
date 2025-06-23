@@ -50,7 +50,7 @@ export const createQuestao: RequestHandler = async (req, res, next) => {
       { $push: { questoes: questao._id } }
     );
 
-    res.status(201).json({ data: questao });
+    res.status(201).json(formatResponse(questao, undefined, 'Questão criada com sucesso'));
   } catch (error) {
     next(error);
   }
@@ -153,7 +153,7 @@ export const getQuestaoById: RequestHandler = async (req, res, next) => {
       throw new HttpError('Questão não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    res.status(200).json({ data: questao });
+    res.status(200).json(formatResponse(questao));
   } catch (error) {
     next(error);
   }
@@ -257,7 +257,7 @@ export const updateQuestao: RequestHandler = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
-    res.status(200).json({ data: updatedQuestao });
+    res.status(200).json(formatResponse(updatedQuestao, undefined, 'Questão atualizada com sucesso'));
   } catch (error) {
     next(error);
   }
@@ -295,10 +295,7 @@ export const deleteQuestao: RequestHandler = async (req, res, next) => {
       questao.alternativas.forEach(alt => removeLocalFile(alt.imagemUrl));
     }
 
-    res.status(200).json({
-      data: null,
-      message: 'Questão removida com sucesso'
-    });
+    res.status(200).json(formatResponse(null, undefined, 'Questão removida com sucesso'));
   } catch (error) {
     next(error);
   }
@@ -333,19 +330,12 @@ export const searchQuestoes: RequestHandler = async (req, res, next) => {
       populate: { path: 'disciplina' }
     }).limit(50);
 
-    res.status(200).json({
-      data: questoes,
-      pagination: {
-        total: questoes.length,
-        totalPages: 1,
-        currentPage: 1,
-        limit: 50,
-        hasPrevPage: false,
-        hasNextPage: false,
-        prevPage: null,
-        nextPage: null
-      }
-    });
+    res.status(200).json(formatResponse(questoes, {
+      total: questoes.length,
+      totalPages: 1,
+      currentPage: 1,
+      limit: 50
+    }));
   } catch (error) {
     next(error);
   }
@@ -434,14 +424,11 @@ export const importarQuestoes: RequestHandler = async (req, res, next) => {
       { $push: { questoes: { $each: questoesCriadas.map(q => q._id) } } }
     );
 
-    res.status(201).json({
-      data: questoesCriadas,
-      message: `${questoesCriadas.length} questões importadas com sucesso. ${rejeitadas.length} foram rejeitadas.`,
-      meta: {
-        importadas: questoesCriadas.length,
-        rejeitadas: rejeitadas.length > 0 ? rejeitadas : undefined
-      }
-    });
+    res.status(201).json(formatResponse(
+      questoesCriadas, 
+      undefined,
+      `${questoesCriadas.length} questões importadas com sucesso. ${rejeitadas.length} foram rejeitadas.`
+    ));
   } catch (error) {
     next(error);
   }
@@ -505,10 +492,11 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       );
     }
 
-    res.status(200).json({
-      data: { imageUrl },
-      message: 'Imagem do enunciado carregada com sucesso'
-    });
+    res.status(200).json(formatResponse(
+      { imageUrl },
+      undefined,
+      'Imagem do enunciado carregada com sucesso'
+    ));
   } catch (error) {
     // Error handling remains the same
     next(error);
@@ -566,10 +554,11 @@ export const uploadImagemAlternativa: RequestHandler = async (req, res, next) =>
     questao.alternativas[alternativaIndex].imagemUrl = imageUrl;
     await questao.save();
 
-    res.status(200).json({
-      data: { imageUrl },
-      message: `Imagem da alternativa ${letra.toUpperCase()} carregada com sucesso`
-    });
+    res.status(200).json(formatResponse(
+      { imageUrl },
+      undefined,
+      `Imagem da alternativa ${letra.toUpperCase()} carregada com sucesso`
+    ));
   } catch (error) {
     next(error);
   }
@@ -591,11 +580,12 @@ export const uploadTempImagem: RequestHandler = async (req, res, next) => {
     const filename = file.filename;
     const imageUrl = `/uploads/${filename}`;
 
-    // Return the image URL to the client
-    res.status(200).json({
-      data: { imageUrl },
-      message: 'Imagem temporária carregada com sucesso'
-    });
+    // Return the image URL to the client using formatResponse
+    res.status(200).json(formatResponse(
+      { imageUrl },
+      undefined,
+      'Imagem temporária carregada com sucesso'
+    ));
   } catch (error) {
     next(error);
   }

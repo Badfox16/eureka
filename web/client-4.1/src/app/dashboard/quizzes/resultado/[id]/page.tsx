@@ -6,64 +6,51 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter, useParams } from "next/navigation";
 import { useQuizResposta } from "@/hooks/useQuizResposta";
+import { useQuiz } from "@/hooks/useQuizzes";
 import { CheckCircle, XCircle, AlertCircle, Clock, Award, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
+import { EstudanteQuiz } from "@/types/estudanteQuiz";
+import { Quiz, QuestaoQuiz} from "@/types/quiz";
+import { Avaliacao } from "@/types/avaliacao";
+import { Disciplina } from "@/types/disciplina";
+import { TestResultadoApi } from "@/components/debug/TestResultadoApi";
 
 export default function ResultadoQuizPage() {
   const params = useParams();
   const id = params.id as string;
   const { usuario } = useAuth();
-  const router = useRouter();
-  const { tentativaAtual, isLoading: isLoadingTentativa } = useQuizResposta(id, true);  const [questoesAbertas, setQuestoesAbertas] = useState<Record<string, boolean>>({});
+  const router = useRouter();  const { tentativaAtual, isLoading: isLoadingTentativa } = useQuizResposta(id, true); // true indica que é para buscar resultado
+  const quizId = tentativaAtual ? (typeof tentativaAtual.quiz === 'string' ? tentativaAtual.quiz : tentativaAtual.quiz?._id) : undefined;
+  const { quiz, isLoading: isLoadingQuiz } = useQuiz(quizId);
+  const [questoesAbertas, setQuestoesAbertas] = useState<Record<string, boolean>>({});
 
-  // Verificar se é o resultado detalhado (novo formato)
-  const isResultadoDetalhado = tentativaAtual && 'quiz' in tentativaAtual && 'tentativa' in tentativaAtual && 'respostas' in tentativaAtual;
+  // Debug logs
+  console.log('=== DEBUG RESULTADOS ===');
+  console.log('ID da tentativa:', id);
+  console.log('tentativaAtual:', tentativaAtual);
+  console.log('isLoadingTentativa:', isLoadingTentativa);
+  console.log('quizId extraído:', quizId);
+  console.log('quiz:', quiz);
+  console.log('isLoadingQuiz:', isLoadingQuiz);
+  console.log('========================');
 
-  // Funções auxiliares para extrair dados independente do formato
-  const getDadosQuiz = () => {
-    if (isResultadoDetalhado) {
-      const resultado = tentativaAtual as any;
-      return {
-        id: resultado.quiz.id,
-        titulo: resultado.quiz.titulo,
-        descricao: resultado.quiz.descricao,
-        disciplina: resultado.quiz.disciplina,
-        avaliacao: resultado.quiz.avaliacao
-      };
-    }
-    return null;
+  // Getter para acessar as questões
+  const getQuestoes = () => {
+    if (!quiz || !quiz.avaliacao?.questoes) return [];
+    return quiz.avaliacao.questoes;
   };
 
-  const getDadosTentativa = () => {
-    if (isResultadoDetalhado) {
-      const resultado = tentativaAtual as any;
-      return {
-        id: resultado.tentativa.id,
-        dataInicio: resultado.tentativa.dataInicio,
-        dataFim: resultado.tentativa.dataFim,
-        duracao: resultado.tentativa.duracao,
-        percentualAcerto: resultado.tentativa.percentualAcerto,
-        pontuacaoObtida: resultado.tentativa.pontuacaoObtida,
-        totalPontos: resultado.tentativa.totalPontos,
-        respostasCorretas: resultado.tentativa.respostasCorretas,
-        totalQuestoes: resultado.tentativa.totalQuestoes,
-        tempoTotal: resultado.tentativa.duracao
-      };
-    }
-    return null;
-  };
+  const isLoading = isLoadingTentativa || isLoadingQuiz || !tentativaAtual || !quiz;
 
-  const getRespostas = () => {
-    if (isResultadoDetalhado) {
-      return (tentativaAtual as any).respostas || [];
-    }
-    return [];
-  };
-
-  const dadosQuiz = getDadosQuiz();
-  const dadosTentativa = getDadosTentativa();
-  const respostas = getRespostas();
+  // Debug para condições de loading
+  console.log('=== DEBUG LOADING CONDITIONS ===');
+  console.log('isLoadingTentativa:', isLoadingTentativa);
+  console.log('isLoadingQuiz:', isLoadingQuiz);
+  console.log('tentativaAtual exists:', !!tentativaAtual);
+  console.log('quiz exists:', !!quiz);
+  console.log('isLoading final:', isLoading);
+  console.log('================================');
 
   // Formatar o tempo
   const formatarTempo = (segundos: number) => {
@@ -87,7 +74,10 @@ export default function ResultadoQuizPage() {
     }));
   };
 
-  const isLoading = isLoadingTentativa || !tentativaAtual || !dadosQuiz || !dadosTentativa;
+  // Formatar percentual
+  const formatarPercentual = (valor: number) => {
+    return `${Math.round(valor * 100)}%`;
+  };
 
   if (isLoading) {
     return (
@@ -99,10 +89,10 @@ export default function ResultadoQuizPage() {
       </DashboardLayout>
     );
   }
-  if (!tentativaAtual || !dadosQuiz || !dadosTentativa) {
-    return (
-      <DashboardLayout>
+  if (!tentativaAtual || !quiz) {
+    return (      <DashboardLayout>
         <div className="max-w-3xl mx-auto">
+          <TestResultadoApi />
           <div className="flex flex-col items-center justify-center h-[60vh]">
             <AlertCircle className="w-16 h-16 text-primary-400" />
             <p className="mt-4 text-primary-800">Quiz não encontrado</p>
@@ -115,7 +105,9 @@ export default function ResultadoQuizPage() {
     );
   }
 
-  const disciplinaNome = dadosQuiz.disciplina?.nome || 'Disciplina não especificada';
+  const avaliacao = typeof quiz.avaliacao === 'string' ? null : quiz.avaliacao;
+  const disciplina = avaliacao?.disciplina && typeof avaliacao.disciplina !== 'string' ? avaliacao.disciplina : null;
+  const disciplinaNome = disciplina?.nome || 'Disciplina não especificada';
 
   return (
     <DashboardLayout>
@@ -128,201 +120,151 @@ export default function ResultadoQuizPage() {
               className="mb-4"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
+              Voltar para Quizzes
             </Button>
-            <h1 className="text-2xl font-bold text-primary-900">{dadosQuiz.titulo}</h1>
-            <p className="text-primary-600">{disciplinaNome}</p>
+            <h1 className="text-2xl font-bold text-primary-900">{quiz.titulo}</h1>
+            <p className="text-primary-700">{disciplinaNome}</p>
           </div>
         </div>
 
-        {/* Estatísticas do Quiz */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pontuação Total</CardTitle>
-              <Award className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-900">
-                {dadosTentativa.pontuacaoObtida || 0}/{dadosTentativa.totalPontos || 0}
+        <Card className="bg-gradient-to-br from-primary-50 to-white">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm">
+                <Award className="h-8 w-8 text-primary-500 mb-2" />
+                <span className="text-sm text-primary-700">Pontuação</span>
+                <span className="text-2xl font-bold text-primary-900">
+                  {tentativaAtual.pontuacaoObtida || 0}/{tentativaAtual.totalPontos || 0}
+                </span>
               </div>
-              <p className="text-xs text-blue-600">pontos obtidos</p>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Acertos</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-900">
-                {dadosTentativa.respostasCorretas}/{dadosTentativa.totalQuestoes}
+              <div className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm">
+                <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
+                <span className="text-sm text-primary-700">Acertos</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {tentativaAtual.respostasCorretas}/{tentativaAtual.totalQuestoes}
+                </span>
               </div>
-              <p className="text-xs text-green-600">questões corretas</p>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tempo Total</CardTitle>
-              <Clock className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-900">
-                {formatarTempo(dadosTentativa.tempoTotal || 0)}
+              <div className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm">
+                <Clock className="h-8 w-8 text-blue-500 mb-2" />
+                <span className="text-sm text-primary-700">Tempo Total</span>
+                <span className="text-2xl font-bold text-blue-600">
+                  {formatarTempo(tentativaAtual.tempoTotal || 0)}
+                </span>
               </div>
-              <p className="text-xs text-purple-600">tempo usado</p>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Badge de Performance */}
-        <div className="flex justify-center">
-          <Badge className={`text-lg px-6 py-2 ${
-            dadosTentativa.percentualAcerto >= 80
-              ? "bg-green-500 hover:bg-green-600"
-              : dadosTentativa.percentualAcerto >= 60
-              ? "bg-yellow-500 hover:bg-yellow-600"
-              : dadosTentativa.percentualAcerto >= 40
-              ? "bg-orange-500 hover:bg-orange-600"
-              : "bg-red-500 hover:bg-red-600"
-          }`}>
-            {dadosTentativa.percentualAcerto >= 80
-              ? "Excelente"
-              : dadosTentativa.percentualAcerto >= 60
-              ? "Bom"
-              : dadosTentativa.percentualAcerto >= 40
-              ? "Regular"
-              : "Precisa Melhorar"
-            } - {Math.round(dadosTentativa.percentualAcerto)}%
-          </Badge>
-        </div>
+              <div className="flex flex-col items-center p-4 bg-white rounded-lg shadow-sm">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="font-medium text-primary-900">Resultado:</span>                  <span className={`font-medium ${
+                    tentativaAtual.percentualAcerto >= 0.8 
+                      ? "text-green-600" 
+                      : tentativaAtual.percentualAcerto >= 0.6 
+                      ? "text-blue-600" 
+                      : tentativaAtual.percentualAcerto >= 0.4
+                      ? "text-primary-600"
+                      : "text-red-600"
+                  }`}>
+                    {tentativaAtual.percentualAcerto >= 0.8 
+                      ? "Excelente" 
+                      : tentativaAtual.percentualAcerto >= 0.6 
+                      ? "Bom" 
+                      : tentativaAtual.percentualAcerto >= 0.4
+                      ? "Médio"
+                      : "Insuficiente"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Detalhes das Questões */}
+        <h2 className="text-xl font-bold text-primary-900 mb-4">Respostas</h2>
+        
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-primary-900">Respostas Detalhadas</h2>
-          
-          {respostas.map((resposta: any, index: number) => {
-            const questaoId = resposta.questao.id;
-            const isAberta = questoesAbertas[questaoId] || false;
+          {tentativaAtual.respostas.map((resposta, index) => {
+            const questao = getQuestoes().find(q => q._id === resposta.questao);
+            const isAberta = questoesAbertas[resposta.questao] || false;
+            
+            if (!questao) return null;
             
             return (
-              <Card
-                key={questaoId}
-                className={`border-l-4 ${
-                  resposta.resposta.estaCorreta
-                    ? "border-l-green-500 bg-green-50"
-                    : "border-l-red-500 bg-red-50"
+              <Card 
+                key={resposta.questao} 
+                className={`overflow-hidden transition-all ${
+                  resposta.correta
+                    ? 'bg-gradient-to-r from-green-50 to-white border-l-4 border-l-green-500'
+                    : 'bg-gradient-to-r from-red-50 to-white border-l-4 border-l-red-500'
                 }`}
               >
-                <CardHeader className="cursor-pointer" onClick={() => toggleQuestao(questaoId)}>
+                <CardHeader className="cursor-pointer" onClick={() => toggleQuestao(resposta.questao)}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {resposta.resposta.estaCorreta ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center space-x-2">
+                      {resposta.correta ? (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-red-600" />
+                        <XCircle className="h-5 w-5 text-red-500" />
                       )}
-                      <CardTitle className="text-lg">
-                        Questão {resposta.questao.numero}
+                      <CardTitle className="text-base font-medium">
+                        {index + 1}. {questao.enunciado}
                       </CardTitle>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={
-                        resposta.resposta.estaCorreta ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                      }>
-                        {resposta.resposta.estaCorreta ? "Resposta Correta" : "Resposta Incorreta"}
-                      </Badge>
-                      {resposta.resposta.tempoResposta && (
-                        <span className="text-sm text-gray-500">
-                          Tempo: {formatarTempo(resposta.resposta.tempoResposta)}
-                        </span>
-                      )}
-                      {isAberta ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </div>
+                    {isAberta ? (
+                      <ChevronUp className="h-5 w-5 text-primary-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-primary-500" />
+                    )}
                   </div>
                 </CardHeader>
-                
+
                 {isAberta && (
-                  <CardContent className="space-y-4">
-                    <div className="bg-white p-4 rounded-lg border">
-                      <h4 className="font-medium text-gray-900 mb-2">
-                        {resposta.questao.enunciado}
-                      </h4>
-                      {resposta.questao.imagemEnunciadoUrl && (
-                        <img 
-                          src={resposta.questao.imagemEnunciadoUrl} 
-                          alt="Imagem da questão"
-                          className="max-w-full h-auto rounded border mt-2"
-                        />
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h5 className="font-medium text-gray-900">Alternativas:</h5>
-                      {resposta.alternativas.map((alternativa: any) => (
-                        <div
-                          key={alternativa.letra}
-                          className={`p-3 rounded border ${
-                            alternativa.letra === resposta.resposta.escolhida && alternativa.correta
-                              ? "bg-green-100 border-green-300 text-green-800"
-                              : alternativa.letra === resposta.resposta.escolhida && !alternativa.correta
-                              ? "bg-red-100 border-red-300 text-red-800"
+                  <CardContent>
+                    <div className="grid gap-4">
+                      {questao.alternativas.map(alternativa => (
+                        <div                          key={alternativa._id}
+                          className={`p-3 rounded-lg border ${
+                            alternativa._id === resposta.alternativa
+                              ? alternativa.correta
+                                ? 'bg-green-100 border-green-500'
+                                : 'bg-red-100 border-red-500'
                               : alternativa.correta
-                              ? "bg-yellow-100 border-yellow-300 text-yellow-800"
-                              : "bg-gray-50 border-gray-200"
+                              ? 'bg-green-50 border-green-500'
+                              : 'bg-gray-50 border-gray-200'
                           }`}
                         >
-                          <div className="flex items-start gap-2">
-                            <span className="font-medium">{alternativa.letra}.</span>
-                            <span className="flex-1">{alternativa.texto}</span>
-                            {alternativa.letra === resposta.resposta.escolhida && alternativa.correta && (
-                              <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          <div className="flex items-start space-x-2">
+                            {alternativa._id === resposta.alternativa && alternativa.correta && (
+                              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                             )}
-                            {alternativa.letra === resposta.resposta.escolhida && !alternativa.correta && (
-                              <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                            {alternativa._id === resposta.alternativa && !alternativa.correta && (
+                              <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
                             )}
-                            {alternativa.letra !== resposta.resposta.escolhida && alternativa.correta && (
-                              <div className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded">Correta</div>
+                            {alternativa._id !== resposta.alternativa && alternativa.correta && (
+                              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                             )}
+                            <p>{alternativa.texto}</p>
                           </div>
-                          {alternativa.imagemUrl && (
-                            <img 
-                              src={alternativa.imagemUrl} 
-                              alt={`Alternativa ${alternativa.letra}`}
-                              className="max-w-full h-auto rounded border mt-2"
-                            />
-                          )}
                         </div>
                       ))}
-                    </div>
-                    
-                    {resposta.explicacao && (
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <h5 className="font-medium text-blue-900 mb-2">Explicação:</h5>
-                        <p className="text-blue-800">{resposta.explicacao}</p>
+
+                      <div className="mt-4">
+                        <Badge className={
+                          resposta.correta ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }>
+                          {resposta.correta ? "Resposta Correta" : "Resposta Incorreta"}
+                        </Badge>
+                        {resposta.tempo && (
+                          <Badge className="ml-2 bg-blue-100 text-blue-800">
+                            Tempo: {formatarTempo(resposta.tempo)}
+                          </Badge>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </CardContent>
                 )}
               </Card>
             );
           })}
-        </div>
-
-        {/* Botão para refazer */}
-        <div className="flex justify-center pt-6">
-          <Button 
-            onClick={() => router.push(`/dashboard/quizzes/${dadosQuiz.id}`)}
-            className="bg-primary-500 hover:bg-primary-600 text-white"
-          >
-            Refazer Quiz
-          </Button>
         </div>
       </div>
     </DashboardLayout>

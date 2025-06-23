@@ -92,7 +92,7 @@ export const createLocalOnlyUpload = () => {
     return multer({
         storage: diskStorage,
         limits: {
-            fileSize: 5 * 1024 * 1024 // 5MB limit
+            fileSize: 7 * 1024 * 1024 // 7MB limit
         },
         fileFilter: fileFilter
     });

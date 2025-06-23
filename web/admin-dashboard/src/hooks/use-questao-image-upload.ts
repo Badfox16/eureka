@@ -19,21 +19,35 @@ export function useQuestaoImageUpload(options: QuestaoImageUploadOptions = {}) {
     try {
       // Se não temos ID da questão ou estamos criando, usar upload temporário
       if (!options.questaoId || options.useTempUpload) {
-        // Assumindo que existe um método uploadTempImage no service
+        console.log("Iniciando upload temporário de imagem...");
+        console.log("Arquivo:", file.name, file.type, file.size);
+        
+        // Chama o método de upload temporário
         const response = await questaoService.uploadTempImage(file);
+        console.log("Resposta do upload temporário:", response);
+        
+        // Retorna a URL da imagem (ajustando a extração conforme a resposta real)
         return response.data.imageUrl;
       }
       
       // Se temos ID, usar o upload específico para o enunciado
+      console.log("Iniciando upload de imagem para enunciado...");
       const response = await enunciadoMutation.mutateAsync({ 
         id: options.questaoId, 
         file 
       });
       
       // Extrair a URL da imagem da resposta
+      console.log("Resposta do upload para enunciado:", response);
       return response.data.imageUrl;
     } catch (error: any) {
-      console.error("Erro ao fazer upload da imagem do enunciado:", error);
+      console.error("Erro detalhado ao fazer upload:", error);
+      
+      // Capturar detalhes mais específicos do erro
+      if (error.response) {
+        console.error("Resposta do servidor:", error.response);
+      }
+      
       throw new Error(`Falha ao fazer upload: ${error.message}`);
     }
   };

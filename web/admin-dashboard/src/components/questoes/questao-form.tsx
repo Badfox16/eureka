@@ -222,16 +222,33 @@ export function QuestaoForm({
 
   // Lidar com o envio do formulário
   const handleFormSubmit = async (data: QuestaoFormValues) => {
-    // Adicione log para debug
     console.log("Formulário enviado:", data);
-    console.log("Dados do formulário a serem enviados:", JSON.stringify(data, null, 2));
+    
+    // Criar uma cópia limpa dos dados para envio
+    const cleanData = { ...data };
+    
+    // Remover URLs de imagem para criação
+    // O backend já ignora esses campos, mas é melhor não enviá-los
+    if (!isEdit) {
+      // Para criação, remover as URLs - elas serão associadas posteriormente
+      delete cleanData.imagemEnunciadoUrl;
+      
+      // Limpar as URLs das alternativas
+      if (cleanData.alternativas) {
+        cleanData.alternativas = cleanData.alternativas.map(alt => {
+          const { imagemUrl, ...rest } = alt;
+          return rest;
+        });
+      }
+    }
+    
+    console.log("Dados limpos para envio:", JSON.stringify(cleanData, null, 2));
     setIsSubmitting(true);
     setError(null);
     
     try {
-      // Fazer log antes da chamada
       console.log("Iniciando submissão...");
-      await onSubmit(data);
+      await onSubmit(cleanData);
       console.log("Submissão concluída com sucesso");
       
       // Fechar dialog apenas após conclusão bem-sucedida
@@ -239,15 +256,25 @@ export function QuestaoForm({
       form.reset();
     } catch (err: any) {
       console.error("Erro na submissão:", err);
-      setError(err.message || "Ocorreu um erro ao salvar a questão");
       
       // Se o erro tiver uma resposta detalhada
       if (err.response?.data) {
         console.error("Resposta da API:", err.response.data);
         
-        // Exibir mensagem de erro mais específica se disponível
-        const detailedMessage = err.response.data.message || err.response.data.error || err.message;
-        setError(`Erro de validação: ${detailedMessage}`);
+        // Exibir mensagem de erro mais específica baseada no código de erro
+        const errorCode = err.response.data.code || '';
+        const errorMessage = err.response.data.message || err.response.data.error || err.message;
+        
+        switch(errorCode) {
+          case 'DUPLICATE_RESOURCE':
+            setError(`Já existe uma questão com o número ${data.numero} nesta avaliação.`);
+            break;
+          case 'RELATED_RESOURCE_NOT_FOUND':
+            setError(`A avaliação selecionada não foi encontrada.`);
+            break;
+          default:
+            setError(`Erro de validação: ${errorMessage}`);
+        }
       } else {
         setError(err.message || "Ocorreu um erro ao salvar a questão");
       }
@@ -255,6 +282,20 @@ export function QuestaoForm({
       setIsSubmitting(false);
     }
   }
+
+  const API_BASE_URL = process.env.UPLOADS_BASE_URL || 'http://localhost:3001';
+
+  // Função utilitária para construir URLs de imagem corretamente
+  const buildImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    
+    // Garantir que não há barras duplicadas
+    const basePath = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    const imagePath = path.startsWith('/') ? path : `/${path}`;
+    
+    return `${basePath}${imagePath}`;
+  };
 
   return (
     <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
@@ -381,24 +422,27 @@ export function QuestaoForm({
                 </Button>
               </div>
               
-              {form.watch("imagemEnunciadoUrl") && (
-                <div className="relative mt-2 rounded-md overflow-hidden border">
-                  <img 
-                    src={form.watch("imagemEnunciadoUrl")} 
-                    alt="Imagem do enunciado" 
-                    className="max-h-48 object-contain mx-auto"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={removeEnunciadoImage}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              {(() => {
+                const imagemUrl = form.watch("imagemEnunciadoUrl");
+                return imagemUrl ? (
+                  <div className="relative mt-2 rounded-md overflow-hidden border">
+                    <img 
+                      src={buildImageUrl(imagemUrl)} 
+                      alt="Imagem do enunciado" 
+                      className="max-h-48 object-contain mx-auto"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={removeEnunciadoImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             <Separator />
@@ -495,24 +539,27 @@ export function QuestaoForm({
                         </Button>
                       </div>
                       
-                      {form.watch(`alternativas.${index}.imagemUrl`) && (
-                        <div className="relative mt-2 rounded-md overflow-hidden border">
-                          <img 
-                            src={form.watch(`alternativas.${index}.imagemUrl`)} 
-                            alt={`Imagem alternativa ${LETRAS_ALTERNATIVAS[index]}`} 
-                            className="max-h-32 object-contain mx-auto"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-2 right-2"
-                            onClick={() => removeAlternativaImage(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
+                      {(() => {
+                        const imagemUrl = form.watch(`alternativas.${index}.imagemUrl`);
+                        return imagemUrl ? (
+                          <div className="relative mt-2 rounded-md overflow-hidden border">
+                            <img 
+                              src={buildImageUrl(imagemUrl)} 
+                              alt={`Imagem alternativa ${LETRAS_ALTERNATIVAS[index]}`} 
+                              className="max-h-32 object-contain mx-auto"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => removeAlternativaImage(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
 

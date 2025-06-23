@@ -53,7 +53,7 @@ export async function getQuizzesEstudante(
 
 // Função para obter estatísticas de um estudante
 export async function getEstatisticasEstudante(id: string): Promise<ApiResponse<EstatisticasEstudante>> {
-  return fetchApi<ApiResponse<EstatisticasEstudante>>(`/estudantes/${id}/estatisticas`);
+  return fetchApi<ApiResponse<EstatisticasEstudante>>(`/estatisticas/estudantes/${id}/estatisticas`);
 }
 
 // Função para obter estatísticas por disciplina

@@ -19,6 +19,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (usuario) {
       const nextUrl = searchParams.get("next") || "/dashboard";
+      console.log('Usuário autenticado, redirecionando para:', nextUrl);
       router.replace(nextUrl);
     }
   }, [usuario, router, searchParams]);

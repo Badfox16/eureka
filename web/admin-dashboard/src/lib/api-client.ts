@@ -42,13 +42,25 @@ export async function apiClient<T = any>(
       }
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...fetchOptions,
-      headers: {
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    // Abordagem 1: Construir um novo objeto de headers condicionalmente
+    let reqHeaders: HeadersInit = {
+      ...headers,
+      ...authHeaders
+    };
+
+    // Adicionar Content-Type apenas se não for FormData
+    if (!(fetchOptions.body instanceof FormData)) {
+      reqHeaders = {
         'Content-Type': 'application/json',
-        ...authHeaders,
-        ...headers,
-      },
+        ...reqHeaders
+      };
+    }
+
+    const response = await fetch(url, {
+      ...fetchOptions,
+      headers: reqHeaders,
       signal: controller.signal,
     });
     

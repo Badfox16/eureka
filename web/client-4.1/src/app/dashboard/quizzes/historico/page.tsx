@@ -93,7 +93,8 @@ export default function HistoricoQuizzesPage() {
         </div>
       </DashboardLayout>
     );
-  }  // Filtragem de quizzes
+  }
+    // Filtragem de quizzes
   const quizzesFiltrados = quizzes?.filter((tentativa: EstudanteQuiz) => {
     // Filtra por disciplina
     if (filtro.disciplina && filtro.disciplina !== "todas" && 
@@ -117,7 +118,7 @@ export default function HistoricoQuizzesPage() {
       return false;
     }
       return true;
-  }) || [];
+  });
 
   // Vamos usar apenas as disciplinas da API ao invés de extrair dos quizzes
 
@@ -195,7 +196,7 @@ export default function HistoricoQuizzesPage() {
           </CardContent>
         </Card>
 
-        {quizzesFiltrados.length === 0 ? (
+        {quizzesFiltrados?.length === 0 ? (
           <div className="text-center py-12">
             <Book className="w-12 h-12 mx-auto text-primary-400 mb-4" />
             <h2 className="text-lg font-semibold text-primary-900 mb-2">Nenhum quiz realizado</h2>
@@ -209,7 +210,7 @@ export default function HistoricoQuizzesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quizzesFiltrados.map((tentativa: EstudanteQuiz) => (
+            {quizzesFiltrados?.map((tentativa: EstudanteQuiz) => (
               <Card key={tentativa._id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between">
@@ -245,9 +246,10 @@ export default function HistoricoQuizzesPage() {
                     <div className="flex items-center text-primary-700">
                       <ClockIcon className="w-4 h-4 mr-2" />
                       {formatarTempo(tentativa.tempoTotal)}
-                    </div>                    <div className="flex items-center text-primary-700">
+                    </div>
+                    <div className="flex items-center text-primary-700">
                       <Award className="w-4 h-4 mr-2" />
-                      {tentativa.acertos} de {tentativa.respostas?.length || 0} questões
+                      {tentativa.acertos} de {tentativa.respostas.length} questões
                     </div>
                   </div>
                   

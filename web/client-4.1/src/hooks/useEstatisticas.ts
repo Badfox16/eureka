@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import * as estatisticaApi from "@/api/estatistica";
-import * as estudanteApi from "@/api/estudante";
 import { 
   EstatisticaDisciplina, 
   EvolucaoDesempenho, 
@@ -8,35 +7,31 @@ import {
   EstatisticasEstudante 
 } from "@/types/estatisticas";
 
-export function useEstatisticas(estudanteId?: string) {
-  // Consulta para obter estatísticas gerais do estudante
-  const estatisticasGerais = useQuery<EstatisticasEstudante | null>({
+export function useEstatisticas(estudanteId?: string) {  const estatisticasGerais = useQuery<EstatisticasEstudante | null>({
     queryKey: ["estatisticas", "estudante", estudanteId],
     queryFn: async () => {
       if (!estudanteId) return null;
-      const response = await estudanteApi.getEstatisticasEstudante(estudanteId);
+      const response = await estatisticaApi.getEstatisticasEstudante(estudanteId);
       return response.data || null;
     },
     enabled: !!estudanteId,
   });
-
   // Consulta para obter estatísticas por disciplina
   const estatisticasDisciplinas = useQuery<EstatisticaDisciplina[] | null>({
     queryKey: ["estatisticas", "disciplinas", estudanteId],
     queryFn: async () => {
       if (!estudanteId) return null;
-      const response = await estudanteApi.getEstatisticasPorDisciplina(estudanteId);
+      const response = await estatisticaApi.getEstatisticasPorDisciplina(estudanteId);
       return response.data || null;
     },
     enabled: !!estudanteId,
   });
-
   // Consulta para obter evolução de desempenho
   const evolucaoDesempenho = useQuery<EvolucaoDesempenho | null>({
     queryKey: ["estatisticas", "evolucao", estudanteId],
     queryFn: async () => {
       if (!estudanteId) return null;
-      const response = await estudanteApi.getEvolucaoDesempenho(estudanteId);
+      const response = await estatisticaApi.getEvolucaoDesempenho(estudanteId);
       return response.data || null;
     },
     enabled: !!estudanteId,

@@ -1,4 +1,4 @@
-import { EstudanteQuiz, QuizResultadoDetalhado } from "@/types/estudanteQuiz";
+import { EstudanteQuiz } from "@/types/estudanteQuiz";
 import { QuizResposta } from "@/types/quizResposta";
 import { EstudanteQuizSearchParams } from "@/types/search";
 import { fetchApi, buildQueryString } from "./apiService";
@@ -23,23 +23,12 @@ export async function getQuizEmAndamento(estudanteQuizId: string) {
 // Função para obter resultado de um quiz finalizado
 export async function getResultadoQuiz(estudanteQuizId: string) {  
   console.log('🔍 API getResultadoQuiz: Buscando resultado para ID:', estudanteQuizId);
-  
   try {
-    // Usar o endpoint correto conforme as rotas do backend
-    console.log('📋 Usando endpoint correto: /quiz-respostas/' + estudanteQuizId + '/resultado');
-    const result = await fetchApi<ApiResponse<QuizResultadoDetalhado>>(`/quiz-respostas/${estudanteQuizId}/resultado`);
+    const result = await fetchApi<ApiResponse<EstudanteQuiz>>(`/quiz-respostas/${estudanteQuizId}`);
     console.log('✅ API getResultadoQuiz: Sucesso:', result);
     return result;
   } catch (error) {
-    console.error('❌ API getResultadoQuiz: Erro no endpoint /resultado:', error);
-    console.error('❌ API getResultadoQuiz: Tipo do erro:', typeof error);
-    console.error('❌ API getResultadoQuiz: Stack:', error instanceof Error ? error.stack : 'N/A');
-    
-    // Se for um erro de fetch, vamos tentar extrair mais informações
-    if (error && typeof error === 'object') {
-      console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
-    }
-    
+    console.error('❌ API getResultadoQuiz: Erro:', error);
     throw error;
   }
 }

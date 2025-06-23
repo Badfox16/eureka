@@ -53,32 +53,18 @@ export type TentativaQuizHistorico = {
 
 // Estatísticas por disciplina para um estudante
 export type EstatisticaDisciplina = {
-  disciplinaId: string;
-  disciplinaNome: string;
-  disciplinaCodigo: string;
-  totalQuizzes: number;
-  acertos: number;
+  nome: string;
+  quizzes: number;
   totalQuestoes: number;
-  tempoMedio: number;
-  melhorPontuacao: number;
-  piorPontuacao: number;
-  pontuacaoMedia: number;
+  respostasCorretas: number;
   percentualAcerto: number;
 };
 
 // Evolução de desempenho ao longo do tempo
 export type EvolucaoDesempenho = Array<{
-  dataInicio: string;
-  percentualAcertos: number;
-  acertos: number;
-  totalQuestoes: number;
-  tempoGasto: number;
-  ano: number;
-  mes: number;
-  dia: number;
-  disciplinaId?: string;
-  disciplinaNome?: string;
-  disciplinaCodigo?: string;
+  data: string;
+  percentual: number;
+  quiz: string;
 }>;
 
 // Ranking de estudantes

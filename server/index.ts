@@ -15,6 +15,7 @@ import provinciaRoutes from './routes/provincia.routes'
 import estatisticaRoutes from './routes/estatistica.routes'
 import quizRespostaRoutes from './routes/quizResposta.routes'
 import authRoutes from './routes/auth.routes'
+import uploadRoutes from './routes/upload.routes'
 
 dotenv.config()
 
@@ -48,7 +49,8 @@ app.use(morgan('dev'))
 const PORT = process.env.PORT || 6199
 
 // Middleware para parsear JSON
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // --- Servir arquivos estáticos da pasta de uploads ---
 // Isso fará com que os arquivos em 'tmp/uploads' sejam acessíveis via '/uploads' na URL
@@ -71,6 +73,7 @@ app.use(`${API_PREFIX}/questoes`, questaoRoutes)
 app.use(`${API_PREFIX}/quizzes`, quizRoutes)
 app.use(`${API_PREFIX}/quiz-respostas`, quizRespostaRoutes)
 app.use(`${API_PREFIX}/estatisticas`, estatisticaRoutes)
+app.use(`${API_PREFIX}/temp`, uploadRoutes) // Nova rota para uploads
 
 // Rota básica para verificar se o servidor está rodando
 app.get('/', (req, res) => {
