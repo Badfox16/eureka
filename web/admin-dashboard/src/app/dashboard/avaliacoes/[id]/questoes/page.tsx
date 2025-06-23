@@ -203,9 +203,9 @@ export default function AvaliacaoQuestoesPage() {
     // Extrair informação de trimestre/época
     const trimestre = avaliacao.trimestre ? 
       `${avaliacao.trimestre} Trimestre` : '';
-    
-    const epoca = avaliacao.epoca || '';
-    
+
+    const epoca = avaliacao.epoca ? `${avaliacao.epoca} Época` : '';
+
     // Escolher qual informação de período mostrar (trimestre ou época)
     const periodo = trimestre || epoca || '';
 
