@@ -65,7 +65,7 @@ export function useAddQuestaoToAvaliacao() {
       queryClient.invalidateQueries({ queryKey: ['questoes', { avaliacaoId: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['questoes', { notInAvaliacao: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['avaliacao', variables.avaliacaoId] });
-      toast.success("Questão adicionada com sucesso!");
+      // toast.success("Questão adicionada com sucesso!");
     },
     onError: (error: any) => {
       toast.error(`Erro ao adicionar questão: ${error.message || "Ocorreu um erro"}`);
@@ -88,7 +88,7 @@ export function useRemoveQuestaoFromAvaliacao() {
       queryClient.invalidateQueries({ queryKey: ['questoes', { avaliacaoId: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['questoes', { notInAvaliacao: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['avaliacao', variables.avaliacaoId] });
-      toast.success("Questão removida com sucesso!");
+      // toast.success("Questão removida com sucesso!");
     },
     onError: (error: any) => {
       toast.error(`Erro ao remover questão: ${error.message || "Ocorreu um erro"}`);
@@ -152,7 +152,7 @@ export function useDeleteQuestao() {
     mutationFn: (id: string) => questaoService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
-      toast.success("Questão excluída com sucesso!");
+      // toast.success("Questão excluída com sucesso!");
     },
     onError: (error: any) => {
       toast.error(`Erro ao excluir questão: ${error.message || "Ocorreu um erro"}`);
@@ -204,4 +204,54 @@ export function useUploadImagemAlternativa() {
   });
   
   return mutation;
+}
+
+/**
+ * Hook para associar uma imagem temporária ao enunciado
+ */
+export function useAssociarImagemTemporaria() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      questaoId, 
+      imagemTemporariaUrl, 
+      tipo, 
+      letra 
+    }: { 
+      questaoId: string, 
+      imagemTemporariaUrl: string, 
+      tipo: 'enunciado' | 'alternativa', 
+      letra?: string 
+    }) => {
+      console.log("Iniciando associação de imagem temporária:", {
+        questaoId, imagemTemporariaUrl, tipo, letra
+      });
+      
+      const result = await questaoService.associarImagemTemporaria(
+        questaoId, 
+        imagemTemporariaUrl, 
+        tipo, 
+        letra
+      );
+      
+      console.log("Resultado da associação:", result);
+      return result;
+    },
+    onSuccess: (response, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['questao', variables.questaoId] });
+      queryClient.invalidateQueries({ queryKey: ['questoes'] });
+      
+      const tipoMsg = variables.tipo === 'enunciado' 
+        ? 'do enunciado' 
+        : `da alternativa ${variables.letra}`;
+      
+      // toast.success(`Imagem ${tipoMsg} associada com sucesso!`);
+      return response.data.imageUrl;
+    },
+    onError: (error: any) => {
+      console.error("Erro completo na associação de imagem:", error);
+      toast.error(`Erro ao associar imagem: ${error.message || "Ocorreu um erro"}`);
+    }
+  });
 }

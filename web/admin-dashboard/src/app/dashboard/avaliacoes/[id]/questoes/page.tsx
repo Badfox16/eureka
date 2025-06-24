@@ -20,8 +20,10 @@ import {
   useQuestoes,
   useCreateQuestao, 
   useUpdateQuestao, 
-  useDeleteQuestao 
+  useDeleteQuestao,
+  useAssociarImagemTemporaria  // Novo hook
 } from '@/hooks/use-questoes'
+import { te } from 'date-fns/locale'
 
 export default function AvaliacaoQuestoesPage() {
   const params = useParams()
@@ -57,12 +59,22 @@ export default function AvaliacaoQuestoesPage() {
   const createQuestaoMutation = useCreateQuestao()
   const updateQuestaoMutation = useUpdateQuestao()
   const deleteQuestaoMutation = useDeleteQuestao()
+  const associarImagemMutation = useAssociarImagemTemporaria(); // Adicionar o hook de associação de imagem
 
   // Handler para criar questão
   const handleCreateQuestao = async (data: QuestaoFormType) => {
     try {
       console.log("Dados originais:", data);
-
+      
+      // Armazenar as URLs temporárias antes de removê-las
+      const tempImagemEnunciadoUrl = data.imagemEnunciadoUrl;
+      const tempAlternativasImagensUrls = data.alternativas
+        .map((alt, idx) => ({
+          letra: alt.letra || String.fromCharCode(65 + idx), // A, B, C, etc.
+          imagemUrl: alt.imagemUrl
+        }))
+        .filter(alt => alt.imagemUrl);
+    
       // Limpar dados para criação - remover campos sensíveis
       const { 
         imagemEnunciadoUrl, // URLs de imagem serão adicionadas por upload separado
@@ -86,9 +98,62 @@ export default function AvaliacaoQuestoesPage() {
 
       console.log("Dados limpos para criação:", cleanCreateData);
       
-      await createQuestaoMutation.mutateAsync(cleanCreateData);
+      // Criar a questão
+      const response = await createQuestaoMutation.mutateAsync(cleanCreateData);
+      const novaQuestao = response;
+      const questaoId = novaQuestao.data._id;
       
-      toast.success("Questão criada com sucesso!");
+      console.log("Questão criada com ID:", questaoId);
+      
+      // Processar as imagens temporárias após a criação bem-sucedida
+      let errosImagem = false;
+      console.log("Processando imagens temporárias...", tempImagemEnunciadoUrl, tempAlternativasImagensUrls);
+      
+      // Processar imagem do enunciado, se existir
+      if (tempImagemEnunciadoUrl) {
+        try {
+          console.log("Associando imagem temporária ao enunciado:", tempImagemEnunciadoUrl);
+          
+          const result = await associarImagemMutation.mutateAsync({
+            questaoId,
+            imagemTemporariaUrl: tempImagemEnunciadoUrl, // Garantir que o nome corresponda ao backend
+            tipo: 'enunciado'
+          });
+          
+          console.log("Resultado da associação do enunciado:", result);
+        } catch (imageError) {
+          console.error("Erro detalhado ao associar imagem do enunciado:", imageError);
+          errosImagem = true;
+        }
+      }
+      
+      // Processar imagens das alternativas
+      if (tempAlternativasImagensUrls.length > 0) {
+        for (const alt of tempAlternativasImagensUrls) {
+          if (alt.imagemUrl && alt.letra) {
+            try {
+              console.log(`Associando imagem temporária à alternativa ${alt.letra}:`, alt.imagemUrl);
+              await associarImagemMutation.mutateAsync({
+                questaoId,
+                imagemTemporariaUrl: alt.imagemUrl,
+                tipo: 'alternativa',
+                letra: alt.letra
+              });
+              console.log(`Imagem da alternativa ${alt.letra} associada com sucesso`);
+            } catch (altImageError) {
+              console.error(`Erro ao associar imagem da alternativa ${alt.letra}:`, altImageError);
+              errosImagem = true;
+            }
+          }
+        }
+      }
+      
+      if (errosImagem) {
+        toast.success("Questão criada com sucesso, mas houve problemas com algumas imagens");
+      } else {
+        toast.success("Questão criada com sucesso!");
+      }
+      
       refetch();
       return Promise.resolve();
     } catch (error: any) {
@@ -124,9 +189,20 @@ export default function AvaliacaoQuestoesPage() {
   // Handler para atualizar questão
   const handleUpdateQuestao = async (questaoId: string, data: QuestaoFormType) => {
     try {
+      console.log("Dados originais para atualização:", data);
+      
+      // Armazenar as URLs temporárias antes de removê-las
+      const tempImagemEnunciadoUrl = data.imagemEnunciadoUrl;
+      const tempAlternativasImagensUrls = data.alternativas
+        .map((alt, idx) => ({
+          letra: alt.letra || String.fromCharCode(65 + idx),
+          imagemUrl: alt.imagemUrl
+        }))
+        .filter(alt => alt.imagemUrl);
+    
       // Limpar dados para atualização - remover campos sensíveis
       const { 
-        avaliacao, // Remover avaliação para não tentar mover a questão
+        avaliacao,        // Remover avaliação para não tentar mover a questão
         imagemEnunciadoUrl, // Remover URLs de imagem que são protegidas
         ...updateData 
       } = data;
@@ -145,16 +221,66 @@ export default function AvaliacaoQuestoesPage() {
 
       console.log("Dados limpos para atualização:", cleanUpdateData);
       
+      // Atualizar a questão
       await updateQuestaoMutation.mutateAsync({
         id: questaoId,
         data: cleanUpdateData
       });
       
-      toast.success("Questão atualizada com sucesso!");
+      // Processar as imagens temporárias após a atualização bem-sucedida
+      let errosImagem = false;
+      console.log("Processando imagens temporárias...", tempImagemEnunciadoUrl, tempAlternativasImagensUrls);
+      
+      // Processar imagem do enunciado, se existir e for temporária
+      if (tempImagemEnunciadoUrl && tempImagemEnunciadoUrl.includes('/uploads/imagem-')) {
+        try {
+          console.log("Associando imagem temporária ao enunciado:", tempImagemEnunciadoUrl);
+          
+          const result = await associarImagemMutation.mutateAsync({
+            questaoId,
+            imagemTemporariaUrl: tempImagemEnunciadoUrl,
+            tipo: 'enunciado'
+          });
+          
+          console.log("Resultado da associação do enunciado:", result);
+        } catch (imageError) {
+          console.error("Erro ao associar imagem do enunciado:", imageError);
+          errosImagem = true;
+        }
+      }
+      
+      // Processar imagens das alternativas
+      if (tempAlternativasImagensUrls.length > 0) {
+        for (const alt of tempAlternativasImagensUrls) {
+          // Apenas processar imagens temporárias (que contêm 'imagem-' no path)
+          if (alt.imagemUrl && alt.letra && alt.imagemUrl.includes('/uploads/imagem-')) {
+            try {
+              console.log(`Associando imagem temporária à alternativa ${alt.letra}:`, alt.imagemUrl);
+              await associarImagemMutation.mutateAsync({
+                questaoId,
+                imagemTemporariaUrl: alt.imagemUrl,
+                tipo: 'alternativa',
+                letra: alt.letra
+              });
+              console.log(`Imagem da alternativa ${alt.letra} associada com sucesso`);
+            } catch (altImageError) {
+              console.error(`Erro ao associar imagem da alternativa ${alt.letra}:`, altImageError);
+              errosImagem = true;
+            }
+          }
+        }
+      }
+      
+      if (errosImagem) {
+        toast.warning("Questão atualizada, mas houve problemas com algumas imagens");
+      } else {
+        toast.success("Questão atualizada com sucesso!");
+      }
+      
       setIsEditFormOpen(false);
       setQuestaoEmEdicao(null);
       refetch();
-      return Promise.resolve()
+      return Promise.resolve();
     } catch (error: any) {
       // Extrair código de erro específico
       let errorCode = error.response?.data?.code || '';

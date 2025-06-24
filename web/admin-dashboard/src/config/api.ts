@@ -31,8 +31,11 @@ export const ENDPOINTS = {
     BASE: '/questoes',
     BY_ID: (id: string) => `/questoes/${id}`,
     SEARCH: (query: string) => `/questoes/search?q=${encodeURIComponent(query)}`,
+    UPLOAD_ENUNCIADO_IMAGE: (id: string) => `/questoes/${id}/imagem-enunciado`,
+    UPLOAD_ALTERNATIVA_IMAGE: (id: string, letra: string) =>
+      `/questoes/${id}/alternativas/${letra}/imagem`,
   },
-   UPLOADS: {
+  UPLOADS: {
     TEMP: '/temp/uploads', // Endpoint para upload temporário de imagens
   },
   PROVINCIAS: {

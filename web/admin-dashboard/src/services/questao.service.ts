@@ -1,10 +1,10 @@
 import { apiClient } from '@/lib/api-client';
 import { ENDPOINTS, buildQueryParams } from '@/config/api';
-import { 
-  Questao, 
-  CreateQuestaoInput, 
-  UpdateQuestaoInput, 
-  QuestaoQueryParams 
+import {
+  Questao,
+  CreateQuestaoInput,
+  UpdateQuestaoInput,
+  QuestaoQueryParams
 } from '@/types/questao';
 import { ApiResponse, PaginatedResponse } from '@/types/api';
 
@@ -15,12 +15,12 @@ class QuestaoService {
   async getAll(params?: QuestaoQueryParams): Promise<PaginatedResponse<Questao>> {
     // Converter avaliacaoId para avaliacao se presente (formato esperado pela API)
     const apiParams: Record<string, any> = { ...params };
-    
+
     if (params?.avaliacaoId) {
       apiParams.avaliacao = params.avaliacaoId;
       delete apiParams.avaliacaoId;
     }
-    
+
     const queryString = buildQueryParams(apiParams || {});
     return apiClient<PaginatedResponse<Questao>>(`${ENDPOINTS.QUESTOES.BASE}${queryString}`);
   }
@@ -86,7 +86,7 @@ class QuestaoService {
     const formData = new FormData();
     // Usar o nome correto do campo esperado pelo backend
     formData.append('imagemEnunciado', file);
-    
+
     return apiClient<ApiResponse<{ imageUrl: string }>>(`${ENDPOINTS.QUESTOES.BY_ID(id)}/imagem-enunciado`, {
       method: 'POST',
       body: formData,
@@ -101,7 +101,7 @@ class QuestaoService {
     const formData = new FormData();
     // Usar o nome correto do campo esperado pelo backend
     formData.append('imagemAlternativa', file);
-    
+
     return apiClient<ApiResponse<{ imageUrl: string }>>(`${ENDPOINTS.QUESTOES.BY_ID(id)}/alternativas/${letra}/imagem`, {
       method: 'POST',
       body: formData,
@@ -121,6 +121,27 @@ class QuestaoService {
       method: 'POST',
       body: formData,
       headers: {} // Remover o Content-Type para que o navegador defina o boundary correto
+    });
+  }
+
+  /**
+   * Associar uma imagem temporária existente ao enunciado de uma questão
+   */
+  async associarImagemTemporaria(
+    questaoId: string,
+    imagemTemporariaUrl: string,
+    tipo: 'enunciado' | 'alternativa',
+    letra?: string
+  ): Promise<ApiResponse<{ imageUrl: string }>> {
+    // Determinar o endpoint com base no tipo
+    const endpoint = tipo === 'enunciado'
+      ? ENDPOINTS.QUESTOES.UPLOAD_ENUNCIADO_IMAGE(questaoId)
+      : ENDPOINTS.QUESTOES.UPLOAD_ALTERNATIVA_IMAGE(questaoId, letra || '');
+
+    // Enviar a URL da imagem temporária
+    return apiClient<ApiResponse<{ imageUrl: string }>>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ imagemTemporariaUrl })
     });
   }
 }

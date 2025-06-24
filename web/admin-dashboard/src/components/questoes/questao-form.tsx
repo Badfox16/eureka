@@ -227,21 +227,6 @@ export function QuestaoForm({
     // Criar uma cópia limpa dos dados para envio
     const cleanData = { ...data };
     
-    // Remover URLs de imagem para criação
-    // O backend já ignora esses campos, mas é melhor não enviá-los
-    if (!isEdit) {
-      // Para criação, remover as URLs - elas serão associadas posteriormente
-      delete cleanData.imagemEnunciadoUrl;
-      
-      // Limpar as URLs das alternativas
-      if (cleanData.alternativas) {
-        cleanData.alternativas = cleanData.alternativas.map(alt => {
-          const { imagemUrl, ...rest } = alt;
-          return rest;
-        });
-      }
-    }
-    
     console.log("Dados limpos para envio:", JSON.stringify(cleanData, null, 2));
     setIsSubmitting(true);
     setError(null);

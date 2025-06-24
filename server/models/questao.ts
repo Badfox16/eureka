@@ -28,15 +28,21 @@ const questaoSchema = new Schema<IQuestao>(
             type: String, 
             required: true 
         },
+        // Adicionar campo para a imagem do enunciado
+        imagemEnunciadoUrl: { 
+            type: String,
+        },
         alternativas: [
             {
                 letra: { type: String, required: true },
                 texto: { type: String, required: true },
-                correta: { type: Boolean, required: true, default: false }
+                correta: { type: Boolean, required: true, default: false },
+                // Adicionar campo para a imagem da alternativa
+                imagemUrl: { type: String, default: '' }
             }
         ],
         explicacao: { 
-            type: String 
+            type: String,
         },
         avaliacao: {
             type: Schema.Types.ObjectId,
@@ -56,5 +62,23 @@ const questaoSchema = new Schema<IQuestao>(
 
 // Garantir que não existam questões duplicadas na mesma avaliação
 questaoSchema.index({ numero: 1, avaliacao: 1 }, { unique: true });
+
+// Adicionar método toJSON para garantir que os campos de imagem sempre estejam presentes
+// questaoSchema.set('toJSON', {
+//     transform: function(doc, ret, options) {
+//         // Garantir que imagemEnunciadoUrl sempre esteja presente
+//         ret.imagemEnunciadoUrl = ret.imagemEnunciadoUrl || '';
+        
+//         // Garantir que cada alternativa tenha o campo imagemUrl
+//         if (ret.alternativas && Array.isArray(ret.alternativas)) {
+//             ret.alternativas = ret.alternativas.map(alt => ({
+//                 ...alt,
+//                 imagemUrl: alt.imagemUrl || ''
+//             }));
+//         }
+        
+//         return ret;
+//     }
+// });
 
 export const Questao = model<IQuestao>("Questao", questaoSchema);

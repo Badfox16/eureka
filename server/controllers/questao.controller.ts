@@ -6,7 +6,9 @@ import { HttpError } from '../utils/error.utils';
 import { Questao } from '../models/questao';
 import { Avaliacao } from '../models/avaliacao';
 import type { CreateQuestaoInput, UpdateQuestaoInput } from '../schemas/questao.schema';
-
+import path from 'path';
+import fs from 'fs';
+import { s3BaseUrl } from '../config/aws';
 // Função auxiliar para remover arquivo do disco local
 const removeLocalFile = removeFile;
 
@@ -440,32 +442,27 @@ export const importarQuestoes: RequestHandler = async (req, res, next) => {
 export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { imagemTemporariaUrl } = req.body;
     const file = req.file;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de questão inválido', 400, 'INVALID_ID');
     }
 
-    if (!file) {
-      throw new HttpError('Nenhum arquivo enviado', 400, 'NO_FILE_UPLOADED');
+    // Verificar se pelo menos um dos parâmetros foi fornecido
+    if (!file && !imagemTemporariaUrl) {
+      throw new HttpError(
+        'É necessário fornecer um arquivo ou uma URL de imagem temporária', 
+        400, 
+        'NO_IMAGE_PROVIDED'
+      );
     }
 
-    // Get the file URL (works for both S3 and local)
-    let imageUrl = '';
-    if ('location' in file && typeof file.location === 'string') {
-      // Using S3
-      imageUrl = file.location;
-    } else {
-      // Using local storage (from the existing logic)
-      const filename = file.filename;
-      imageUrl = `/uploads/${filename}`;
-    }
-
-    // Rest of the function remains the same...
+    // Buscar a questão
     const questaoOriginal = await Questao.findById(id);
+    console.log(questaoOriginal?.numero);
+    
     if (!questaoOriginal) {
-      // If using S3, remove the uploaded file since we won't need it
-      await removeFile(imageUrl);
       throw new HttpError(
         'Questão não encontrada para associar a imagem',
         404,
@@ -473,18 +470,73 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       );
     }
 
-    // Remove the old image, if it exists
-    await removeFile(questaoOriginal.imagemEnunciadoUrl);
+    let imageUrl = '';
 
-    // Update the document in MongoDB with the new URL
+    if (file) {
+      // Caso 1: Upload de nova imagem
+      if ('location' in file && typeof file.location === 'string') {
+        // Usando S3 com a location diretamente (quando disponível)
+        imageUrl = file.location;
+        console.log('Upload S3 com location:', file.location);
+        console.log('URL completa:', imageUrl);
+      } else if ('key' in file && typeof file.key === 'string') {
+        // Usando S3 com o novo multerS3 sem ACL (que retorna a key em vez de location)
+        imageUrl = `${s3BaseUrl}${file.key}`;
+        console.log('Upload S3 com key:', file.key);
+        console.log('URL completa:', imageUrl);
+      } else {
+        // Usando armazenamento local
+        imageUrl = `/uploads/${file.filename}`;
+        console.log('Upload local:', file.path);
+        console.log('URL relativa:', imageUrl);
+      }
+    } else {
+      // Caso 2: Usando imagem temporária existente
+      imageUrl = imagemTemporariaUrl;
+      console.log(imageUrl);
+      
+      // Verificar se a imagem temporária existe
+      const caminhoAbsoluto = path.resolve(
+        __dirname, '..', '..', 'tmp', 'uploads', 
+        path.basename(imagemTemporariaUrl)
+      );
+      
+      if (!fs.existsSync(caminhoAbsoluto)) {
+        throw new HttpError(
+          'Imagem temporária não encontrada', 
+          404, 
+          'FILE_NOT_FOUND'
+        );
+      }
+    }
+
+    // Remover a imagem antiga, se existir e for diferente da temporária
+    if (questaoOriginal.imagemEnunciadoUrl && 
+        questaoOriginal.imagemEnunciadoUrl !== imageUrl) {
+      try {
+        await removeFile(questaoOriginal.imagemEnunciadoUrl);
+        console.log('Imagem antiga removida:', questaoOriginal.imagemEnunciadoUrl);
+      } catch (error) {
+        console.error('Erro ao remover imagem antiga:', error);
+        // Não interromper o fluxo se falhar ao remover a imagem antiga
+      }
+    }
+
+    // Atualizar o documento no MongoDB com a nova URL
     const questaoAtualizada = await Questao.findByIdAndUpdate(
       id,
       { $set: { imagemEnunciadoUrl: imageUrl } },
       { new: true }
     );
 
+     console.log('Questão atualizada:', {
+      id: questaoAtualizada?._id,
+      numero: questaoAtualizada?.numero,
+      temImagem: !!questaoAtualizada?.imagemEnunciadoUrl,
+      imagemUrl: questaoAtualizada?.imagemEnunciadoUrl
+    });
+
     if (!questaoAtualizada) {
-      await removeFile(imageUrl);
       throw new HttpError(
         'Falha ao atualizar a questão com a URL da imagem',
         500,
@@ -495,58 +547,96 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
     res.status(200).json(formatResponse(
       { imageUrl },
       undefined,
-      'Imagem do enunciado carregada com sucesso'
+      'Imagem do enunciado atualizada com sucesso'
     ));
   } catch (error) {
-    // Error handling remains the same
+    console.error('Erro no upload de imagem:', error);
     next(error);
   }
 };
 
 /**
- * Upload de imagem para uma alternativa específica
+ * Upload ou associação de imagem para uma alternativa específica
+ * Aceita tanto um novo upload quanto uma URL temporária existente
  */
 export const uploadImagemAlternativa: RequestHandler = async (req, res, next) => {
   try {
     const { id, letra } = req.params;
+    const { imagemTemporariaUrl } = req.body;
     const file = req.file;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new HttpError('ID de questão inválido', 400, 'INVALID_ID');
     }
 
-    if (!file) {
-      throw new HttpError('Nenhum arquivo enviado', 400, 'NO_FILE_UPLOADED');
+    if (!letra || !/^[A-E]$/i.test(letra)) {
+      throw new HttpError('Letra da alternativa é inválida (A-E)', 400, 'INVALID_PARAMETER');
     }
 
-    // Handle file URL for both S3 and local storage
-    let imageUrl = '';
-    if ('location' in file && typeof file.location === 'string') {
-      // Using S3
-      imageUrl = file.location;
-    } else {
-      // Using local storage
-      const filename = file.filename;
-      imageUrl = `/uploads/${filename}`;
+    // Verificar se pelo menos um dos parâmetros foi fornecido
+    if (!file && !imagemTemporariaUrl) {
+      throw new HttpError(
+        'É necessário fornecer um arquivo ou uma URL de imagem temporária', 
+        400, 
+        'NO_IMAGE_PROVIDED'
+      );
     }
 
     // Buscar a questão
     const questao = await Questao.findById(id);
     if (!questao) {
-      // Se a questão não existe, remover o arquivo que acabou de ser carregado
-      await removeFile(imageUrl);
       throw new HttpError('Questão não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
     // Encontrar a alternativa com a letra correspondente
-    const alternativaIndex = questao.alternativas.findIndex(alt => alt.letra === letra.toUpperCase());
+    const alternativaIndex = questao.alternativas.findIndex(alt => 
+      alt.letra.toUpperCase() === letra.toUpperCase()
+    );
+    
     if (alternativaIndex === -1) {
-      await removeFile(imageUrl);
       throw new HttpError('Alternativa não encontrada', 404, 'RESOURCE_NOT_FOUND');
     }
 
-    // Remover a imagem antiga, se existir
-    if (questao.alternativas[alternativaIndex].imagemUrl) {
+    let imageUrl = '';
+
+    if (file) {
+      // Caso 1: Upload de nova imagem
+      if ('location' in file && typeof file.location === 'string') {
+        // Usando S3 com a location diretamente (quando disponível)
+        imageUrl = file.location;
+      } else if ('key' in file && typeof file.key === 'string') {
+        // Usando S3 com o novo multerS3 sem ACL (que retorna a key em vez de location)
+        imageUrl = `${s3BaseUrl}${file.key}`;
+        console.log('Upload S3 com key:', file.key);
+        console.log('URL completa:', imageUrl);
+      } else {
+        // Usando armazenamento local
+        imageUrl = `/uploads/${file.filename}`;
+        console.log('Upload local:', file.path);
+        console.log('URL relativa:', imageUrl);
+      }
+    } else {
+      // Caso 2: Usando imagem temporária existente
+      imageUrl = imagemTemporariaUrl;
+      
+      // Verificar se a imagem temporária existe
+      const caminhoAbsoluto = path.resolve(
+        __dirname, '..', '..', 'tmp', 'uploads', 
+        path.basename(imagemTemporariaUrl)
+      );
+      
+      if (!fs.existsSync(caminhoAbsoluto)) {
+        throw new HttpError(
+          'Imagem temporária não encontrada', 
+          404, 
+          'FILE_NOT_FOUND'
+        );
+      }
+    }
+
+    // Remover a imagem antiga, se existir e for diferente da temporária
+    if (questao.alternativas[alternativaIndex].imagemUrl && 
+        questao.alternativas[alternativaIndex].imagemUrl !== imageUrl) {
       await removeFile(questao.alternativas[alternativaIndex].imagemUrl);
     }
 
@@ -557,7 +647,7 @@ export const uploadImagemAlternativa: RequestHandler = async (req, res, next) =>
     res.status(200).json(formatResponse(
       { imageUrl },
       undefined,
-      `Imagem da alternativa ${letra.toUpperCase()} carregada com sucesso`
+      `Imagem da alternativa ${letra.toUpperCase()} atualizada com sucesso`
     ));
   } catch (error) {
     next(error);

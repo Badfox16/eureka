@@ -1,9 +1,25 @@
 import multer from 'multer';
-import type { Request } from 'express';
 import path from 'path';
 import fs from 'fs';
 import multerS3 from 'multer-s3';
-import { s3Client, bucketName } from './aws';
+import { s3Client, bucketName, s3BaseUrl } from './aws';
+import type { Request } from 'express';
+
+// Configure S3 storage without ACL
+const s3Storage = multerS3({
+  s3: s3Client,
+  bucket: bucketName,
+  metadata: (req, file, cb) => {
+    cb(null, { fieldName: file.fieldname });
+  },
+  key: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const key = `${file.fieldname}-${uniqueSuffix}${ext}`;
+    cb(null, key);
+  },
+  contentType: multerS3.AUTO_CONTENT_TYPE
+});
 
 const fileFilter = (
     req: Request,
@@ -32,24 +48,6 @@ const fileFilter = (
         (cb as any)(new Error('Tipo de arquivo inválido. Apenas imagens são permitidas.'), false);
     }
 };
-
-// Configure S3 storage
-const s3Storage = multerS3({
-    s3: s3Client,
-    bucket: bucketName,
-    acl: 'public-read',
-    contentType: multerS3.AUTO_CONTENT_TYPE,
-    key: (req, file, cb) => {
-        // Generate a unique file name
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(file.originalname);
-        const filename = file.fieldname + '-' + uniqueSuffix + extension;
-        // Store in a folder structure: uploads/YYYY-MM-DD/filename
-        const date = new Date();
-        const folder = `uploads/${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        cb(null, `${folder}/${filename}`);
-    }
-});
 
 // Keep local storage as a fallback option
 const uploadDirectory = path.resolve(__dirname, '..', '..', 'tmp', 'uploads');

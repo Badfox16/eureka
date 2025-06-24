@@ -11,7 +11,7 @@ const router = Router();
 // --- Rotas CRUD básicas ---
 // Se precisar de autenticação, adicione 'authenticate' antes de 'validate' ou 'validateId'
 router.post('/', authenticate, validate(createQuestaoSchema), questaoController.createQuestao); //
-router.get('/', authenticate, questaoController.getAllQuestoes); //
+router.get('/', /* authenticate, */ questaoController.getAllQuestoes); //
 router.get('/search', authenticate, questaoController.searchQuestoes); //
 router.get('/:id', authenticate, validateId(), questaoController.getQuestaoById); //
 router.put('/:id', authenticate, validateId(), validate(updateQuestaoSchema), questaoController.updateQuestao); //
