@@ -221,9 +221,7 @@ export function QuestaoForm({
   }
 
   // Lidar com o envio do formulário
-  const handleFormSubmit = async (data: QuestaoFormValues) => {
-    console.log("Formulário enviado:", data);
-    
+  const handleFormSubmit = async (data: QuestaoFormValues) => {    
     // Criar uma cópia limpa dos dados para envio
     const cleanData = { ...data };
     

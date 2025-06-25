@@ -108,6 +108,20 @@ export function QuestaoCard({
     )
   }
 
+    const API_BASE_URL = process.env.UPLOADS_BASE_URL || 'http://localhost:3001';
+
+  // Função utilitária para construir URLs de imagem corretamente
+  const buildImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    
+    // Garantir que não há barras duplicadas
+    const basePath = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    const imagePath = path.startsWith('/') ? path : `/${path}`;
+    
+    return `${basePath}${imagePath}`;
+  };
+
   return (
     <Card className="mb-4 overflow-hidden">
       <CardHeader className="pb-2">
@@ -153,7 +167,7 @@ export function QuestaoCard({
           {questao.imagemEnunciadoUrl && (
             <div className="relative mt-2 rounded-md overflow-hidden border h-40">
               <Image 
-                src={questao.imagemEnunciadoUrl} 
+                src={buildImageUrl(questao.imagemEnunciadoUrl)} 
                 alt="Imagem do enunciado" 
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -187,7 +201,7 @@ export function QuestaoCard({
                       {alternativa.imagemUrl && (
                         <div className="mt-1 relative h-20">
                           <Image 
-                            src={alternativa.imagemUrl} 
+                            src={buildImageUrl(alternativa.imagemUrl)} 
                             alt={`Imagem alternativa ${alternativa.letra}`}
                             fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

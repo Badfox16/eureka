@@ -8,7 +8,7 @@ import { Avaliacao } from '../models/avaliacao';
 import type { CreateQuestaoInput, UpdateQuestaoInput } from '../schemas/questao.schema';
 import path from 'path';
 import fs from 'fs';
-import { s3BaseUrl } from '../config/aws';
+import { bucketName, s3BaseUrl, s3Client } from '../config/aws';
 // Função auxiliar para remover arquivo do disco local
 const removeLocalFile = removeFile;
 
@@ -438,6 +438,7 @@ export const importarQuestoes: RequestHandler = async (req, res, next) => {
 
 /**
  * Upload de imagem para o enunciado da questão
+ * Suporta tanto upload direto quanto conversão de imagens temporárias para permanentes no S3
  */
 export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
   try {
@@ -460,7 +461,7 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
 
     // Buscar a questão
     const questaoOriginal = await Questao.findById(id);
-    console.log(questaoOriginal?.numero);
+    console.log('Processando questão número:', questaoOriginal?.numero);
     
     if (!questaoOriginal) {
       throw new HttpError(
@@ -492,13 +493,10 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       }
     } else {
       // Caso 2: Usando imagem temporária existente
-      imageUrl = imagemTemporariaUrl;
-      console.log(imageUrl);
-      
-      // Verificar se a imagem temporária existe
+      // Vamos mover a imagem temporária para o S3 se USE_S3 estiver ativado
+      const arquivoTemp = path.basename(imagemTemporariaUrl);
       const caminhoAbsoluto = path.resolve(
-        __dirname, '..', '..', 'tmp', 'uploads', 
-        path.basename(imagemTemporariaUrl)
+        __dirname, '..', '..', 'tmp', 'uploads', arquivoTemp
       );
       
       if (!fs.existsSync(caminhoAbsoluto)) {
@@ -508,11 +506,56 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
           'FILE_NOT_FOUND'
         );
       }
+
+      // Verificar se devemos usar S3 ou manter como arquivo local
+      if (process.env.USE_S3 === 'true') {
+        try {
+          console.log('Movendo imagem temporária para S3:', arquivoTemp);
+
+          // Ler o arquivo temporário
+          const fileContent = fs.readFileSync(caminhoAbsoluto);
+          const fileType = path.extname(arquivoTemp).substring(1); // Remove o ponto do início
+          const mimeType = `image/${fileType}`;
+
+          // Gerar uma nova chave para o S3
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const s3Key = `imagemEnunciado-${uniqueSuffix}${path.extname(arquivoTemp)}`;
+
+          // Fazer upload para o S3
+          const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+          const command = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: s3Key,
+            Body: fileContent,
+            ContentType: mimeType
+          });
+
+          await s3Client.send(command);
+
+          // Gerar a URL permanente
+          imageUrl = `${s3BaseUrl}${s3Key}`;
+          console.log('Imagem temporária movida para S3:', imageUrl);
+
+          // Remover o arquivo temporário local
+          fs.unlinkSync(caminhoAbsoluto);
+          console.log('Arquivo temporário local removido:', caminhoAbsoluto);
+        } catch (s3Error) {
+          console.error('Erro ao mover imagem para S3:', s3Error);
+          // Em caso de erro, usar a URL temporária como fallback
+          imageUrl = imagemTemporariaUrl;
+          console.log('Usando URL temporária como fallback:', imageUrl);
+        }
+      } else {
+        // Manter a imagem como temporária (sem mover para S3)
+        imageUrl = imagemTemporariaUrl;
+        console.log('Mantendo imagem temporária (S3 desativado):', imageUrl);
+      }
     }
 
     // Remover a imagem antiga, se existir e for diferente da temporária
     if (questaoOriginal.imagemEnunciadoUrl && 
-        questaoOriginal.imagemEnunciadoUrl !== imageUrl) {
+        questaoOriginal.imagemEnunciadoUrl !== imageUrl &&
+        questaoOriginal.imagemEnunciadoUrl !== imagemTemporariaUrl) {
       try {
         await removeFile(questaoOriginal.imagemEnunciadoUrl);
         console.log('Imagem antiga removida:', questaoOriginal.imagemEnunciadoUrl);
@@ -527,9 +570,9 @@ export const uploadImagemEnunciado: RequestHandler = async (req, res, next) => {
       id,
       { $set: { imagemEnunciadoUrl: imageUrl } },
       { new: true }
-    );
+    );  
 
-     console.log('Questão atualizada:', {
+    console.log('Questão atualizada:', {
       id: questaoAtualizada?._id,
       numero: questaoAtualizada?.numero,
       temImagem: !!questaoAtualizada?.imagemEnunciadoUrl,

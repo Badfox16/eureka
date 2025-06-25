@@ -103,14 +103,15 @@ export default function AvaliacaoQuestoesPage() {
       const novaQuestao = response;
       const questaoId = novaQuestao.data._id;
       
+      
       console.log("Questão criada com ID:", questaoId);
       
       // Processar as imagens temporárias após a criação bem-sucedida
       let errosImagem = false;
       console.log("Processando imagens temporárias...", tempImagemEnunciadoUrl, tempAlternativasImagensUrls);
       
-      // Processar imagem do enunciado, se existir
-      if (tempImagemEnunciadoUrl) {
+      // Processar imagem do enunciado, se existir e for temporária
+      if (tempImagemEnunciadoUrl && tempImagemEnunciadoUrl.includes('/uploads/imagem-')) {
         try {
           console.log("Associando imagem temporária ao enunciado:", tempImagemEnunciadoUrl);
           
@@ -130,7 +131,8 @@ export default function AvaliacaoQuestoesPage() {
       // Processar imagens das alternativas
       if (tempAlternativasImagensUrls.length > 0) {
         for (const alt of tempAlternativasImagensUrls) {
-          if (alt.imagemUrl && alt.letra) {
+          // Apenas processar imagens temporárias (que contêm 'imagem-' no path)
+          if (alt.imagemUrl && alt.letra && alt.imagemUrl.includes('/uploads/imagem-')) {
             try {
               console.log(`Associando imagem temporária à alternativa ${alt.letra}:`, alt.imagemUrl);
               await associarImagemMutation.mutateAsync({
@@ -340,6 +342,19 @@ export default function AvaliacaoQuestoesPage() {
     // Montar o título com todas as informações
     return `${avaliacao.tipo === TipoAvaliacao.EXAME ? 'Exame' : 'AP'} ${periodo ? `(${periodo})` : ''} de ${disciplinaNome} - ${avaliacao.ano} ${provinciaNome}`;
   }
+    const API_BASE_URL = process.env.UPLOADS_BASE_URL || 'http://localhost:3001';
+
+  // Função utilitária para construir URLs de imagem corretamente
+  const buildImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    
+    // Garantir que não há barras duplicadas
+    const basePath = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    const imagePath = path.startsWith('/') ? path : `/${path}`;
+    
+    return `${basePath}${imagePath}`;
+  };
 
   return (
     <DashboardLayout>

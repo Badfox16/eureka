@@ -239,6 +239,7 @@ export function useAssociarImagemTemporaria() {
       return result;
     },
     onSuccess: (response, variables) => {
+      queryClient.invalidateQueries(); 
       queryClient.invalidateQueries({ queryKey: ['questao', variables.questaoId] });
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
       
@@ -246,7 +247,7 @@ export function useAssociarImagemTemporaria() {
         ? 'do enunciado' 
         : `da alternativa ${variables.letra}`;
       
-      // toast.success(`Imagem ${tipoMsg} associada com sucesso!`);
+      toast.success(`Imagem ${tipoMsg} associada com sucesso!`);
       return response.data.imageUrl;
     },
     onError: (error: any) => {
