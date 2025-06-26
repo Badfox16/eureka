@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { usuarioService } from "@/services/usuario.service";
 import { Usuario, CreateUsuarioInput, UpdateUsuarioInput } from "@/types/usuario";
 import { toast } from "sonner";
+import { handleApiError, showSuccessToast } from "@/lib/error-utils";
 
 interface UseUsuariosOptions {
   page?: number;
@@ -54,7 +55,11 @@ export function useUsuarios(initialOptions: UseUsuariosOptions = {}) {
   const createUsuarioMutation = useMutation({
     mutationFn: (data: CreateUsuarioInput) => usuarioService.create(data),
     onSuccess: () => {
+      showSuccessToast("Usuário criado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    },
+    onError: (error) => {
+      handleApiError(error, 'Criar Usuário');
     }
   });
 
@@ -63,7 +68,11 @@ export function useUsuarios(initialOptions: UseUsuariosOptions = {}) {
     mutationFn: ({ id, data }: { id: string, data: UpdateUsuarioInput }) => 
       usuarioService.update(id, data),
     onSuccess: () => {
+      showSuccessToast("Usuário atualizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    },
+    onError: (error) => {
+      handleApiError(error, 'Atualizar Usuário');
     }
   });
 
@@ -71,7 +80,11 @@ export function useUsuarios(initialOptions: UseUsuariosOptions = {}) {
   const deleteUsuarioMutation = useMutation({
     mutationFn: (id: string) => usuarioService.delete(id),
     onSuccess: () => {
+      showSuccessToast("Usuário excluído com sucesso!");
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    },
+    onError: (error) => {
+      handleApiError(error, 'Excluir Usuário');
     }
   });
 

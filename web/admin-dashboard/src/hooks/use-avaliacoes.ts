@@ -6,7 +6,7 @@ import {
   UpdateAvaliacaoInput  // Adicionar importação
 } from '@/types/avaliacao';
 import { ApiResponse, QueryParams } from '@/types/api'; // Modificar para usar QueryParams da API
-import { toast } from 'sonner';
+import { handleApiError, showSuccessToast } from '@/lib/error-utils';
 
 /**
  * Hook para listar avaliações com filtros e paginação
@@ -78,18 +78,16 @@ export function useSearchAvaliacoes(query: string) {
 export function useCreateAvaliacao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: (data: CreateAvaliacaoInput) => avaliacaoService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
-      toast.success("Avaliação criada com sucesso!");
+      showSuccessToast("Avaliação criada com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao criar avaliação: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Criar Avaliação');
     }
   });
-  
-  return mutation;
 }
 
 /**
@@ -98,20 +96,18 @@ export function useCreateAvaliacao() {
 export function useUpdateAvaliacao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: ({ id, data }: { id: string, data: UpdateAvaliacaoInput }) => 
       avaliacaoService.update(id, data),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
       queryClient.invalidateQueries({ queryKey: ['avaliacao', variables.id] });
-      toast.success("Avaliação atualizada com sucesso!");
+      showSuccessToast("Avaliação atualizada com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao atualizar avaliação: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Atualizar Avaliação');
     }
   });
-  
-  return mutation;
 }
 
 /**
@@ -120,16 +116,14 @@ export function useUpdateAvaliacao() {
 export function useDeleteAvaliacao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: (id: string) => avaliacaoService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['avaliacoes'] });
-      toast.success("Avaliação excluída com sucesso!");
+      showSuccessToast("Avaliação excluída com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao excluir avaliação: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Excluir Avaliação');
     }
   });
-  
-  return mutation;
 }

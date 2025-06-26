@@ -1,38 +1,62 @@
 import { toast } from 'sonner';
 import { ApiError } from './api-client';
 
-export function handleApiError(error: unknown): string {
-  // Erro da API
-  if (error instanceof ApiError) {
-    const message = error.message || 'Ocorreu um erro na requisição';
-    
-    // Tratamentos específicos por código de erro
-    if (error.status === 401) {
-      toast.error('Sessão expirada. Por favor, faça login novamente.');
-      // Caso queira redirecionar para login:
-      // window.location.href = '/auth/login';
-    } else if (error.status === 403) {
-      toast.error('Você não tem permissão para realizar esta ação');
-    } else if (error.status === 404) {
-      toast.error('Recurso não encontrado');
-    } else if (error.status >= 500) {
-      toast.error('Erro no servidor. Tente novamente mais tarde.');
-    } else {
-      toast.error(message);
-    }
-    
-    return message;
+// Interface para resposta de erro da API
+interface ApiErrorResponse {
+  status: string;
+  message: string;
+}
+
+/**
+ * Extrai a mensagem de erro da resposta da API
+ */
+function extractErrorMessage(error: any): string {
+  if (error instanceof ApiError && error.data) {
+    const apiError = error.data as ApiErrorResponse;
+    return apiError.message || error.message;
   }
   
-  // Outros tipos de erro
-  if (error instanceof Error) {
-    const message = error.message || 'Ocorreu um erro inesperado';
-    toast.error(message);
-    return message;
+  if (error.response?.data) {
+    const apiError = error.response.data as ApiErrorResponse;
+    return apiError.message || error.message;
   }
   
-  // Fallback
-  const fallbackMessage = 'Ocorreu um erro inesperado';
-  toast.error(fallbackMessage);
-  return fallbackMessage;
+  return error.message || 'Ocorreu um erro inesperado';
+}
+
+/**
+ * Trata erros da API e exibe um toast de erro padrão.
+ */
+export function handleApiError(error: unknown, context?: string): string {
+  console.error(`[${context || 'API Error'}]`, error);
+  const message = extractErrorMessage(error);
+  toast.error(message);
+  return message;
+}
+
+/**
+ * Exibe toast de sucesso com opção de tema.
+ */
+export function showSuccessToast(message: string, forceTheme?: 'light') {
+  toast.success(message, {
+    className: forceTheme === 'light' ? 'toast-always-light' : undefined,
+  });
+}
+
+/**
+ * Exibe toast de erro com opção de tema.
+ */
+export function showErrorToast(message: string, forceTheme?: 'light') {
+  toast.error(message, {
+    className: forceTheme === 'light' ? 'toast-always-light' : undefined,
+  });
+}
+
+/**
+ * Exibe toast de aviso com opção de tema.
+ */
+export function showWarningToast(message: string, forceTheme?: 'light') {
+  toast.warning(message, {
+    className: forceTheme === 'light' ? 'toast-always-light' : undefined,
+  });
 }

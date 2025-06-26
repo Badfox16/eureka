@@ -13,7 +13,6 @@ import { X } from 'lucide-react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { toast } from 'sonner';
 
 interface ModalFormProps<T extends z.ZodType> {
   title: string;
@@ -21,7 +20,7 @@ interface ModalFormProps<T extends z.ZodType> {
   schema: T;
   defaultValues?: any;
   onSubmit: (data: z.infer<T>) => Promise<void> | void;
-  children: React.ReactNode;
+  children: (onClose: () => void) => React.ReactNode;
   trigger: React.ReactNode;
   submitLabel?: string;
   cancelLabel?: string;
@@ -56,10 +55,8 @@ export function ModalForm<T extends z.ZodType>({
       await onSubmit(data);
       methods.reset();
       setOpen(false);
-      toast.success('Operação concluída com sucesso!');
     } catch (error) {
       console.error('Erro ao enviar formulário:', error);
-      toast.error('Falha na operação. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -75,6 +72,10 @@ export function ModalForm<T extends z.ZodType>({
     }
   }
 
+  const handleClose = () => {
+    setOpen(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -87,12 +88,12 @@ export function ModalForm<T extends z.ZodType>({
         </DialogHeader>
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(handleSubmit)} className="space-y-4">
-            {children}
+            {children(handleClose)}
             <DialogFooter className="gap-2 sm:gap-0">
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setOpen(false)}
+                onClick={handleClose}
               >
                 {cancelLabel}
               </Button>

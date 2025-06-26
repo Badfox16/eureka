@@ -120,3 +120,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Adicione esta classe para forçar o tema light nos toasts */
+.toast-always-light {
+  --normal-bg: #ffffff;
+  --normal-border: #e5e7eb;
+  --normal-text: #1f2937;
+  
+  --success-bg: #ECFDF5;
+  --success-border: #A7F3D0;
+  --success-text: #065F46;
+
+  --error-bg: #FEF2F2;
+  --error-border: #FECACA;
+  --error-text: #991B1B;
+}

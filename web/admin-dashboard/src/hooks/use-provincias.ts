@@ -6,7 +6,7 @@ import {
   UpdateProvinciaInput 
 } from '@/types/provincia';
 import { ApiResponse, QueryParams } from '@/types/api'; // Corrija a importação
-import { toast } from 'sonner';
+import { handleApiError, showSuccessToast } from '@/lib/error-utils';
 
 // Query key para provincias
 const PROVINCIAS_KEY = 'provincias';
@@ -42,51 +42,52 @@ export function useProvincia(id: string) {
   });
 }
 
-// Hook para criar provincia
+// Hook para criar província
 export function useCreateProvincia() {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: (data: CreateProvinciaInput) => provinciaService.create(data),
     onSuccess: () => {
-      toast.success('Província criada com sucesso!');
-      queryClient.invalidateQueries({ queryKey: [PROVINCIAS_KEY] });
+      showSuccessToast('Província criada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['provincias'] });
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao criar província: ${error.message}`);
+    onError: (error) => {
+      handleApiError(error, 'Criar Província');
     }
   });
 }
 
-// Hook para atualizar provincia
+// Hook para atualizar província
 export function useUpdateProvincia() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & UpdateProvinciaInput) => 
+    mutationFn: ({ id, data }: { id: string, data: UpdateProvinciaInput }) => 
       provinciaService.update(id, data),
-    onSuccess: () => {
-      toast.success('Província atualizada com sucesso!');
-      queryClient.invalidateQueries({ queryKey: [PROVINCIAS_KEY] });
+    onSuccess: (response, { id }) => {
+      showSuccessToast('Província atualizada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['provincias'] });
+      queryClient.invalidateQueries({ queryKey: ['provincia', id] });
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao atualizar província: ${error.message}`);
+    onError: (error) => {
+      handleApiError(error, 'Atualizar Província');
     }
   });
 }
 
-// Hook para excluir provincia
+// Hook para excluir província
 export function useDeleteProvincia() {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: (id: string) => provinciaService.delete(id),
     onSuccess: () => {
-      toast.success('Província excluída com sucesso!');
-      queryClient.invalidateQueries({ queryKey: [PROVINCIAS_KEY] });
+      showSuccessToast('Província excluída com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['provincias'] });
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao excluir província: ${error.message}`);
+    onError: (error) => {
+      handleApiError(error, 'Excluir Província');
     }
   });
 }

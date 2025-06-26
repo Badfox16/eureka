@@ -6,7 +6,7 @@ import {
   UpdateDisciplinaInput  // Adicionar importação
 } from '@/types/disciplina';
 import { ApiResponse, QueryParams } from '@/types/api'; // Adicionar QueryParams
-import { toast } from 'sonner';
+import { handleApiError, showSuccessToast } from '@/lib/error-utils';
 
 // Query key para disciplinas
 const DISCIPLINAS_KEY = 'disciplinas';
@@ -59,11 +59,11 @@ export function useCreateDisciplina() {
   return useMutation({
     mutationFn: (data: CreateDisciplinaInput) => disciplinaService.create(data),
     onSuccess: () => {
-      toast.success('Disciplina criada com sucesso!');
-      queryClient.invalidateQueries({ queryKey: [DISCIPLINAS_KEY] });
+      showSuccessToast('Disciplina criada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['disciplinas'] });
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao criar disciplina: ${error.message}`);
+    onError: (error) => {
+      handleApiError(error, 'Criar Disciplina');
     }
   });
 }
@@ -73,14 +73,15 @@ export function useUpdateDisciplina() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & UpdateDisciplinaInput) => 
+    mutationFn: ({ id, data }: { id: string, data: UpdateDisciplinaInput }) => 
       disciplinaService.update(id, data),
-    onSuccess: () => {
-      toast.success('Disciplina atualizada com sucesso!');
-      queryClient.invalidateQueries({ queryKey: [DISCIPLINAS_KEY] });
+    onSuccess: (response, { id }) => {
+      showSuccessToast('Disciplina atualizada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['disciplinas'] });
+      queryClient.invalidateQueries({ queryKey: ['disciplina', id] });
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao atualizar disciplina: ${error.message}`);
+    onError: (error) => {
+      handleApiError(error, 'Atualizar Disciplina');
     }
   });
 }
@@ -92,11 +93,11 @@ export function useDeleteDisciplina() {
   return useMutation({
     mutationFn: (id: string) => disciplinaService.delete(id),
     onSuccess: () => {
-      toast.success('Disciplina excluída com sucesso!');
-      queryClient.invalidateQueries({ queryKey: [DISCIPLINAS_KEY] });
+      showSuccessToast('Disciplina excluída com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['disciplinas'] });
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao excluir disciplina: ${error.message}`);
+    onError: (error) => {
+      handleApiError(error, 'Excluir Disciplina');
     }
   });
 }

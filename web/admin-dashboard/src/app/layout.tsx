@@ -2,9 +2,7 @@ import type { Metadata } from "next"
 import { Inter as FontSans } from "next/font/google"
 import "./globals.css";
 import { cn } from "@/lib/utils"
-import { ThemeProvider } from "@/components/theme-provider"
 import { AppProviders } from "@/providers/app-providers"
-import { Toaster } from "@/components/ui/sonner"
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -22,21 +20,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt" suppressHydrationWarning>
+    <html lang="pt" suppressHydrationWarning className="h-screen overflow-hidden">
       <body className={cn(
-        "min-h-screen bg-background font-sans antialiased",
+        "h-screen overflow-hidden bg-background font-sans antialiased",
         fontSans.variable
       )}>
         <AppProviders>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
+          {children}
         </AppProviders>
       </body>
     </html>

@@ -28,19 +28,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { TipoUsuario } from '@/types/base';
 import { Usuario, CreateUsuarioInput, UpdateUsuarioInput } from '@/types/usuario';
+import { createUsuarioSchema, updateUsuarioSchema } from '@/schemas/usuario.schema';
 
-// Definir explicitamente o tipo para os dados do formulário
-type FormData = {
-  nome: string;
-  email: string;
-  password?: string;
-  tipo: TipoUsuario;
-};
+// O tipo do formulário é inferido a partir do schema do Zod
+type FormValues = z.infer<typeof createUsuarioSchema> | z.infer<typeof updateUsuarioSchema>;
 
 interface UsuarioFormProps {
   title: string;
   usuario?: Usuario;
-  onSubmit: (data: FormData) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>; // Usar 'any' para flexibilidade entre create/update
   trigger: React.ReactNode;
 }
 
@@ -48,19 +44,10 @@ export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormPr
   const [open, setOpen] = useState(false);
   const isEditMode = !!usuario;
 
-  // Schema com password opcional para edição
-  const formSchema = z.object({
-    nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
-    email: z.string().email('Email inválido'),
-    password: isEditMode 
-      ? z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional()
-      : z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-    tipo: z.nativeEnum(TipoUsuario, {
-      errorMap: () => ({ message: 'Tipo de usuário inválido' }),
-    }),
-  });
+  // Escolher o schema correto com base no modo (edição ou criação)
+  const formSchema = isEditMode ? updateUsuarioSchema : createUsuarioSchema;
 
-  const form = useForm<FormData>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: isEditMode
       ? {
@@ -76,13 +63,15 @@ export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormPr
         },
   });
 
-  const handleSubmit = async (data: FormData) => {
+  const { formState: { isSubmitting } } = form;
+
+  const handleSubmit = async (data: FormValues) => {
     try {
       await onSubmit(data);
       setOpen(false);
       form.reset();
     } catch (error) {
-      // O erro já será tratado pelo hook
+      // O erro já será tratado pelo hook no nível da página
     }
   };
 
@@ -103,9 +92,7 @@ export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormPr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome completo" {...field} />
-                  </FormControl>
+                  <FormControl><Input placeholder="Nome completo" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -117,33 +104,23 @@ export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormPr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="email@exemplo.com" type="email" {...field} />
-                  </FormControl>
+                  <FormControl><Input placeholder="email@exemplo.com" type="email" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            {!isEditMode && (
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Mínimo 6 caracteres" 
-                        type="password" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl><Input placeholder={isEditMode ? "Deixe em branco para não alterar" : "Mínimo 6 caracteres"} type="password" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}
@@ -151,14 +128,9 @@ export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormPr
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Usuário</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value as string}>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo de usuário" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Selecione o tipo de usuário" /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value={TipoUsuario.ADMIN}>Administrador</SelectItem>
@@ -171,11 +143,8 @@ export function UsuarioForm({ title, usuario, onSubmit, trigger }: UsuarioFormPr
               )}
             />
             
-            <Button 
-              type="submit" 
-              className="w-full"
-            >
-              {isEditMode ? 'Atualizar Usuário' : 'Criar Usuário'}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : (isEditMode ? 'Atualizar Usuário' : 'Criar Usuário')}
             </Button>
           </form>
         </Form>

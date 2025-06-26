@@ -10,7 +10,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
 
 interface ConfirmDialogProps {
   title: string;
@@ -33,14 +32,13 @@ export function ConfirmDialog({
   const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
+    setLoading(true);
     try {
-      setLoading(true);
       await onConfirm();
-      setOpen(false);
-      toast.success('Operação concluída com sucesso');
+      setOpen(false); // Fechar apenas em sucesso
     } catch (error) {
-      console.error('Erro na operação:', error);
-      toast.error('Falha na operação. Tente novamente.');
+      // O erro agora é tratado pelo hook que chama onConfirm.
+      console.error('Erro na operação de confirmação:', error);
     } finally {
       setLoading(false);
     }

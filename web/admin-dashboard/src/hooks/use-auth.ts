@@ -8,6 +8,7 @@ import { TipoUsuario } from '@/types';
 import { hasRole } from '@/lib/auth';
 import { useAuth as useAuthContext } from '@/providers/auth-provider';
 import { ApiError } from '@/lib/api-client';
+import { handleApiError, showSuccessToast } from '@/lib/error-utils';
 
 // Re-exporta o hook principal de autenticação do provider
 export function useAuth() {
@@ -26,56 +27,23 @@ export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (credentials: LoginCredentials) => {
-      try {
-        // Adicionar logs para depuração
-        console.log('Tentando login com:', { email: credentials.email });
-        
-        const result = await authService.login(credentials);
-        console.log('Login bem-sucedido:', result);
-        
-        return result;
-      } catch (error) {
-        console.error('Erro no login:', error);
-        
-        if (error instanceof ApiError && error.status === 401) {
-          return { 
-            success: false, 
-            errorMessage: 'Email ou senha inválidos',
-            originalError: error 
-          };
-        }
-        
-        return { 
-          success: false, 
-          errorMessage: error instanceof Error ? error.message : 'Erro desconhecido',
-          originalError: error 
-        };
-      }
-    },
-    onSuccess: (result: any) => {
-      // Verificamos se o resultado é um objeto de erro
-      if (result && result.success === false) {
-        toast.error(result.errorMessage);
-        return;
-      }
-      
-      // Armazenar o token e os dados do usuário
+    mutationFn: (credentials: LoginCredentials) => authService.login(credentials),
+    onSuccess: (result) => {
       if (result.token) {
         authService.storeToken(result.token);
       }
-      
-      // Atualizar o cache
       if (result.user) {
         queryClient.setQueryData(['user'], result.user);
       }
       
-      toast.success('Login realizado com sucesso!');
+      showSuccessToast('Login realizado com sucesso!');
       
-      // Adicionar um pequeno atraso para garantir que o cookie seja definido
       setTimeout(() => {
         window.location.href = '/dashboard';
       }, 300);
+    },
+    onError: (error) => {
+      handleApiError(error, 'Login');
     }
   });
 }
@@ -88,26 +56,22 @@ export function useLogout() {
   return useMutation({
     mutationFn: async () => {
       try {
-        // Tentar logout no servidor
         await authService.logout();
       } catch (error) {
-        console.error("Erro ao fazer logout no servidor:", error);
-        // Continua mesmo com erro no servidor
+        console.error("Erro no logout do servidor (continuando localmente):", error);
       } finally {
-        // Limpar dados locais
         authService.removeToken();
         queryClient.clear();
-        
-        // Redirecionar para login
-        window.location.href = '/auth/login';
       }
     },
     onSuccess: () => {
-      toast.success('Logout realizado com sucesso');
+      showSuccessToast('Logout realizado com sucesso');
+      window.location.href = '/auth/login';
     },
     onError: () => {
-      toast.success('Logout realizado com sucesso');
-      // Mostramos sucesso mesmo com erro, pois o importante é o token local ter sido removido
+      // Mesmo com erro, o logout local foi feito. O importante é o usuário ser deslogado.
+      showSuccessToast('Logout realizado com sucesso');
+      window.location.href = '/auth/login';
     }
   });
 }

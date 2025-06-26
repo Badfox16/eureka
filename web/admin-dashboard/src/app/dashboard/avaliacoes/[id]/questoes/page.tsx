@@ -12,7 +12,6 @@ import { Pagination } from '@/components/ui/pagination'
 import DashboardLayout from '@/components/layout/dashboard-layout'
 import { TipoAvaliacao } from '@/types/avaliacao'
 import { Questao, QuestaoForm as QuestaoFormType } from '@/types/questao'
-import { toast } from 'sonner'
 import { QuestaoForm } from '@/components/questoes/questao-form'
 import { QuestaoCard } from '@/components/questoes/questao-card'
 import { useAvaliacao } from '@/hooks/use-avaliacoes'
@@ -21,8 +20,9 @@ import {
   useCreateQuestao, 
   useUpdateQuestao, 
   useDeleteQuestao,
-  useAssociarImagemTemporaria  // Novo hook
+  useAssociarImagemTemporaria
 } from '@/hooks/use-questoes'
+import { handleApiError, showSuccessToast, showWarningToast } from '@/lib/error-utils'
 import { te } from 'date-fns/locale'
 
 export default function AvaliacaoQuestoesPage() {
@@ -32,17 +32,15 @@ export default function AvaliacaoQuestoesPage() {
   
   // Estado para paginação e busca
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(5)
   const [searchQuery, setSearchQuery] = useState("")
   
   // Estado para controlar edição de questão
   const [questaoEmEdicao, setQuestaoEmEdicao] = useState<Questao | null>(null)
   const [isEditFormOpen, setIsEditFormOpen] = useState(false)
   
-  // Carregar dados da avaliação
   const { avaliacao, isLoading: isLoadingAvaliacao } = useAvaliacao(avaliacaoId)
   
-  // Hooks de gerenciamento de questões
   const { 
     questoes, 
     isLoading: isLoadingQuestoes,
@@ -59,265 +57,115 @@ export default function AvaliacaoQuestoesPage() {
   const createQuestaoMutation = useCreateQuestao()
   const updateQuestaoMutation = useUpdateQuestao()
   const deleteQuestaoMutation = useDeleteQuestao()
-  const associarImagemMutation = useAssociarImagemTemporaria(); // Adicionar o hook de associação de imagem
+  const associarImagemMutation = useAssociarImagemTemporaria()
 
-  // Handler para criar questão
+  const processarImagens = async (questaoId: string, data: QuestaoFormType) => {
+    let errosImagem = false;
+    const tempImagemEnunciadoUrl = data.imagemEnunciadoUrl;
+    const tempAlternativasImagensUrls = data.alternativas
+      .map((alt, idx) => ({
+        letra: alt.letra || String.fromCharCode(65 + idx),
+        imagemUrl: alt.imagemUrl
+      }))
+      .filter(alt => alt.imagemUrl && alt.imagemUrl.includes('/uploads/imagem-'));
+
+    if (tempImagemEnunciadoUrl && tempImagemEnunciadoUrl.includes('/uploads/imagem-')) {
+      try {
+        await associarImagemMutation.mutateAsync({
+          questaoId,
+          imagemTemporariaUrl: tempImagemEnunciadoUrl,
+          tipo: 'enunciado'
+        });
+      } catch (error) {
+        errosImagem = true;
+        handleApiError(error, 'Associar Imagem Enunciado');
+      }
+    }
+
+    for (const alt of tempAlternativasImagensUrls) {
+      try {
+        await associarImagemMutation.mutateAsync({
+          questaoId,
+          imagemTemporariaUrl: alt.imagemUrl!,
+          tipo: 'alternativa',
+          letra: alt.letra
+        });
+      } catch (error) {
+        errosImagem = true;
+        handleApiError(error, `Associar Imagem Alternativa ${alt.letra}`);
+      }
+    }
+    return errosImagem;
+  }
+
   const handleCreateQuestao = async (data: QuestaoFormType) => {
     try {
-      console.log("Dados originais:", data);
-      
-      // Armazenar as URLs temporárias antes de removê-las
-      const tempImagemEnunciadoUrl = data.imagemEnunciadoUrl;
-      const tempAlternativasImagensUrls = data.alternativas
-        .map((alt, idx) => ({
-          letra: alt.letra || String.fromCharCode(65 + idx), // A, B, C, etc.
-          imagemUrl: alt.imagemUrl
-        }))
-        .filter(alt => alt.imagemUrl);
-    
-      // Limpar dados para criação - remover campos sensíveis
-      const { 
-        imagemEnunciadoUrl, // URLs de imagem serão adicionadas por upload separado
-        ...createData 
-      } = data;
-
-      // Garantir que as alternativas não têm imagemUrl
-      const alternativas = createData.alternativas?.map(alt => {
-        const { imagemUrl, ...altData } = alt;
-        return altData;
-      });
-
-      // Construir objeto limpo para criação
+      const { imagemEnunciadoUrl, ...createData } = data;
+      const alternativas = createData.alternativas?.map(({ imagemUrl, ...alt }) => alt);
       const cleanCreateData = {
         ...createData,
         alternativas,
-        avaliacao: avaliacaoId, // Garantir que está usando o ID correto
-        numero: Number(createData.numero), // Garantir que é número
-        valor: Number(createData.valor) // Garantir que é número
+        avaliacao: avaliacaoId,
+        numero: Number(createData.numero),
+        valor: Number(createData.valor)
       };
 
-      console.log("Dados limpos para criação:", cleanCreateData);
-      
-      // Criar a questão
       const response = await createQuestaoMutation.mutateAsync(cleanCreateData);
-      const novaQuestao = response;
-      const questaoId = novaQuestao.data._id;
+      const questaoId = response.data._id;
       
-      
-      console.log("Questão criada com ID:", questaoId);
-      
-      // Processar as imagens temporárias após a criação bem-sucedida
-      let errosImagem = false;
-      console.log("Processando imagens temporárias...", tempImagemEnunciadoUrl, tempAlternativasImagensUrls);
-      
-      // Processar imagem do enunciado, se existir e for temporária
-      if (tempImagemEnunciadoUrl && tempImagemEnunciadoUrl.includes('/uploads/imagem-')) {
-        try {
-          console.log("Associando imagem temporária ao enunciado:", tempImagemEnunciadoUrl);
-          
-          const result = await associarImagemMutation.mutateAsync({
-            questaoId,
-            imagemTemporariaUrl: tempImagemEnunciadoUrl, // Garantir que o nome corresponda ao backend
-            tipo: 'enunciado'
-          });
-          
-          console.log("Resultado da associação do enunciado:", result);
-        } catch (imageError) {
-          console.error("Erro detalhado ao associar imagem do enunciado:", imageError);
-          errosImagem = true;
-        }
-      }
-      
-      // Processar imagens das alternativas
-      if (tempAlternativasImagensUrls.length > 0) {
-        for (const alt of tempAlternativasImagensUrls) {
-          // Apenas processar imagens temporárias (que contêm 'imagem-' no path)
-          if (alt.imagemUrl && alt.letra && alt.imagemUrl.includes('/uploads/imagem-')) {
-            try {
-              console.log(`Associando imagem temporária à alternativa ${alt.letra}:`, alt.imagemUrl);
-              await associarImagemMutation.mutateAsync({
-                questaoId,
-                imagemTemporariaUrl: alt.imagemUrl,
-                tipo: 'alternativa',
-                letra: alt.letra
-              });
-              console.log(`Imagem da alternativa ${alt.letra} associada com sucesso`);
-            } catch (altImageError) {
-              console.error(`Erro ao associar imagem da alternativa ${alt.letra}:`, altImageError);
-              errosImagem = true;
-            }
-          }
-        }
-      }
+      const errosImagem = await processarImagens(questaoId, data);
       
       if (errosImagem) {
-        toast.success("Questão criada com sucesso, mas houve problemas com algumas imagens");
+        showWarningToast("Questão criada, mas houve erro ao associar uma ou mais imagens.");
       } else {
-        toast.success("Questão criada com sucesso!");
+        showSuccessToast("Questão criada com sucesso!");
       }
       
       refetch();
       return Promise.resolve();
-    } catch (error: any) {
-      // Extrair código de erro específico
-      let errorCode = error.response?.data?.code || '';
-      let errorMessage = "Ocorreu um erro";
-      
-      switch(errorCode) {
-        case 'DUPLICATE_RESOURCE':
-          errorMessage = "Já existe uma questão com este número na avaliação. Por favor, escolha outro número.";
-          break;
-        case 'RELATED_RESOURCE_NOT_FOUND':
-          errorMessage = "A avaliação associada não foi encontrada.";
-          break;
-        case 'VALIDATION_ERROR':
-          errorMessage = error.response?.data?.message || "Os dados fornecidos não são válidos.";
-          break;
-        default:
-          errorMessage = error.message || "Erro ao criar questão";
-      }
-      
-      toast.error(errorMessage);
+    } catch (error) {
+      handleApiError(error, 'Criar Questão');
       return Promise.reject(error);
     }
   }
 
-  // Handler para abrir formulário de edição
-  const handleOpenEditForm = (questao: Questao) => {
-    setQuestaoEmEdicao(questao)
-    setIsEditFormOpen(true)
-  }
-
-  // Handler para atualizar questão
   const handleUpdateQuestao = async (questaoId: string, data: QuestaoFormType) => {
     try {
-      console.log("Dados originais para atualização:", data);
-      
-      // Armazenar as URLs temporárias antes de removê-las
-      const tempImagemEnunciadoUrl = data.imagemEnunciadoUrl;
-      const tempAlternativasImagensUrls = data.alternativas
-        .map((alt, idx) => ({
-          letra: alt.letra || String.fromCharCode(65 + idx),
-          imagemUrl: alt.imagemUrl
-        }))
-        .filter(alt => alt.imagemUrl);
-    
-      // Limpar dados para atualização - remover campos sensíveis
-      const { 
-        avaliacao,        // Remover avaliação para não tentar mover a questão
-        imagemEnunciadoUrl, // Remover URLs de imagem que são protegidas
-        ...updateData 
-      } = data;
+      const { avaliacao, imagemEnunciadoUrl, ...updateData } = data;
+      const alternativas = updateData.alternativas?.map(({ imagemUrl, ...alt }) => alt);
+      const cleanUpdateData = { ...updateData, alternativas };
 
-      // Garantir que as alternativas não têm imagemUrl
-      const alternativas = updateData.alternativas?.map(alt => {
-        const { imagemUrl, ...altData } = alt;
-        return altData;
-      });
-
-      // Construir objeto limpo para atualização
-      const cleanUpdateData = {
-        ...updateData,
-        alternativas
-      };
-
-      console.log("Dados limpos para atualização:", cleanUpdateData);
+      await updateQuestaoMutation.mutateAsync({ id: questaoId, data: cleanUpdateData });
       
-      // Atualizar a questão
-      await updateQuestaoMutation.mutateAsync({
-        id: questaoId,
-        data: cleanUpdateData
-      });
-      
-      // Processar as imagens temporárias após a atualização bem-sucedida
-      let errosImagem = false;
-      console.log("Processando imagens temporárias...", tempImagemEnunciadoUrl, tempAlternativasImagensUrls);
-      
-      // Processar imagem do enunciado, se existir e for temporária
-      if (tempImagemEnunciadoUrl && tempImagemEnunciadoUrl.includes('/uploads/imagem-')) {
-        try {
-          console.log("Associando imagem temporária ao enunciado:", tempImagemEnunciadoUrl);
-          
-          const result = await associarImagemMutation.mutateAsync({
-            questaoId,
-            imagemTemporariaUrl: tempImagemEnunciadoUrl,
-            tipo: 'enunciado'
-          });
-          
-          console.log("Resultado da associação do enunciado:", result);
-        } catch (imageError) {
-          console.error("Erro ao associar imagem do enunciado:", imageError);
-          errosImagem = true;
-        }
-      }
-      
-      // Processar imagens das alternativas
-      if (tempAlternativasImagensUrls.length > 0) {
-        for (const alt of tempAlternativasImagensUrls) {
-          // Apenas processar imagens temporárias (que contêm 'imagem-' no path)
-          if (alt.imagemUrl && alt.letra && alt.imagemUrl.includes('/uploads/imagem-')) {
-            try {
-              console.log(`Associando imagem temporária à alternativa ${alt.letra}:`, alt.imagemUrl);
-              await associarImagemMutation.mutateAsync({
-                questaoId,
-                imagemTemporariaUrl: alt.imagemUrl,
-                tipo: 'alternativa',
-                letra: alt.letra
-              });
-              console.log(`Imagem da alternativa ${alt.letra} associada com sucesso`);
-            } catch (altImageError) {
-              console.error(`Erro ao associar imagem da alternativa ${alt.letra}:`, altImageError);
-              errosImagem = true;
-            }
-          }
-        }
-      }
+      const errosImagem = await processarImagens(questaoId, data);
       
       if (errosImagem) {
-        toast.warning("Questão atualizada, mas houve problemas com algumas imagens");
+        showWarningToast("Questão atualizada, mas houve erro ao associar uma ou mais imagens.");
       } else {
-        toast.success("Questão atualizada com sucesso!");
+        showSuccessToast("Questão atualizada com sucesso!");
       }
       
       setIsEditFormOpen(false);
-      setQuestaoEmEdicao(null);
       refetch();
       return Promise.resolve();
-    } catch (error: any) {
-      // Extrair código de erro específico
-      let errorCode = error.response?.data?.code || '';
-      let errorMessage = "Ocorreu um erro";
-      
-      switch(errorCode) {
-        case 'DUPLICATE_RESOURCE':
-          errorMessage = "Já existe uma questão com este número na avaliação";
-          break;
-        case 'VALIDATION_ERROR':
-          errorMessage = error.response?.data?.message || "Erro de validação";
-          break;
-        case 'RELATED_RESOURCE_NOT_FOUND':
-          errorMessage = "Avaliação não encontrada";
-          break;
-        default:
-          errorMessage = error.message || "Erro ao atualizar questão";
-      }
-      
-      toast.error(errorMessage);
+    } catch (error) {
+      handleApiError(error, 'Atualizar Questão');
       return Promise.reject(error);
     }
   }
 
-  // Handler para excluir questão
   const handleDeleteQuestao = async (questaoId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta questão?')) {
-      try {
-        await deleteQuestaoMutation.mutateAsync(questaoId)
-        toast.success("Questão excluída com sucesso!")
-        refetch()
-      } catch (error: any) {
-        toast.error(`Erro ao excluir questão: ${error.message || "Ocorreu um erro"}`)
-      }
+    try {
+      await deleteQuestaoMutation.mutateAsync(questaoId)
+      // O hook já mostra o toast de sucesso
+    } catch (error: any) {
+      handleApiError(error, 'Excluir Questão');
     }
+  }
+
+  const handleOpenEditForm = (questao: Questao) => {
+    setQuestaoEmEdicao(questao)
+    setIsEditFormOpen(true)
   }
 
   // Gerar título para exibição com trimestre/época

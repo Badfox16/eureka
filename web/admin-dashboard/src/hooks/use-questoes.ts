@@ -7,7 +7,7 @@ import {
   QuestaoQueryParams
 } from '@/types/questao';
 import { ApiResponse } from '@/types/api';
-import { toast } from 'sonner';
+import { handleApiError, showSuccessToast, showWarningToast } from '@/lib/error-utils';
 
 /**
  * Hook para listar questões com filtros e paginação
@@ -58,21 +58,19 @@ export function useQuestao(id: string) {
 export function useAddQuestaoToAvaliacao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: ({ avaliacaoId, questaoId }: { avaliacaoId: string, questaoId: string }) => 
       questaoService.addToAvaliacao(avaliacaoId, questaoId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['questoes', { avaliacaoId: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['questoes', { notInAvaliacao: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['avaliacao', variables.avaliacaoId] });
-      // toast.success("Questão adicionada com sucesso!");
+      showSuccessToast("Questão adicionada com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao adicionar questão: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Adicionar Questão à Avaliação');
     }
   });
-  
-  return mutation;
 }
 
 /**
@@ -81,65 +79,51 @@ export function useAddQuestaoToAvaliacao() {
 export function useRemoveQuestaoFromAvaliacao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: ({ avaliacaoId, questaoId }: { avaliacaoId: string, questaoId: string }) => 
       questaoService.removeFromAvaliacao(avaliacaoId, questaoId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['questoes', { avaliacaoId: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['questoes', { notInAvaliacao: variables.avaliacaoId }] });
       queryClient.invalidateQueries({ queryKey: ['avaliacao', variables.avaliacaoId] });
-      // toast.success("Questão removida com sucesso!");
+      showSuccessToast("Questão removida com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao remover questão: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Remover Questão da Avaliação');
     }
   });
-  
-  return mutation;
 }
 
 /**
  * Hook para criar questão
+ * O toast de erro é tratado na página devido à complexidade do upload de imagens.
  */
 export function useCreateQuestao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: (data: CreateQuestaoInput) => questaoService.create(data),
-    onSuccess: (response) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
-      return response.data; // Retorna a questão criada para uso posterior
     },
-    onError: (error: any) => {
-      console.error("Erro na criação de questão:", error);
-    }
   });
-  
-  return mutation;
 }
 
 /**
  * Hook para atualizar questão
+ * O toast de erro é tratado na página devido à complexidade do upload de imagens.
  */
 export function useUpdateQuestao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: ({ id, data }: { id: string, data: UpdateQuestaoInput }) => 
       questaoService.update(id, data),
     onSuccess: (response, variables) => {
-      // Invalidar cache da questão específica
-      queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
-      
-      // Invalidar cache da lista de questões
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
+      queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
     },
-    onError: (error: any) => {
-      console.error("Erro na atualização de questão:", error);
-    }
   });
-  
-  return mutation;
 }
 
 /**
@@ -148,18 +132,16 @@ export function useUpdateQuestao() {
 export function useDeleteQuestao() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: (id: string) => questaoService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
-      // toast.success("Questão excluída com sucesso!");
+      showSuccessToast("Questão excluída com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao excluir questão: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Excluir Questão');
     }
   });
-  
-  return mutation;
 }
 
 /**
@@ -168,20 +150,17 @@ export function useDeleteQuestao() {
 export function useUploadImagemEnunciado() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: ({ id, file }: { id: string, file: File }) => 
       questaoService.uploadImagemEnunciado(id, file),
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
-      toast.success("Imagem do enunciado carregada com sucesso!");
-      return response.data.imageUrl;
+      showSuccessToast("Imagem do enunciado carregada com sucesso!");
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao carregar imagem: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Upload Imagem Enunciado');
     }
   });
-  
-  return mutation;
 }
 
 /**
@@ -190,20 +169,17 @@ export function useUploadImagemEnunciado() {
 export function useUploadImagemAlternativa() {
   const queryClient = useQueryClient();
   
-  const mutation = useMutation({
+  return useMutation({
     mutationFn: ({ id, letra, file }: { id: string, letra: string, file: File }) => 
       questaoService.uploadImagemAlternativa(id, letra, file),
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['questao', variables.id] });
-      toast.success(`Imagem da alternativa ${variables.letra} carregada com sucesso!`);
-      return response.data.imageUrl;
+      showSuccessToast(`Imagem da alternativa ${variables.letra} carregada com sucesso!`);
     },
-    onError: (error: any) => {
-      toast.error(`Erro ao carregar imagem: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Upload Imagem Alternativa');
     }
   });
-  
-  return mutation;
 }
 
 /**
@@ -224,22 +200,14 @@ export function useAssociarImagemTemporaria() {
       tipo: 'enunciado' | 'alternativa', 
       letra?: string 
     }) => {
-      console.log("Iniciando associação de imagem temporária:", {
-        questaoId, imagemTemporariaUrl, tipo, letra
-      });
-      
-      const result = await questaoService.associarImagemTemporaria(
+      return questaoService.associarImagemTemporaria(
         questaoId, 
         imagemTemporariaUrl, 
         tipo, 
         letra
       );
-      
-      console.log("Resultado da associação:", result);
-      return result;
     },
     onSuccess: (response, variables) => {
-      queryClient.invalidateQueries(); 
       queryClient.invalidateQueries({ queryKey: ['questao', variables.questaoId] });
       queryClient.invalidateQueries({ queryKey: ['questoes'] });
       
@@ -247,12 +215,10 @@ export function useAssociarImagemTemporaria() {
         ? 'do enunciado' 
         : `da alternativa ${variables.letra}`;
       
-      toast.success(`Imagem ${tipoMsg} associada com sucesso!`);
-      return response.data.imageUrl;
+      showSuccessToast(`Imagem ${tipoMsg} associada com sucesso!`);
     },
-    onError: (error: any) => {
-      console.error("Erro completo na associação de imagem:", error);
-      toast.error(`Erro ao associar imagem: ${error.message || "Ocorreu um erro"}`);
+    onError: (error: unknown) => {
+      handleApiError(error, 'Associar Imagem Temporária');
     }
   });
 }

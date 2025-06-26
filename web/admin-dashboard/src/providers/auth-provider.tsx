@@ -1,12 +1,13 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { isAuthenticated, getUser } from "@/lib/auth"
 import { Usuario } from "@/types/usuario"
 import { authService } from "@/services/auth.service"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
+import { useLogin, useLogout } from '@/hooks/use-auth'
 
 interface AuthContextType {
   user: Usuario | null
@@ -38,12 +39,14 @@ const publicRoutes = [
   '/auth/reset-password',
 ]
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<Usuario | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
   const queryClient = useQueryClient()
+  const loginMutation = useLogin()
+  const logoutMutation = useLogout()
 
   // Verifica se a rota atual precisa de autenticação
   const isPublicRoute = publicRoutes.includes(pathname || '')
@@ -102,49 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
   
   // Função de login
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      setIsLoading(true)
-      const response = await authService.login({ email, password })
-      authService.storeToken(response.token)
-      
-      // Se a resposta incluir dados do usuário
-      if (response.user) {
-        setUser(response.user)
-        queryClient.setQueryData(['user'], response.user)
-      } else {
-        // Se não incluir, busque o usuário atual
-        await checkSession()
-      }
-      
-      toast.success('Login realizado com sucesso!')
-      router.push('/dashboard')
-      return true
-    } catch (error) {
-      console.error("Erro ao fazer login:", error)
-      toast.error((error as Error)?.message || 'Falha ao realizar login')
-      return false
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    await loginMutation.mutateAsync({ email, password })
+    return true
+  }, [loginMutation])
   
   // Função de logout
-  const logout = async (): Promise<void> => {
-    try {
-      setIsLoading(true)
-      await authService.logout()
-      queryClient.clear()
-      setUser(null)
-      router.push('/auth/login')
-      toast.success('Logout realizado com sucesso')
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error)
-      toast.error('Erro ao realizar logout')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const logout = useCallback(async (): Promise<void> => {
+    await logoutMutation.mutateAsync()
+  }, [logoutMutation])
   
   // Verificar autenticação ao montar o componente
   useEffect(() => {

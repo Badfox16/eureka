@@ -26,19 +26,16 @@ import {
   useUpdateDisciplina,
   useDeleteDisciplina
 } from "@/hooks/use-disciplinas"
-import { Disciplina } from "@/types/disciplina"
-import { ApiResponse } from "@/types/api" // Importar tipo da API
+import { Disciplina, CreateDisciplinaInput, UpdateDisciplinaInput } from "@/types/disciplina"
+import { ApiResponse } from "@/types/api"
 import { formatDate } from "@/lib/utils"
-import { toast } from "sonner"
 
 export default function DisciplinasPage() {
-  // Estado para paginação e filtros
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(5)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
 
-  // Buscar disciplinas com React Query
   const {
     data,
     isLoading,
@@ -50,12 +47,10 @@ export default function DisciplinasPage() {
     status: activeFilters["status"]
   });
 
-  // Mutations para operações CRUD
   const createMutation = useCreateDisciplina();
   const updateMutation = useUpdateDisciplina();
   const deleteMutation = useDeleteDisciplina();
 
-  // Filtros disponíveis
   const filters = [
     {
       id: "status",
@@ -68,68 +63,39 @@ export default function DisciplinasPage() {
     }
   ]
 
-  // Funções para manipular filtros
   const handleFilterChange = (filterId: string, value: string) => {
-    setActiveFilters((prev) => ({
-      ...prev,
-      [filterId]: value,
-    }))
-    setCurrentPage(1) // Resetar para primeira página ao filtrar
+    setActiveFilters((prev) => ({ ...prev, [filterId]: value, }))
+    setCurrentPage(1)
   }
 
   const handleFilterClear = (filterId: string) => {
     setActiveFilters((prev) => {
-      const newFilters = { ...prev }
-      delete newFilters[filterId]
+      const newFilters = { ...prev };
+      delete newFilters[filterId];
       return newFilters
     })
     setCurrentPage(1)
   }
 
-  // Funções CRUD
-  const handleCreateDisciplina = async (formData: { codigo: string; nome: string; descricao: string; ativo: boolean }) => {
-    try {
-      await createMutation.mutateAsync(formData);
-      return Promise.resolve();
-    } catch (error) {
-      console.error("Erro ao criar disciplina:", error);
-      return Promise.reject(error);
-    }
+  const handleCreateDisciplina = async (data: CreateDisciplinaInput) => {
+    await createMutation.mutateAsync(data);
   }
 
-  const handleUpdateDisciplina = async (id: string, formData: { codigo: string; nome: string; descricao: string; ativo: boolean }) => {
-    try {
-      await updateMutation.mutateAsync({
-        id,
-        ...formData
-      });
-      return Promise.resolve();
-    } catch (error) {
-      console.error("Erro ao atualizar disciplina:", error);
-      return Promise.reject(error);
-    }
+  const handleUpdateDisciplina = async (id: string, data: UpdateDisciplinaInput) => {
+    await updateMutation.mutateAsync({ id, data });
   }
 
   const handleDeleteDisciplina = async (id: string) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-    } catch (error) {
-      console.error("Erro ao excluir disciplina:", error);
-      throw error;
-    }
+    await deleteMutation.mutateAsync(id);
   }
 
-  // Renderizar status
   const renderStatusBadge = (ativo: boolean) => {
     return ativo
       ? <Badge variant="success">Ativo</Badge>
       : <Badge variant="secondary">Inativo</Badge>;
   }
 
-  // Usar o tipo correto para a resposta da API
   const apiResponse = data as ApiResponse<Disciplina[]>;
-  
-  // Disciplinas e paginação
   const disciplinas = apiResponse?.data || [];
   const totalItems = apiResponse?.pagination?.total || 0;
   const totalPages = apiResponse?.pagination?.totalPages || 1;
@@ -153,10 +119,7 @@ export default function DisciplinasPage() {
       <div className="space-y-4">
         <TableToolbar
           searchQuery={searchQuery}
-          onSearchChange={(value) => {
-            setSearchQuery(value)
-            setCurrentPage(1)
-          }}
+          onSearchChange={(value) => { setSearchQuery(value); setCurrentPage(1); }}
           showClearButton={true}
           filters={filters}
           activeFilters={activeFilters}
@@ -179,25 +142,11 @@ export default function DisciplinasPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    <div className="flex justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></TableCell></TableRow>
               ) : error ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-destructive">
-                    Erro ao carregar disciplinas. Tente novamente.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center text-destructive">Erro ao carregar disciplinas.</TableCell></TableRow>
               ) : disciplinas.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Nenhuma disciplina encontrada.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">Nenhuma disciplina encontrada.</TableCell></TableRow>
               ) : (
                 disciplinas.map((disciplina: Disciplina) => (
                   <TableRow key={disciplina._id}>
@@ -208,37 +157,30 @@ export default function DisciplinasPage() {
                     <TableCell className="text-right">
                       <TableRowActions
                         editTrigger={
-                          <DropdownMenuItem asChild>
-                            <DisciplinaForm
-                              title="Editar Disciplina"
-                              disciplina={disciplina}
-                              onSubmit={(data) => handleUpdateDisciplina(disciplina._id, data)}
-                              trigger={
-                                <div className="flex w-full items-center">
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  <span>Editar</span>
-                                </div>
-                              }
-                            />
-                          </DropdownMenuItem>
+                          <DisciplinaForm
+                            title="Editar Disciplina"
+                            disciplina={disciplina}
+                            onSubmit={(data) => handleUpdateDisciplina(disciplina._id, data)}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center">
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Editar</span>
+                              </DropdownMenuItem>
+                            }
+                          />
                         }
                         deleteTrigger={
-                          <DropdownMenuItem
-                            asChild
-                            className="text-destructive hover:bg-destructive hover:text-white focus:bg-destructive focus:text-white"
-                          >
-                            <ConfirmDialog
-                              title="Excluir Disciplina"
-                              description={`Tem certeza que deseja excluir a disciplina ${disciplina.nome}? Esta ação não pode ser desfeita.`}
-                              onConfirm={() => handleDeleteDisciplina(disciplina._id)}
-                              trigger={
-                                <div className="flex w-full items-center">
-                                  <Trash className="mr-2 h-4 w-4" />
-                                  <span>Excluir</span>
-                                </div>
-                              }
-                            />
-                          </DropdownMenuItem>
+                          <ConfirmDialog
+                            title="Excluir Disciplina"
+                            description={`Tem certeza que deseja excluir a disciplina ${disciplina.nome}?`}
+                            onConfirm={() => handleDeleteDisciplina(disciplina._id)}
+                            trigger={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center text-destructive">
+                                <Trash className="mr-2 h-4 w-4" />
+                                <span>Excluir</span>
+                              </DropdownMenuItem>
+                            }
+                          />
                         }
                       />
                     </TableCell>
@@ -250,19 +192,8 @@ export default function DisciplinasPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <ItemsPerPage
-            value={itemsPerPage}
-            onChange={(value) => {
-              setItemsPerPage(value)
-              setCurrentPage(1)
-            }}
-          />
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
+          <ItemsPerPage value={itemsPerPage} onChange={(value) => { setItemsPerPage(value); setCurrentPage(1); }} />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       </div>
     </DashboardLayout>
