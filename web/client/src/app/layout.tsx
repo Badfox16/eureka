@@ -1,14 +1,26 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "sonner";
-import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { QueryProvider } from "@/contexts/QueryProvider";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { QuizProvider } from "@/contexts/QuizContext";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { TokenSyncProvider } from "@/components/providers/TokenSyncProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "Eureka - Plataforma de Preparação para Exames",
-  description: "Sistema de preparação para avaliações e exames",
+  title: "Eureka - Plataforma Estudantil",
+  description: "Democratizando o acesso ao conhecimento",
 };
 
 export default function RootLayout({
@@ -17,11 +29,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light">
-          {children}
-          <Toaster position="top-right" />
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-screen flex flex-col`}>
+        <ThemeProvider>
+          <TokenSyncProvider />
+          <QueryProvider>
+            <AuthProvider>
+              <NotificationsProvider>
+                <QuizProvider>
+                  <main className="flex-1 flex flex-col">
+                    {children}
+                  </main>
+                </QuizProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

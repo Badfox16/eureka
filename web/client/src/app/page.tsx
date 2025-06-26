@@ -1,296 +1,196 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Search, BookOpen, Award, Brain, UsersRound, ArrowRight, ChevronUp } from "lucide-react";
+import Footer from "@/components/layout/Footer";
+import HomeHeader from "@/components/layout/HomeHeader";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function Home() {
+export default function HomePage() {
+  const [search, setSearch] = useState("");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Detectar quando o usuário rolou o suficiente para mostrar o botão de voltar ao topo
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Função para rolar para o topo da página
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
+  const features = [
+    {
+      icon: <BookOpen className="w-6 h-6 text-primary-600" />,
+      title: "Quizzes Dinâmicos",
+      description: "Aprenda através de quizzes interativos que se adaptam ao seu ritmo de aprendizado."
+    },
+    {
+      icon: <Award className="w-6 h-6 text-primary-600" />,
+      title: "Acompanhe seu Progresso",
+      description: "Visualize estatísticas detalhadas do seu desempenho e evolução ao longo do tempo."
+    },
+    {
+      icon: <Brain className="w-6 h-6 text-primary-600" />,
+      title: "Aprendizado Personalizado",
+      description: "Conteúdo recomendado com base no seu histórico e áreas que precisam de mais atenção."
+    },
+    {
+      icon: <UsersRound className="w-6 h-6 text-primary-600" />,
+      title: "Comunidade Estudantil",
+      description: "Conecte-se com outros estudantes para compartilhar conhecimento e dicas de estudo."
+    }
+  ];
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b bg-white dark:bg-slate-950">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="Eureka Logo"
-              width={32}
-              height={32}
-              className="h-8 w-8"
-            />
-            <span className="text-xl font-bold text-primary-600">Eureka</span>
-          </div>
+    <main className="min-h-screen bg-background">
+      {/* Header */}
+      <HomeHeader />
 
-          <nav className="hidden md:flex">
-            <ul className="flex space-x-8">
-              <li>
-                <a
-                  href="#recursos"
-                  className="text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-                >
-                  Recursos
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#como-funciona"
-                  className="text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-                >
-                  Como Funciona
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#depoimentos"
-                  className="text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-                >
-                  Depoimentos
-                </a>
-              </li>
-            </ul>
-          </nav>
-
-          <div className="flex items-center gap-4">
-            <Link
-              href="/auth/login"
-              className="text-sm font-medium text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-            >
-              Login
-            </Link>
-            <Link
-              href="/auth/cadastro"
-              className="rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
-            >
-              Comece Grátis
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="bg-gradient-to-b from-primary-50 to-white py-20 dark:from-slate-900 dark:to-slate-950">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="mb-6 text-4xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-5xl md:text-6xl">
-              Prepare-se para exames <br className="hidden sm:inline" />
-              <span className="text-primary-600 dark:text-primary-400">
-                de forma inteligente
-              </span>
-            </h1>
-            <p className="mx-auto mb-8 max-w-2xl text-lg text-slate-600 dark:text-slate-300">
-              Eureka é a plataforma que ajuda estudantes a se prepararem para
-              exames e avaliações com quizzes personalizados, estatísticas
-              detalhadas e materiais de revisão.
-            </p>
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="auth/cadastro"
-                className="rounded-full bg-primary-600 px-8 py-3 text-base font-semibold text-white hover:bg-primary-700"
-              >
-                Comece Agora
-              </Link>
-              <Link
-                href="/sobre"
-                className="flex items-center text-base font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-              >
-                Saiba mais
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section id="recursos" className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto mb-16 max-w-2xl text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-                Recursos que impulsionam seu aprendizado
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-300">
-                Tudo o que você precisa para se preparar para exames e avaliações
-                no seu caminho acadêmico.
-              </p>
-            </div>
-
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                {
-                  icon: "📚",
-                  title: "Quizzes por Disciplina",
-                  description:
-                    "Pratique com quizzes específicos para cada disciplina e conte materiais.",
-                },
-                {
-                  icon: "📊",
-                  title: "Estatísticas de Desempenho",
-                  description:
-                    "Acompanhe seu progresso com estatísticas detalhadas e identificação de pontos fracos.",
-                },
-                {
-                  icon: "🗓️",
-                  title: "Planos de Estudo",
-                  description:
-                    "Crie planos de estudo personalizados com base nas suas necessidades.",
-                },
-                {
-                  icon: "⏱️",
-                  title: "Simulados Cronometrados",
-                  description:
-                    "Prepare-se com simulados que imitam o ambiente real de avaliação.",
-                },
-                {
-                  icon: "🎯",
-                  title: "Foco Personalizado",
-                  description:
-                    "Identifique e foque nos tópicos que mais precisam de atenção.",
-                },
-                {
-                  icon: "🔔",
-                  title: "Lembretes e Notificações",
-                  description:
-                    "Receba lembretes para manter a consistência nos estudos.",
-                },
-              ].map((feature, index) => (
-                <div
-                  key={index}
-                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <div className="mb-4 text-3xl">{feature.icon}</div>
-                  <h3 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
-                    {feature.title}
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    {feature.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section id="como-funciona" className="bg-slate-50 py-20 dark:bg-slate-900">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto mb-16 max-w-2xl text-center">
-              <h2 className="mb-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-                Como funciona
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-300">
-                Três passos simples para começar sua jornada de preparação para
-                exames.
-              </p>
-            </div>
-
-            <div className="grid gap-8 md:grid-cols-3">
-              {[
-                {
-                  step: "01",
-                  title: "Crie sua conta",
-                  description:
-                    "Cadastre-se gratuitamente e personalize seu perfil acadêmico.",
-                },
-                {
-                  step: "02",
-                  title: "Escolha seus materiais",
-                  description:
-                    "Selecione as disciplinas e tópicos que deseja estudar.",
-                },
-                {
-                  step: "03",
-                  title: "Comece a praticar",
-                  description:
-                    "Responda quizzes, acompanhe seu progresso e melhore continuamente.",
-                },
-              ].map((step, index) => (
-                <div
-                  key={index}
-                  className="relative rounded-lg bg-white p-6 shadow-sm dark:bg-slate-800"
-                >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-lg font-bold text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
-                    {step.step}
-                  </div>
-                  <h3 className="mb-2 text-xl font-bold text-slate-900 dark:text-white">
-                    {step.title}
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    {step.description}
-                  </p>
-
-                  {index < 2 && (
-                    <div className="absolute right-0 top-10 hidden h-0.5 w-16 bg-primary-200 md:block dark:bg-primary-800"></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Call to Action */}
-        <section className="bg-primary-600 py-20 text-white dark:bg-primary-900">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="mb-6 text-3xl font-bold tracking-tight sm:text-4xl">
-              Pronto para começar sua jornada?
-            </h2>
-            <p className="mx-auto mb-8 max-w-2xl text-lg text-primary-100">
-              Junte-se a milhares de estudantes que estão melhorando sua
-              preparação para exames com o Eureka.
-            </p>
-            <Link
-              href="/auth/cadastro"
-              className="inline-block rounded-full bg-white px-8 py-3 text-base font-semibold text-primary-600 hover:bg-primary-50"
-            >
-              Criar conta gratuita
-            </Link>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t bg-white py-12 dark:bg-slate-950">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
+      {/* Hero Section */}
+      <section className="relative py-12 md:py-20 bg-gradient-to-b from-primary-50 to-background dark:from-primary-950/20 dark:to-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="flex items-center justify-center gap-2 md:justify-start">
-                <Image
-                  src="/logo.png"
-                  alt="Eureka Logo"
-                  width={24}
-                  height={24}
-                  className="h-6 w-6"
-                />
-                <span className="text-lg font-bold text-primary-600">Eureka</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                © 2024 Eureka. Todos os direitos reservados.
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-slate-50">
+                Descubra seu potencial com <span className="text-primary-600 dark:text-primary-400">Eureka</span>
+              </h1>
+              <p className="text-lg mb-8 text-slate-700 dark:text-slate-300">
+                A plataforma que transforma a maneira como você estuda, aprende e evolui academicamente.
               </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/register">
+                  <Button size="lg" className="w-full sm:w-auto">
+                    Começar agora
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                    Já tenho conta
+                  </Button>
+                </Link>
+              </div>
             </div>
-
-            <div className="flex flex-wrap justify-center gap-6 md:justify-end">
-              <a
-                href="#"
-                className="text-sm text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-              >
-                Termos de Uso
-              </a>
-              <a
-                href="#"
-                className="text-sm text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-              >
-                Política de Privacidade
-              </a>
-              <a
-                href="#"
-                className="text-sm text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-              >
-                Contato
-              </a>
-              <a
-                href="#"
-                className="text-sm text-slate-600 hover:text-primary-600 dark:text-slate-300 dark:hover:text-primary-400"
-              >
-                Sobre
-              </a>
+            <div className="hidden md:flex justify-center">
+              <Image 
+                src="/home.svg" 
+                alt="Estudantes aprendendo" 
+                width={500} 
+                height={400} 
+                className="max-w-full h-auto"
+              />
             </div>
           </div>
         </div>
-      </footer>
-    </div>
+      </section>
+
+      {/* Search Section */}
+      <section className="py-12 bg-white dark:bg-slate-900">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2 text-slate-900 dark:text-slate-50">
+              Encontre o conteúdo ideal para seus estudos
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              Pesquise entre milhares de quizzes, avaliações e materiais didáticos
+            </p>
+          </div>
+          <form
+            className="flex items-center gap-2 mb-8"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <input
+              type="text"
+              className="flex-1 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:bg-slate-800 dark:text-slate-100"
+              placeholder="Pesquisar avaliações, quizzes ou disciplinas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Button type="submit" className="py-3">
+              <Search className="w-5 h-5" />
+              <span className="hidden sm:inline">Buscar</span>
+            </Button>
+          </form>
+          
+          {/* Resultados de busca e filtros aparecerão aqui futuramente */}
+          <div className="text-center text-muted-foreground">
+            Digite para pesquisar avaliações ou quizzes disponíveis.
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4 text-slate-900 dark:text-slate-50">
+              Por que escolher o Eureka?
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+              Nossa plataforma foi desenvolvida pensando nas necessidades reais dos estudantes
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <Card key={index} className="border-primary-100 dark:border-primary-900 h-full">
+                <CardHeader className="pb-2">
+                  <div className="mb-2">{feature.icon}</div>
+                  <CardTitle className="text-xl text-slate-900 dark:text-slate-50">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                    {feature.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-primary-600 dark:bg-primary-900">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold mb-4 text-white">
+            Pronto para elevar seus estudos?
+          </h2>
+          <p className="text-lg mb-8 text-primary-100 max-w-2xl mx-auto">
+            Junte-se a milhares de estudantes que já transformaram sua jornada acadêmica com o Eureka.
+          </p>
+          <Link href="/register">
+            <Button size="lg" variant="secondary" className="bg-white text-primary-700 hover:bg-primary-50">
+              Criar minha conta gratuita
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      <Footer />
+
+      {/* Botão de voltar ao topo */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 p-3 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-md transition-all duration-300 z-50"
+          aria-label="Voltar ao topo"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+      )}
+    </main>
   );
 }

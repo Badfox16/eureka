@@ -38,29 +38,61 @@
   --background: #ffffff;
   --foreground: #171717;
   --border: var(--color-slate-200);
+  --input: var(--color-slate-200);
+  --ring: var(--color-primary-500);
   --muted: var(--color-slate-100);
   --muted-foreground: var(--color-slate-500);
   --card: #ffffff;
   --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: var(--color-primary-600);
+  --primary-foreground: white;
+  --secondary: var(--color-slate-100);
+  --secondary-foreground: var(--color-slate-900);
   --accent: var(--color-primary-50);
   --accent-foreground: var(--color-primary-900);
+  --destructive: #ef4444;
+  --destructive-foreground: white;
+  --success: #22c55e;
+  --success-foreground: white;
+  --warning: #f59e0b;
+  --warning-foreground: white;
+  --info: #3b82f6;
+  --info-foreground: white;
+  --radius: 0.5rem;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --border: var(--color-slate-700);
-    --muted: var(--color-slate-800);
-    --muted-foreground: var(--color-slate-400);
-    --card: var(--color-slate-900);
-    --card-foreground: #ffffff;
-    --accent: var(--color-primary-900);
-    --accent-foreground: var(--color-primary-50);
-  }
+/* Tema escuro baseado na classe .dark no html */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --border: var(--color-slate-700);
+  --input: var(--color-slate-700);
+  --ring: var(--color-primary-400);
+  --muted: var(--color-slate-800);
+  --muted-foreground: var(--color-slate-400);
+  --card: var(--color-slate-900);
+  --card-foreground: #ffffff;
+  --popover: var(--color-slate-900);
+  --popover-foreground: #ffffff;
+  --primary: var(--color-primary-500);
+  --primary-foreground: white;
+  --secondary: var(--color-slate-800);
+  --secondary-foreground: var(--color-slate-100);
+  --accent: var(--color-primary-900);
+  --accent-foreground: var(--color-primary-50);
+  --destructive: #ef4444;
+  --destructive-foreground: white;
+  --success: #22c55e;
+  --success-foreground: white;
+  --warning: #f59e0b;
+  --warning-foreground: white;
+  --info: #3b82f6;
+  --info-foreground: white;
 }
 
 /* Estilizações para o corpo da página */
@@ -149,4 +181,39 @@ body {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: var(--color-slate-600);
+}
+
+/* Força fundo sólido nos dropdowns do Radix/shadcn/ui no dark mode */
+.force-solid-bg,
+.dark .force-solid-bg,
+[data-theme="dark"] .force-solid-bg {
+  background-color: #18181b !important; /* zinc-900 */
+  color: #ededed !important;
+  opacity: 1 !important;
+}
+
+/* Força fundo sólido nos dropdowns do Radix/shadcn/ui, mesmo em portal */
+[data-radix-popper-content-wrapper] > div {
+  background-color: #fff !important;
+  color: #171717 !important;
+}
+.dark [data-radix-popper-content-wrapper] > div {
+  background-color: #18181b !important;
+  color: #ededed !important;
+}
+
+/* Transições entre páginas */
+.page-transition-enter {
+  opacity: 0;
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+.page-transition-exit {
+  opacity: 1;
+}
+.page-transition-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
 }
