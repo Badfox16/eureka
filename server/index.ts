@@ -2,7 +2,9 @@ import express from 'express'
 import path from 'path'
 import dotenv from 'dotenv'
 import cors from 'cors'
+import swaggerUi from 'swagger-ui-express'
 import { connectToDatabase } from './config/db'
+import { specs } from './config/swagger'
 import morgan from 'morgan'
 import errorHandler from './middlewares/errorHandler'
 import disciplinaRoutes from './routes/disciplina.routes'
@@ -56,6 +58,25 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // Isso fará com que os arquivos em 'tmp/uploads' sejam acessíveis via '/uploads' na URL
 app.use('/uploads', express.static(path.resolve(__dirname, '..', 'tmp', 'uploads')));
 
+// Configuração do Swagger/OpenAPI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Eureka API Documentation',
+  customfavIcon: '/favicon.ico',
+  swaggerOptions: {
+    docExpansion: 'list',
+    filter: true,
+    showRequestHeaders: true,
+    tryItOutEnabled: true
+  }
+}))
+
+// Rota para o arquivo JSON do Swagger
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json')
+  res.send(specs)
+})
+
 // Middleware para tratamento de erros (deve vir após as rotas)
 // app.use(errorHandler)
 
@@ -80,7 +101,9 @@ app.get('/', (req, res) => {
   res.json({
     message: 'API Eureka - Sistema de Preparação para Exames',
     status: 'online',
-    version: '1.0.0'
+    version: '1.0.0',
+    documentation: '/api-docs',
+    apiBase: `${API_PREFIX}`
   })
 })
 

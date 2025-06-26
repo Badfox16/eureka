@@ -17,9 +17,6 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const tokenOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as any};
 const refreshTokenOptions: SignOptions = { expiresIn: JWT_REFRESH_EXPIRES_IN as any};
 
-/**
- * Login de usuário
- */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validar body com Zod
@@ -91,9 +88,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-/**
- * Registro de novo usuário
- */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validar body com Zod
@@ -168,9 +162,105 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
   }
 };
 
-/**
- * Refresh de token JWT
- */
+export const registerEstudante = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Validar body com Zod
+    const validationResult = createEstudanteSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Dados inválidos',
+        errors: validationResult.error.format()
+      });
+    }
+
+    const estudanteData = validationResult.data;
+
+    // Verificar se já existe um estudante com o mesmo email
+    const existsEstudante = await Estudante.findOne({ email: estudanteData.email });
+    if (existsEstudante) {
+      return res.status(409).json({
+        status: 'error',
+        message: `Já existe um estudante com o email ${estudanteData.email}`
+      });
+    }
+
+    // Verificar se já existe um usuário com o mesmo email
+    const existsUsuario = await Usuario.findOne({ email: estudanteData.email });
+    if (existsUsuario) {
+      return res.status(409).json({
+        status: 'error',
+        message: `Já existe um usuário com o email ${estudanteData.email}`
+      });
+    }
+
+    // Criar um usuário para o estudante
+    const saltRounds = 10;
+    // Use a senha fornecida ou gere uma senha aleatória
+    const password = estudanteData.password || generatePassword();
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    const novoUsuario = await Usuario.create({
+      nome: estudanteData.nome,
+      email: estudanteData.email,
+      password: hashedPassword,
+      tipo: TipoUsuario.NORMAL // Estudantes são usuários normais
+    });
+
+    // Criar o estudante associado ao usuário
+    const estudante = await Estudante.create({
+      nome: estudanteData.nome,
+      email: estudanteData.email,
+      classe: estudanteData.classe,
+      escola: estudanteData.escola,
+      provincia: estudanteData.provincia,
+      usuario: novoUsuario._id
+    });
+
+    // Gerar token JWT
+    const token = jwt.sign(
+      { 
+        id: novoUsuario._id,
+        email: novoUsuario.email,
+        tipo: novoUsuario.tipo
+      },
+      JWT_SECRET,
+      tokenOptions
+    );
+
+    // Gerar refresh token
+    const refreshToken = jwt.sign(
+      { id: novoUsuario._id },
+      JWT_REFRESH_SECRET,
+      refreshTokenOptions
+    );
+
+    // Remover senha do objeto de resposta
+    const usuarioResponse = {
+      _id: novoUsuario._id,
+      nome: novoUsuario.nome,
+      email: novoUsuario.email,
+      tipo: novoUsuario.tipo
+    };
+
+    // Determinar se deve retornar a senha temporária na resposta
+    const senhaTemporaria = estudanteData.password ? undefined : password;
+
+    return res.status(201).json({
+      status: 'success',
+      data: {
+        estudante,
+        usuario: usuarioResponse,
+        token,
+        refreshToken,
+        senhaTemporaria
+      }
+    });
+  } catch (err: unknown) {
+    return next(err);
+  }
+};
+
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
@@ -284,108 +374,6 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
       data: {
         usuario,
         estudante
-      }
-    });
-  } catch (err: unknown) {
-    return next(err);
-  }
-};
-
-/**
- * Registro específico para estudantes
- */
-export const registerEstudante = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Validar body com Zod
-    const validationResult = createEstudanteSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Dados inválidos',
-        errors: validationResult.error.format()
-      });
-    }
-
-    const estudanteData = validationResult.data;
-
-    // Verificar se já existe um estudante com o mesmo email
-    const existsEstudante = await Estudante.findOne({ email: estudanteData.email });
-    if (existsEstudante) {
-      return res.status(409).json({
-        status: 'error',
-        message: `Já existe um estudante com o email ${estudanteData.email}`
-      });
-    }
-
-    // Verificar se já existe um usuário com o mesmo email
-    const existsUsuario = await Usuario.findOne({ email: estudanteData.email });
-    if (existsUsuario) {
-      return res.status(409).json({
-        status: 'error',
-        message: `Já existe um usuário com o email ${estudanteData.email}`
-      });
-    }
-
-    // Criar um usuário para o estudante
-    const saltRounds = 10;
-    // Use a senha fornecida ou gere uma senha aleatória
-    const password = estudanteData.password || generatePassword();
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    const novoUsuario = await Usuario.create({
-      nome: estudanteData.nome,
-      email: estudanteData.email,
-      password: hashedPassword,
-      tipo: TipoUsuario.NORMAL // Estudantes são usuários normais
-    });
-
-    // Criar o estudante associado ao usuário
-    const estudante = await Estudante.create({
-      nome: estudanteData.nome,
-      email: estudanteData.email,
-      classe: estudanteData.classe,
-      escola: estudanteData.escola,
-      provincia: estudanteData.provincia,
-      usuario: novoUsuario._id
-    });
-
-    // Gerar token JWT
-    const token = jwt.sign(
-      { 
-        id: novoUsuario._id,
-        email: novoUsuario.email,
-        tipo: novoUsuario.tipo
-      },
-      JWT_SECRET,
-      tokenOptions
-    );
-
-    // Gerar refresh token
-    const refreshToken = jwt.sign(
-      { id: novoUsuario._id },
-      JWT_REFRESH_SECRET,
-      refreshTokenOptions
-    );
-
-    // Remover senha do objeto de resposta
-    const usuarioResponse = {
-      _id: novoUsuario._id,
-      nome: novoUsuario.nome,
-      email: novoUsuario.email,
-      tipo: novoUsuario.tipo
-    };
-
-    // Determinar se deve retornar a senha temporária na resposta
-    const senhaTemporaria = estudanteData.password ? undefined : password;
-
-    return res.status(201).json({
-      status: 'success',
-      data: {
-        estudante,
-        usuario: usuarioResponse,
-        token,
-        refreshToken,
-        senhaTemporaria
       }
     });
   } catch (err: unknown) {

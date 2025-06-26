@@ -5,10 +5,15 @@
   "private": true,
   "scripts": {
     "dev": "nodemon",
+    "start": "bun run server/index",
+    "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:clear-cache": "jest --clearCache"
+    "test:clear-cache": "jest --clearCache",
+    "docs:generate": "node scripts/generate-docs.js",
+    "docs:serve": "bun run dev & sleep 3 && open http://localhost:6199/api-docs",
+    "docs:validate": "node scripts/generate-docs.js --validate-only"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -34,6 +39,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.832.0",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -44,6 +51,8 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "multer-s3": "^3.0.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "zod": "^3.24.2"
   }
 }

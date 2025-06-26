@@ -3,11 +3,8 @@ import { Disciplina } from '../models/disciplina';
 import type { CreateDisciplinaInput, UpdateDisciplinaInput } from '../schemas/disciplina.schema';
 import { paginationSchema } from '../schemas/common.schema';
 import { Avaliacao } from '../models/avaliacao';
-import { formatResponse } from '../utils/response.utils'; // Adicione este import
+import { formatResponse } from '../utils/response.utils'; 
 
-/**
- * Cria uma nova disciplina
- */
 export const createDisciplina: RequestHandler = async (req, res, next) => {
   try {
     const disciplinaData = req.body as CreateDisciplinaInput;
@@ -32,9 +29,6 @@ export const createDisciplina: RequestHandler = async (req, res, next) => {
   }
 };
 
-/**
- * Obtém todas as disciplinas com opção de paginação
- */
 export const getAllDisciplinas: RequestHandler = async (req, res, next) => {
   try {
     const { page, limit } = paginationSchema.parse({
@@ -58,9 +52,6 @@ export const getAllDisciplinas: RequestHandler = async (req, res, next) => {
   }
 };
 
-/**
- * Obtém uma disciplina pelo ID
- */
 export const getDisciplinaById: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -71,136 +62,83 @@ export const getDisciplinaById: RequestHandler = async (req, res, next) => {
     }
     res.status(200).json(formatResponse(disciplina));
   } catch (error) {
-    console.error('Erro ao buscar disciplina:', error);
-    res.status(500).json(formatResponse(null, undefined, 'Erro ao buscar disciplina'));
+    console.error('Erro ao buscar disciplina por ID:', error);
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao buscar disciplina por ID'));
   }
 };
 
-/**
- * Atualiza uma disciplina pelo ID
- */
 export const updateDisciplina: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
     const updateData = req.body as UpdateDisciplinaInput;
-    const disciplina = await Disciplina.findById(id);
+    const disciplina = await Disciplina.findByIdAndUpdate(id, updateData, { new: true });
     if (!disciplina) {
       res.status(404).json(formatResponse(null, undefined, 'Disciplina não encontrada'));
       return;
     }
-    if (updateData.codigo && updateData.codigo !== disciplina.codigo) {
-      const exists = await Disciplina.findOne({ 
-        codigo: updateData.codigo, 
-        _id: { $ne: id } 
-      });
-      if (exists) {
-        res.status(409).json(formatResponse(
-          null,
-          undefined,
-          `Já existe uma disciplina com o código ${updateData.codigo}`
-        ));
-        return;
-      }
-    }
-    const updatedDisciplina = await Disciplina.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
-    res.status(200).json(formatResponse(updatedDisciplina));
+    res.status(200).json(formatResponse(disciplina));
   } catch (error) {
     console.error('Erro ao atualizar disciplina:', error);
     res.status(500).json(formatResponse(null, undefined, 'Erro ao atualizar disciplina'));
   }
 };
 
-/**
- * Remove uma disciplina pelo ID
- */
 export const deleteDisciplina: RequestHandler = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const disciplina = await Disciplina.findById(id);
+    const disciplina = await Disciplina.findByIdAndDelete(id);
     if (!disciplina) {
       res.status(404).json(formatResponse(null, undefined, 'Disciplina não encontrada'));
       return;
     }
-    const avaliacoesComDisciplina = await Avaliacao.countDocuments({ disciplina: id });
-    if (avaliacoesComDisciplina > 0) {
-      res.status(409).json(formatResponse(
-        null,
-        undefined,
-        'Esta disciplina não pode ser removida pois está sendo usada em avaliações'
-      ));
-      return;
-    }
-    await Disciplina.findByIdAndDelete(id);
-    res.status(200).json(formatResponse(null, undefined, 'Disciplina removida com sucesso'));
+    res.status(200).json(formatResponse(null, undefined, 'Disciplina excluída com sucesso'));
   } catch (error) {
-    console.error('Erro ao remover disciplina:', error);
-    res.status(500).json(formatResponse(null, undefined, 'Erro ao remover disciplina'));
+    console.error('Erro ao excluir disciplina:', error);
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao excluir disciplina'));
   }
 };
 
-/**
- * Busca disciplinas por termo de pesquisa
- */
 export const searchDisciplinas: RequestHandler = async (req, res, next) => {
   try {
-    const { q } = req.query;
+    const { q, page = 1, limit = 10 } = req.query;
     if (!q || typeof q !== 'string') {
-      res.status(400).json(formatResponse(null, undefined, 'Termo de busca inválido'));
+      res.status(400).json(formatResponse(null, undefined, 'Termo de pesquisa não fornecido'));
       return;
     }
-    const disciplinas = await Disciplina.find({
-      $or: [
-        { nome: { $regex: q, $options: 'i' } },
-        { codigo: { $regex: q, $options: 'i' } },
-        { descricao: { $regex: q, $options: 'i' } }
-      ]
-    });
-    const total = disciplinas.length;
+    const query = {
+      nome: { $regex: q, $options: 'i' }
+    };
+    const total = await Disciplina.countDocuments(query);
+    const disciplinas = await Disciplina.find(query)
+      .sort({ nome: 1 })
+      .skip((+page - 1) * +limit)
+      .limit(+limit);
     res.status(200).json(formatResponse(
       disciplinas,
-      { page: 1, limit: total, total }
+      { page: +page, limit: +limit, total }
     ));
   } catch (error) {
-    console.error('Erro ao buscar disciplinas:', error);
-    res.status(500).json(formatResponse(null, undefined, 'Erro ao buscar disciplinas'));
+    console.error('Erro ao pesquisar disciplinas:', error);
+    res.status(500).json(formatResponse(null, undefined, 'Erro ao pesquisar disciplinas'));
   }
 };
 
-/**
- * Cria múltiplas disciplinas em massa
- */
 export const createDisciplinasEmMassa: RequestHandler = async (req, res, next) => {
   try {
-    const disciplinasData = req.body;
-    if (!Array.isArray(disciplinasData)) {
-      res.status(400).json(formatResponse(null, undefined, 'O body deve ser um array de disciplinas'));
+    const { disciplinas } = req.body;
+    if (!Array.isArray(disciplinas) || disciplinas.length === 0) {
+      res.status(400).json(formatResponse(null, undefined, 'Nenhuma disciplina fornecida'));
       return;
     }
-    const codigos = disciplinasData.map(d => d.codigo);
-    const codigosUnicos = new Set(codigos);
-    if (codigos.length !== codigosUnicos.size) {
-      res.status(400).json(formatResponse(null, undefined, 'O array contém códigos duplicados'));
+    // Verificar duplicidade de códigos
+    const codigos = disciplinas.map((d: any) => d.codigo);
+    const existentes = await Disciplina.find({ codigo: { $in: codigos } });
+    if (existentes.length > 0) {
+      res.status(409).json(formatResponse(null, undefined, `Já existem disciplinas com os códigos: ${existentes.map(e => e.codigo).join(', ')}`));
       return;
     }
-    const codigosExistentes = await Disciplina.find({ codigo: { $in: codigos } }).select('codigo').lean();
-    if (codigosExistentes.length > 0) {
-      res.status(409).json(formatResponse(
-        codigosExistentes.map(d => d.codigo),
-        undefined,
-        'Algumas disciplinas já existem'
-      ));
-      return;
-    }
-    const disciplinas = await Disciplina.insertMany(disciplinasData);
-    res.status(201).json(formatResponse(
-      disciplinas,
-      undefined,
-      `Disciplinas criadas com sucesso (${disciplinas.length})`
-    ));
+    const novasDisciplinas = await Disciplina.insertMany(disciplinas);
+    res.status(201).json(formatResponse(novasDisciplinas));
   } catch (error) {
     console.error('Erro ao criar disciplinas em massa:', error);
     res.status(500).json(formatResponse(null, undefined, 'Erro ao criar disciplinas em massa'));

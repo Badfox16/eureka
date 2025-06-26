@@ -98,7 +98,7 @@ export const createAvaliacao: RequestHandler = async (req, res, next) => {
       .populate('disciplina', 'nome codigo')
       .populate('provincia', 'nome codigo');
 
-    res.status(201).json({ data: avaliacaoCompleta });
+    res.status(201).json(formatResponse(avaliacaoCompleta));
   } catch (error) {
     next(error);
   }
@@ -155,19 +155,7 @@ export const getAllAvaliacoes: RequestHandler = async (req, res, next) => {
           if (provincia) {
             filtro.provincia = provincia._id;
           } else {
-            res.status(200).json({
-              data: [],
-              pagination: {
-                total: 0,
-                totalPages: 0,
-                currentPage: page,
-                limit,
-                hasPrevPage: false,
-                hasNextPage: false,
-                prevPage: null,
-                nextPage: null
-              }
-            });
+            res.status(200).json(formatResponse([], { page, limit, total: 0 }));
             return;
           }
         } catch (error) {

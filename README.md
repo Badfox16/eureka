@@ -4,6 +4,20 @@
 
 Eureka é uma API RESTful de um sistema de preparação para exames, projetado para ajudar estudantes a se prepararem para avaliações provinciais e exames nacionais. O sistema permite o gerenciamento de disciplinas, avaliações, questões, respostas e estatísticas de desempenho dos estudantes.
 
+## 📚 Documentação da API
+
+### Swagger UI
+- **URL**: `http://localhost:6199/api-docs`
+- **Descrição**: Interface interativa para testar a API
+
+### OpenAPI JSON
+- **URL**: `http://localhost:6199/api-docs.json`
+- **Descrição**: Especificação OpenAPI em formato JSON
+
+### Documentação Detalhada
+- **Arquivo**: `server/API_DOCUMENTATION.md`
+- **Descrição**: Documentação completa com exemplos e guias de uso
+
 ## Tecnologias Utilizadas
 
 * **Bun.js** : Ambiente de execução JavaScript server-side
@@ -15,12 +29,13 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
 * **Jest** : Framework de testes
 * **Supertest** : Biblioteca para testes de integração em APIs
 * **TypeScript** : Linguagem com tipagem estática
+* **Swagger/OpenAPI** : Documentação da API
 
 ## Estrutura do Projeto
 
 **eureka/**
 
-**├── src/                      		# Código fonte**
+**├── server/                    		# Backend API**
 
 **│   ├── config/               	# Configurações do projeto**
 
@@ -32,7 +47,17 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
 
 **│   ├── routes/               	# Rotas da API**
 
-**│   └── schemas/              	# Esquemas de validação (Zod)**
+**│   ├── schemas/              	# Esquemas de validação (Zod)**
+
+**│   └── API_DOCUMENTATION.md  	# Documentação da API**
+
+**├── mobile/                   		# Aplicação React Native**
+
+**├── web/                      		# Aplicações Next.js**
+
+**│   ├── admin-dashboard/      	# Dashboard administrativo**
+
+**│   └── client/               	# Cliente web**
 
 **├── test/                     		# Testes**
 
@@ -112,6 +137,9 @@ Eureka é uma API RESTful de um sistema de preparação para exames, projetado p
 4. Iniciar o servidor de desenvolvimento:
 
    **bun run dev**
+5. Acessar a documentação:
+
+   **http://localhost:6199/api-docs**
 
 ## Testes
 
@@ -129,67 +157,69 @@ NB - eu estava cansado e com preguiça na reta final então os testes agr estão
 
 ### Autenticação
 
-* `POST /api/usuarios/register` - Registro de usuário
-* `POST /api/usuarios/login` - Login de usuário
-* `GET /api/usuarios/profile` - Perfil do usuário autenticado
+* `POST /api/v1/auth/login` - Login de usuário
+* `POST /api/v1/auth/register` - Registro de usuário
+* `POST /api/v1/auth/refresh` - Renovar token
+* `POST /api/v1/auth/logout` - Logout
+* `GET /api/v1/auth/me` - Perfil do usuário autenticado
 
 ### Disciplinas
 
-* `GET /api/disciplinas` - Listar todas as disciplinas
-* `GET /api/disciplinas/:id` - Obter disciplina por ID
-* `GET /api/disciplinas/search` - Pesquisar disciplinas
-* `POST /api/disciplinas` - Criar disciplina (requer ADMIN)
-* `PUT /api/disciplinas/:id` - Atualizar disciplina
-* `DELETE /api/disciplinas/:id` - Remover disciplina
+* `GET /api/v1/disciplinas` - Listar todas as disciplinas
+* `GET /api/v1/disciplinas/:id` - Obter disciplina por ID
+* `GET /api/v1/disciplinas/search` - Pesquisar disciplinas
+* `POST /api/v1/disciplinas` - Criar disciplina (requer ADMIN)
+* `PUT /api/v1/disciplinas/:id` - Atualizar disciplina
+* `DELETE /api/v1/disciplinas/:id` - Remover disciplina
 
 ### Avaliações
 
-* `GET /api/avaliacoes` - Listar avaliações
-* `GET /api/avaliacoes/:id` - Obter avaliação por ID
-* `GET /api/avaliacoes/search` - Pesquisar avaliações
-* `GET /api/avaliacoes/estatisticas` - Estatísticas de avaliações
-* `POST /api/avaliacoes` - Criar avaliação
-* `PUT /api/avaliacoes/:id` - Atualizar avaliação
-* `DELETE /api/avaliacoes/:id` - Remover avaliação
+* `GET /api/v1/avaliacoes` - Listar avaliações
+* `GET /api/v1/avaliacoes/:id` - Obter avaliação por ID
+* `GET /api/v1/avaliacoes/search` - Pesquisar avaliações
+* `GET /api/v1/avaliacoes/estatisticas` - Estatísticas de avaliações
+* `POST /api/v1/avaliacoes` - Criar avaliação
+* `PUT /api/v1/avaliacoes/:id` - Atualizar avaliação
+* `DELETE /api/v1/avaliacoes/:id` - Remover avaliação
 
 ### Questões
 
-* `GET /api/questoes` - Listar questões
-* `GET /api/questoes/:id` - Obter questão por ID
-* `GET /api/questoes/search` - Pesquisar questões
-* `POST /api/questoes` - Criar questão
-* `POST /api/questoes/importar/:avaliacaoId` - Importar questões em massa
-* `PUT /api/questoes/:id` - Atualizar questão
-* `DELETE /api/questoes/:id` - Remover questão
+* `GET /api/v1/questoes` - Listar questões
+* `GET /api/v1/questoes/:id` - Obter questão por ID
+* `GET /api/v1/questoes/search` - Pesquisar questões
+* `POST /api/v1/questoes` - Criar questão
+* `POST /api/v1/questoes/importar/:avaliacaoId` - Importar questões em massa
+* `PUT /api/v1/questoes/:id` - Atualizar questão
+* `DELETE /api/v1/questoes/:id` - Remover questão
 
 ### Estudantes
 
-* `GET /api/estudantes` - Listar estudantes
-* `GET /api/estudantes/:id` - Obter estudante por ID
-* `GET /api/estudantes/:id/respostas` - Obter respostas do estudante
-* `GET /api/estudantes/:id/estatisticas` - Estatísticas do estudante
-* `POST /api/estudantes` - Criar estudante
-* `PUT /api/estudantes/:id` - Atualizar estudante
-* `DELETE /api/estudantes/:id` - Remover estudante
+* `GET /api/v1/estudantes` - Listar estudantes
+* `GET /api/v1/estudantes/:id` - Obter estudante por ID
+* `GET /api/v1/estudantes/:id/respostas` - Obter respostas do estudante
+* `GET /api/v1/estudantes/:id/estatisticas` - Estatísticas do estudante
+* `POST /api/v1/estudantes` - Criar estudante
+* `PUT /api/v1/estudantes/:id` - Atualizar estudante
+* `DELETE /api/v1/estudantes/:id` - Remover estudante
 
 ### Respostas
 
-* `GET /api/respostas` - Listar respostas
-* `GET /api/respostas/:id` - Obter resposta por ID
-* `GET /api/respostas/estatisticas` - Estatísticas de respostas
-* `POST /api/respostas` - Criar resposta
-* `POST /api/respostas/batch` - Criar respostas em massa
-* `PUT /api/respostas/:id` - Atualizar resposta
-* `DELETE /api/respostas/:id` - Remover resposta
+* `GET /api/v1/respostas` - Listar respostas
+* `GET /api/v1/respostas/:id` - Obter resposta por ID
+* `GET /api/v1/respostas/estatisticas` - Estatísticas de respostas
+* `POST /api/v1/respostas` - Criar resposta
+* `POST /api/v1/respostas/batch` - Criar respostas em massa
+* `PUT /api/v1/respostas/:id` - Atualizar resposta
+* `DELETE /api/v1/respostas/:id` - Remover resposta
 
 ### Quizzes
 
-* `GET /api/quizzes` - Listar quizzes
-* `GET /api/quizzes/:id` - Obter quiz por ID
-* `POST /api/quizzes` - Criar quiz
-* `PUT /api/quizzes/:id` - Atualizar quiz
-* `DELETE /api/quizzes/:id` - Remover quiz
-* `PATCH /api/quizzes/:id/toggle-status` - Ativar/desativar quiz
+* `GET /api/v1/quizzes` - Listar quizzes
+* `GET /api/v1/quizzes/:id` - Obter quiz por ID
+* `POST /api/v1/quizzes` - Criar quiz
+* `PUT /api/v1/quizzes/:id` - Atualizar quiz
+* `DELETE /api/v1/quizzes/:id` - Remover quiz
+* `PATCH /api/v1/quizzes/:id/toggle-status` - Ativar/desativar quiz
 
 ## Contribuição
 
