@@ -11,8 +11,6 @@ import { useRouter } from "next/navigation";
 import { Search, Book, ClockIcon, Award, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EstudanteQuiz } from "@/types/estudanteQuiz";
-import { Quiz } from "@/types/quiz";
-import { primary } from "@/lib/colors";
 import { useDisciplinas } from "@/hooks/useDisciplinas";
 
 export default function HistoricoQuizzesPage() {
@@ -45,17 +43,52 @@ export default function HistoricoQuizzesPage() {
       minute: '2-digit'
     });
   };
-
+  // Calcula o tempo total em segundos entre dataInicio e dataFim
+  const calcularTempoTotal = (tentativa: EstudanteQuiz) => {
+    // Se já temos tempoTotal definido, usamos ele
+    if (tentativa.tempoTotal) {
+      return tentativa.tempoTotal;
+    }
+    
+    // Se temos dataInicio e dataFim, calculamos a diferença
+    if (tentativa.dataInicio && tentativa.dataFim) {
+      const inicio = new Date(tentativa.dataInicio);
+      const fim = new Date(tentativa.dataFim);
+      const diferencaMs = fim.getTime() - inicio.getTime();
+      return Math.floor(diferencaMs / 1000); // Converte para segundos
+    }
+    
+    return 0; // Fallback
+  };
+  
   // Formatação de tempo
   const formatarTempo = (segundos: number) => {
     const minutos = Math.floor(segundos / 60);
     const segs = segundos % 60;
     return `${minutos}:${segs.toString().padStart(2, '0')}`;
-  };
-
-  // Formatação de percentual
+  };// Formatação de percentual
   const formatarPercentual = (valor: number) => {
-    return `${(valor * 100).toFixed(1)}%`;
+    // Se o valor já estiver em percentual (maior que 1), não multiplicamos
+    const percentual = valor > 1 ? valor : valor * 100;
+    return `${percentual.toFixed(1)}%`;
+  };
+    // Calcula o percentual de acertos a partir do número de acertos e do total de questões
+  const calcularPercentualAcertos = (tentativa: EstudanteQuiz) => {
+    // Se temos um percentual definido, usamos ele
+    if (tentativa.percentualAcerto !== undefined && tentativa.percentualAcerto !== null) {
+      return tentativa.percentualAcerto > 1 
+        ? tentativa.percentualAcerto / 100 
+        : tentativa.percentualAcerto;
+    }
+    
+    // Caso contrário, calculamos com base em respostasCorretas ou acertos
+    const acertos = tentativa.respostasCorretas !== undefined 
+      ? tentativa.respostasCorretas 
+      : (tentativa.acertos || 0);
+    
+    const total = tentativa.totalQuestoes || 0;
+    
+    return total > 0 ? acertos / total : 0;
   };
 
   if (isLoading) {
@@ -93,31 +126,35 @@ export default function HistoricoQuizzesPage() {
         </div>
       </DashboardLayout>
     );
-  }
-    // Filtragem de quizzes
-  const quizzesFiltrados = quizzes?.filter((tentativa: EstudanteQuiz) => {
+  }  // Filtragem de quizzes
+  const quizzesFiltrados = (quizzes || []).filter((tentativa: EstudanteQuiz) => {
     // Filtra por disciplina
     if (filtro.disciplina && filtro.disciplina !== "todas" && 
         typeof tentativa.quiz === 'object' &&
+        tentativa.quiz?.avaliacao &&
         typeof tentativa.quiz.avaliacao === 'object' &&
+        tentativa.quiz.avaliacao?.disciplina &&
         typeof tentativa.quiz.avaliacao.disciplina === 'object' &&
         tentativa.quiz.avaliacao.disciplina._id !== filtro.disciplina) {
       return false;
-    }
-      // Filtra por resultado
+    }    // Filtra por resultado
     if (filtro.resultado && filtro.resultado !== "todos") {
-      if (filtro.resultado === "excelente" && tentativa.percentualAcerto < 0.8) return false;
-      if (filtro.resultado === "bom" && (tentativa.percentualAcerto < 0.6 || tentativa.percentualAcerto >= 0.8)) return false;
-      if (filtro.resultado === "medio" && (tentativa.percentualAcerto < 0.4 || tentativa.percentualAcerto >= 0.6)) return false;
-      if (filtro.resultado === "insuficiente" && tentativa.percentualAcerto >= 0.4) return false;
+      const percentual = calcularPercentualAcertos(tentativa);
+        
+      if (filtro.resultado === "excelente" && percentual < 0.8) return false;
+      if (filtro.resultado === "bom" && (percentual < 0.6 || percentual >= 0.8)) return false;
+      if (filtro.resultado === "medio" && (percentual < 0.4 || percentual >= 0.6)) return false;
+      if (filtro.resultado === "insuficiente" && percentual >= 0.4) return false;
     }
     
     // Filtra por termo de busca
     if (filtro.search && typeof tentativa.quiz === 'object' && 
+        tentativa.quiz?.titulo &&
         !tentativa.quiz.titulo.toLowerCase().includes(filtro.search.toLowerCase())) {
       return false;
     }
-      return true;
+    
+    return true;
   });
 
   // Vamos usar apenas as disciplinas da API ao invés de extrair dos quizzes
@@ -194,9 +231,7 @@ export default function HistoricoQuizzesPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
-
-        {quizzesFiltrados?.length === 0 ? (
+        </Card>        {quizzesFiltrados.length === 0 ? (
           <div className="text-center py-12">
             <Book className="w-12 h-12 mx-auto text-primary-400 mb-4" />
             <h2 className="text-lg font-semibold text-primary-900 mb-2">Nenhum quiz realizado</h2>
@@ -208,25 +243,30 @@ export default function HistoricoQuizzesPage() {
               Explorar quizzes
             </Button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quizzesFiltrados?.map((tentativa: EstudanteQuiz) => (
+        ) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quizzesFiltrados.map((tentativa: EstudanteQuiz) => (
               <Card key={tentativa._id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between">
-                    <Badge variant="outline" className={`${
-                      tentativa.percentualAcerto >= 0.8
-                        ? 'bg-green-50 text-green-700'
-                        : tentativa.percentualAcerto >= 0.6
-                        ? 'bg-blue-50 text-blue-700'
-                        : tentativa.percentualAcerto >= 0.4
-                        ? 'bg-primary-50 text-primary-700'
-                        : 'bg-red-50 text-red-700'
-                    }`}>
-                      {formatarPercentual(tentativa.percentualAcerto)}
+                  <div className="flex justify-between">                    <Badge variant="outline" className={
+                      (() => {
+                        // Calculamos o percentual normalizado (0-1)
+                        const percentual = calcularPercentualAcertos(tentativa);
+                        
+                        return percentual >= 0.8
+                          ? 'bg-green-50 text-green-700'
+                          : percentual >= 0.6
+                          ? 'bg-blue-50 text-blue-700'
+                          : percentual >= 0.4
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'bg-red-50 text-red-700';
+                      })()
+                    }>
+                      {formatarPercentual(calcularPercentualAcertos(tentativa))}
                     </Badge>
                     {typeof tentativa.quiz === 'object' && 
+                     tentativa.quiz?.avaliacao && 
                      typeof tentativa.quiz.avaliacao === 'object' && 
+                     tentativa.quiz.avaliacao?.disciplina &&
                      typeof tentativa.quiz.avaliacao.disciplina === 'object' && (
                       <Badge variant="outline" className="bg-primary-50 text-primary-700">
                         {tentativa.quiz.avaliacao.disciplina.nome}
@@ -234,7 +274,9 @@ export default function HistoricoQuizzesPage() {
                     )}
                   </div>
                   <CardTitle className="text-lg text-primary-900 mt-2 line-clamp-2">
-                    {typeof tentativa.quiz === 'object' ? tentativa.quiz.titulo : 'Quiz não encontrado'}
+                    {typeof tentativa.quiz === 'object' && tentativa.quiz?.titulo 
+                      ? tentativa.quiz.titulo 
+                      : 'Quiz não encontrado'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -242,14 +284,22 @@ export default function HistoricoQuizzesPage() {
                     <div className="flex items-center text-primary-700">
                       <Calendar className="w-4 h-4 mr-2" />
                       {formatarData(tentativa.dataInicio)}
-                    </div>
-                    <div className="flex items-center text-primary-700">
+                    </div>                    <div className="flex items-center text-primary-700">
                       <ClockIcon className="w-4 h-4 mr-2" />
-                      {formatarTempo(tentativa.tempoTotal)}
-                    </div>
-                    <div className="flex items-center text-primary-700">
+                      {formatarTempo(calcularTempoTotal(tentativa))}
+                    </div><div className="flex items-center text-primary-700">
                       <Award className="w-4 h-4 mr-2" />
-                      {tentativa.acertos} de {tentativa.respostas.length} questões
+                      {(() => {
+                        // Usamos respostasCorretas que é o campo que contém o número real de acertos
+                        const acertos = tentativa.respostasCorretas !== undefined 
+                          ? tentativa.respostasCorretas 
+                          : (tentativa.acertos || 0);
+                        
+                        // Usamos diretamente o campo totalQuestoes
+                        const totalQuestoes = tentativa.totalQuestoes || 0;
+                        
+                        return `${acertos} de ${totalQuestoes} questões`;
+                      })()}
                     </div>
                   </div>
                   

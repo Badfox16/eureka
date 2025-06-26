@@ -10,14 +10,15 @@ export type EstudanteQuiz = {
   dataFim?: string;
   pontuacaoObtida?: number;
   totalPontos?: number;
-  respostasCorretas: number;
-  totalQuestoes: number;
-  percentualAcerto: number;
-  tempoTotal: number;
-  acertos: number;
-  respostas: Array<{
+  respostasCorretas: number;  // Número de respostas corretas
+  totalQuestoes: number;      // Total de questões do quiz
+  percentualAcerto: number;   // Percentual já calculado (pode estar como fração 0-1 ou como percentual 0-100)
+  tempoTotal?: number;        // Tempo total gasto no quiz em segundos
+  acertos?: number;           // Campo alternativo para acertos (depreciado)
+  respostas?: Array<{         // Este campo pode não estar presente em todas as respostas da API
     questao: string;
     alternativa: string;
+    alternativaSelecionada?: string; // Algumas APIs podem usar este nome
     correta: boolean;
     tempo: number;
   }>;

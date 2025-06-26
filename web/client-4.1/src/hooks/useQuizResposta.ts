@@ -9,14 +9,14 @@ import { useAuth } from "@/contexts/AuthContext";
 export function useQuizResposta(estudanteQuizId?: string, isResultado: boolean = false) {
   const queryClient = useQueryClient();
   const { usuario } = useAuth();
-  
-  const { 
+    const { 
     data: tentativaAtual, 
     isLoading, 
     isError, 
     error, 
     refetch 
-  } = useQuery<ApiResponse<EstudanteQuiz> | undefined>({    queryKey: ["tentativa", estudanteQuizId, isResultado ? "resultado" : "andamento"],
+  } = useQuery<ApiResponse<EstudanteQuiz> | undefined>({
+    queryKey: ["tentativa", estudanteQuizId, isResultado ? "resultado" : "andamento"],
     queryFn: async () => {
       if (!estudanteQuizId) {
         console.log('❌ useQuizResposta: estudanteQuizId não fornecido');
@@ -28,37 +28,29 @@ export function useQuizResposta(estudanteQuizId?: string, isResultado: boolean =
       // Se é para buscar resultado, usa API diferente
       if (isResultado) {
         try {
-          console.log('📋 Tentando buscar resultado via API /quiz-respostas/' + estudanteQuizId);
+          console.log('📋 Tentando buscar resultado via API para ID:', estudanteQuizId);
+          // getResultadoQuiz já possui seu próprio mecanismo de fallback interno
           const result = await quizRespostaApi.getResultadoQuiz(estudanteQuizId);
           console.log('✅ Resultado obtido com sucesso:', result);
           return result;
         } catch (error) {
-          console.error('❌ Erro ao buscar resultado via API principal:', error);
-          console.log('🔄 Tentando fallback para API de andamento...');
-          
-          try {
-            const fallbackResult = await quizRespostaApi.getQuizEmAndamento(estudanteQuizId);
-            console.log('✅ Resultado obtido via fallback:', fallbackResult);
-            return fallbackResult;
-          } catch (fallbackError) {
-            console.error('❌ Erro também no fallback:', fallbackError);
-            throw new Error(`Não foi possível buscar dados do quiz. Erro principal: ${error instanceof Error ? error.message : 'Desconhecido'}. Erro fallback: ${fallbackError instanceof Error ? fallbackError.message : 'Desconhecido'}`);
-          }
+          console.error('❌ Erro ao buscar dados do quiz:', error);
+          return undefined; // Retorna undefined para exibir mensagem de erro amigável
         }
       } else {
-        console.log('📋 Buscando andamento via API /quiz-respostas/' + estudanteQuizId + '/andamento');
+        console.log('📋 Buscando andamento via API para ID:', estudanteQuizId);
         try {
           const result = await quizRespostaApi.getQuizEmAndamento(estudanteQuizId);
           console.log('✅ Andamento obtido com sucesso:', result);
           return result;
         } catch (error) {
           console.error('❌ Erro ao buscar andamento:', error);
-          throw error;
+          return undefined; // Retorna undefined para exibir mensagem de erro amigável
         }
       }
     },
     enabled: !!estudanteQuizId,
-    retry: false,
+    retry: 1, // Tenta uma vez a mais, além da tentativa inicial
   });const iniciarMutation = useMutation({
     mutationFn: async (quizId: string) => {
       if (!usuario) {

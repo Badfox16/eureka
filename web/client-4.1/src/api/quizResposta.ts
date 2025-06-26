@@ -17,19 +17,57 @@ export async function getTentativa(id: string) {
 
 // Função para obter detalhes de um quiz em andamento
 export async function getQuizEmAndamento(estudanteQuizId: string) {  
-  return fetchApi<ApiResponse<EstudanteQuiz>>(`/quiz-respostas/${estudanteQuizId}/andamento`);
+  console.log('🔍 API getQuizEmAndamento: Buscando andamento para ID:', estudanteQuizId);
+  try {
+    const result = await fetchApi<ApiResponse<EstudanteQuiz>>(`/quiz-respostas/${estudanteQuizId}/andamento`);
+    console.log('✅ API getQuizEmAndamento: Sucesso:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ API getQuizEmAndamento: Erro:', error);
+    // Tentativa alternativa usando o endpoint de estudantes
+    try {
+      console.log('🔄 API getQuizEmAndamento: Tentando endpoint alternativo');
+      const alternativeResult = await fetchApi<ApiResponse<EstudanteQuiz>>(`/estudantes/quizzes/${estudanteQuizId}`);
+      console.log('✅ API getQuizEmAndamento: Sucesso via endpoint alternativo:', alternativeResult);
+      return alternativeResult;
+    } catch (alternativeError) {
+      console.error('❌ API getQuizEmAndamento: Erro também no endpoint alternativo:', alternativeError);
+      throw error; // Lançamos o erro original
+    }
+  }
 }
 
 // Função para obter resultado de um quiz finalizado
 export async function getResultadoQuiz(estudanteQuizId: string) {  
   console.log('🔍 API getResultadoQuiz: Buscando resultado para ID:', estudanteQuizId);
   try {
-    const result = await fetchApi<ApiResponse<EstudanteQuiz>>(`/quiz-respostas/${estudanteQuizId}`);
+    // Primeiro tenta o endpoint correto para resultados
+    const result = await fetchApi<ApiResponse<EstudanteQuiz>>(`/quiz-respostas/${estudanteQuizId}/resultado`);
     console.log('✅ API getResultadoQuiz: Sucesso:', result);
     return result;
   } catch (error) {
-    console.error('❌ API getResultadoQuiz: Erro:', error);
-    throw error;
+    console.error('❌ API getResultadoQuiz: Erro no endpoint principal:', error);
+    
+    // Tenta o primeiro endpoint alternativo
+    try {
+      console.log('🔄 API getResultadoQuiz: Tentando endpoint alternativo estudantes/quizzes...');
+      const fallbackResult = await fetchApi<ApiResponse<EstudanteQuiz>>(`/estudantes/quizzes/${estudanteQuizId}`);
+      console.log('✅ API getResultadoQuiz: Sucesso via endpoint alternativo estudantes/quizzes:', fallbackResult);
+      return fallbackResult;
+    } catch (fallbackError) {
+      console.error('❌ API getResultadoQuiz: Erro no primeiro endpoint alternativo:', fallbackError);
+      
+      // Tenta o segundo endpoint alternativo (andamento)
+      try {
+        console.log('🔄 API getResultadoQuiz: Tentando endpoint alternativo andamento...');
+        const secondFallbackResult = await fetchApi<ApiResponse<EstudanteQuiz>>(`/quiz-respostas/${estudanteQuizId}/andamento`);
+        console.log('✅ API getResultadoQuiz: Sucesso via endpoint alternativo andamento:', secondFallbackResult);
+        return secondFallbackResult;
+      } catch (secondFallbackError) {
+        console.error('❌ API getResultadoQuiz: Erro também no segundo endpoint alternativo:', secondFallbackError);
+        throw error; // Lança o erro original para manter a consistência
+      }
+    }
   }
 }
 

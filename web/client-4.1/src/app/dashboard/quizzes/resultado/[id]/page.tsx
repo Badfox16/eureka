@@ -10,30 +10,16 @@ import { useQuiz } from "@/hooks/useQuizzes";
 import { CheckCircle, XCircle, AlertCircle, Clock, Award, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { EstudanteQuiz } from "@/types/estudanteQuiz";
-import { Quiz, QuestaoQuiz} from "@/types/quiz";
-import { Avaliacao } from "@/types/avaliacao";
-import { Disciplina } from "@/types/disciplina";
-import { TestResultadoApi } from "@/components/debug/TestResultadoApi";
 
 export default function ResultadoQuizPage() {
   const params = useParams();
   const id = params.id as string;
   const { usuario } = useAuth();
-  const router = useRouter();  const { tentativaAtual, isLoading: isLoadingTentativa } = useQuizResposta(id, true); // true indica que é para buscar resultado
+  const router = useRouter();
+  const { tentativaAtual, isLoading: isLoadingTentativa, isError: isTentativaError } = useQuizResposta(id, true); // true indica que é para buscar resultado
   const quizId = tentativaAtual ? (typeof tentativaAtual.quiz === 'string' ? tentativaAtual.quiz : tentativaAtual.quiz?._id) : undefined;
   const { quiz, isLoading: isLoadingQuiz } = useQuiz(quizId);
   const [questoesAbertas, setQuestoesAbertas] = useState<Record<string, boolean>>({});
-
-  // Debug logs
-  console.log('=== DEBUG RESULTADOS ===');
-  console.log('ID da tentativa:', id);
-  console.log('tentativaAtual:', tentativaAtual);
-  console.log('isLoadingTentativa:', isLoadingTentativa);
-  console.log('quizId extraído:', quizId);
-  console.log('quiz:', quiz);
-  console.log('isLoadingQuiz:', isLoadingQuiz);
-  console.log('========================');
 
   // Getter para acessar as questões
   const getQuestoes = () => {
@@ -41,16 +27,8 @@ export default function ResultadoQuizPage() {
     return quiz.avaliacao.questoes;
   };
 
-  const isLoading = isLoadingTentativa || isLoadingQuiz || !tentativaAtual || !quiz;
-
-  // Debug para condições de loading
-  console.log('=== DEBUG LOADING CONDITIONS ===');
-  console.log('isLoadingTentativa:', isLoadingTentativa);
-  console.log('isLoadingQuiz:', isLoadingQuiz);
-  console.log('tentativaAtual exists:', !!tentativaAtual);
-  console.log('quiz exists:', !!quiz);
-  console.log('isLoading final:', isLoading);
-  console.log('================================');
+  const isLoading = isLoadingTentativa || isLoadingQuiz;
+  const hasError = isTentativaError || !tentativaAtual;
 
   // Formatar o tempo
   const formatarTempo = (segundos: number) => {
@@ -78,7 +56,6 @@ export default function ResultadoQuizPage() {
   const formatarPercentual = (valor: number) => {
     return `${Math.round(valor * 100)}%`;
   };
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -89,15 +66,19 @@ export default function ResultadoQuizPage() {
       </DashboardLayout>
     );
   }
-  if (!tentativaAtual || !quiz) {
-    return (      <DashboardLayout>
+
+  if (hasError || !tentativaAtual || !quiz) {
+    return (
+      <DashboardLayout>
         <div className="max-w-3xl mx-auto">
-          <TestResultadoApi />
           <div className="flex flex-col items-center justify-center h-[60vh]">
             <AlertCircle className="w-16 h-16 text-primary-400" />
-            <p className="mt-4 text-primary-800">Quiz não encontrado</p>
-            <Button onClick={() => router.push('/dashboard/quizzes')} className="mt-4 bg-primary-500 hover:bg-primary-600 text-white">
-              Voltar para Quizzes
+            <p className="mt-4 text-primary-800">Não foi possível carregar os detalhes deste quiz</p>
+            <p className="text-sm text-primary-600 mt-2 mb-4">
+              O quiz pode ter sido excluído ou você não tem permissão para visualizá-lo.
+            </p>
+            <Button onClick={() => router.push('/dashboard/quizzes/historico')} className="mt-4 bg-primary-500 hover:bg-primary-600 text-white">
+              Voltar para Histórico
             </Button>
           </div>
         </div>
@@ -177,94 +158,97 @@ export default function ResultadoQuizPage() {
               </div>
             </div>
           </CardContent>
-        </Card>
-
-        <h2 className="text-xl font-bold text-primary-900 mb-4">Respostas</h2>
-        
-        <div className="space-y-4">
-          {tentativaAtual.respostas.map((resposta, index) => {
-            const questao = getQuestoes().find(q => q._id === resposta.questao);
-            const isAberta = questoesAbertas[resposta.questao] || false;
-            
-            if (!questao) return null;
-            
-            return (
-              <Card 
-                key={resposta.questao} 
-                className={`overflow-hidden transition-all ${
-                  resposta.correta
-                    ? 'bg-gradient-to-r from-green-50 to-white border-l-4 border-l-green-500'
-                    : 'bg-gradient-to-r from-red-50 to-white border-l-4 border-l-red-500'
-                }`}
-              >
-                <CardHeader className="cursor-pointer" onClick={() => toggleQuestao(resposta.questao)}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {resposta.correta ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      )}
-                      <CardTitle className="text-base font-medium">
-                        {index + 1}. {questao.enunciado}
-                      </CardTitle>
-                    </div>
-                    {isAberta ? (
-                      <ChevronUp className="h-5 w-5 text-primary-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-primary-500" />
-                    )}
-                  </div>
-                </CardHeader>
-
-                {isAberta && (
-                  <CardContent>
-                    <div className="grid gap-4">
-                      {questao.alternativas.map(alternativa => (
-                        <div                          key={alternativa._id}
-                          className={`p-3 rounded-lg border ${
-                            alternativa._id === resposta.alternativa
-                              ? alternativa.correta
-                                ? 'bg-green-100 border-green-500'
-                                : 'bg-red-100 border-red-500'
-                              : alternativa.correta
-                              ? 'bg-green-50 border-green-500'
-                              : 'bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <div className="flex items-start space-x-2">
-                            {alternativa._id === resposta.alternativa && alternativa.correta && (
-                              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                            )}
-                            {alternativa._id === resposta.alternativa && !alternativa.correta && (
-                              <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
-                            )}
-                            {alternativa._id !== resposta.alternativa && alternativa.correta && (
-                              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                            )}
-                            <p>{alternativa.texto}</p>
-                          </div>
-                        </div>
-                      ))}
-
-                      <div className="mt-4">
-                        <Badge className={
-                          resposta.correta ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                        }>
-                          {resposta.correta ? "Resposta Correta" : "Resposta Incorreta"}
-                        </Badge>
-                        {resposta.tempo && (
-                          <Badge className="ml-2 bg-blue-100 text-blue-800">
-                            Tempo: {formatarTempo(resposta.tempo)}
-                          </Badge>
+        </Card>        <h2 className="text-xl font-bold text-primary-900 mb-4">Respostas</h2>          <div className="space-y-4">
+          {tentativaAtual.respostas && tentativaAtual.respostas.length > 0 ? (
+            tentativaAtual.respostas.map((resposta, index) => {
+              const questao = getQuestoes().find(q => q._id === resposta.questao);
+              const isAberta = questoesAbertas[resposta.questao] || false;
+              
+              if (!questao) return null;
+              
+              return (
+                <Card 
+                  key={resposta.questao} 
+                  className={`overflow-hidden transition-all ${
+                    resposta.correta
+                      ? 'bg-gradient-to-r from-green-50 to-white border-l-4 border-l-green-500'
+                      : 'bg-gradient-to-r from-red-50 to-white border-l-4 border-l-red-500'
+                  }`}
+                >
+                  <CardHeader className="cursor-pointer" onClick={() => toggleQuestao(resposta.questao)}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {resposta.correta ? (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-red-500" />
                         )}
+                        <CardTitle className="text-base font-medium">
+                          {index + 1}. {questao.enunciado}
+                        </CardTitle>
                       </div>
+                      {isAberta ? (
+                        <ChevronUp className="h-5 w-5 text-primary-500" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-primary-500" />
+                      )}
                     </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
+                  </CardHeader>
+
+                  {isAberta && (
+                    <CardContent>
+                      <div className="grid gap-4">
+                        {questao.alternativas.map(alternativa => (
+                          <div
+                            key={alternativa._id}
+                            className={`p-3 rounded-lg border ${
+                              alternativa._id === resposta.alternativa
+                                ? alternativa.correta
+                                  ? 'bg-green-100 border-green-500'
+                                  : 'bg-red-100 border-red-500'
+                                : alternativa.correta
+                                ? 'bg-green-50 border-green-500'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}
+                          >                            <div className="flex items-start space-x-2">
+                              {alternativa._id === resposta.alternativa && alternativa.correta && (
+                                <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                              )}
+                              {alternativa._id === resposta.alternativa && !alternativa.correta && (
+                                <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                              )}
+                              {alternativa._id !== resposta.alternativa && alternativa.correta && (
+                                <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                              )}
+                              <p>{alternativa.texto}</p>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="mt-4">
+                          <Badge className={
+                            resposta.correta ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          }>
+                            {resposta.correta ? "Resposta Correta" : "Resposta Incorreta"}
+                          </Badge>
+                          {resposta.tempo && (
+                            <Badge className="ml-2 bg-blue-100 text-blue-800">
+                              Tempo: {formatarTempo(resposta.tempo)}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })
+          ) : (
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <AlertCircle className="h-8 w-8 text-primary-400 mx-auto mb-2" />
+              <p className="text-primary-700">Nenhuma resposta disponível para esta tentativa.</p>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

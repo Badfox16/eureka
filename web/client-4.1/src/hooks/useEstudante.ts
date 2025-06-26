@@ -143,14 +143,37 @@ export function useQuizzes(estudanteId?: string) {
           hasPrevious: false
         }
       };
-      return estudanteApi.getQuizzesEstudante(estudanteId);
+      try {
+        const response = await estudanteApi.getQuizzesEstudante(estudanteId);
+        return response;
+      } catch (error) {
+        console.error("Erro ao carregar quizzes do estudante:", error);
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            totalPages: 0,
+            currentPage: 1,
+            perPage: 10,
+            hasNext: false,
+            hasPrevious: false
+          }
+        };
+      }
     },
     enabled: !!estudanteId,
   });
 
   return {
     quizzes: quizzes?.data || [],
-    pagination: quizzes?.pagination,
+    pagination: quizzes?.pagination || {
+      total: 0,
+      totalPages: 0,
+      currentPage: 1,
+      perPage: 10,
+      hasNext: false,
+      hasPrevious: false
+    },
     isLoading,
     isError,
     error,

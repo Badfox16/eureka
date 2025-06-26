@@ -19,10 +19,35 @@ import type {
 export const useDisciplinas = (params?: DisciplinaSearchParams) => {
   return useQuery({
     queryKey: ['disciplinas', params],
-    queryFn: () => getDisciplinas(params),
+    queryFn: async () => {
+      try {
+        const response = await getDisciplinas(params);
+        return response;
+      } catch (error) {
+        console.error("Erro ao buscar disciplinas:", error);
+        return {
+          data: [],
+          pagination: {
+            total: 0,
+            totalPages: 0,
+            currentPage: 1,
+            perPage: 10,
+            hasNext: false,
+            hasPrevious: false
+          }
+        };
+      }
+    },
     select: (response) => ({
-      disciplinas: response.data,
-      pagination: response.pagination
+      disciplinas: response?.data || [],
+      pagination: response?.pagination || {
+        total: 0,
+        totalPages: 0,
+        currentPage: 1,
+        perPage: 10,
+        hasNext: false,
+        hasPrevious: false
+      }
     })
   });
 };
