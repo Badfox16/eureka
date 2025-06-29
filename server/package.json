@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon",
-    "start": "bun run server/src/index",
+    "start": "bun run /src/index",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",

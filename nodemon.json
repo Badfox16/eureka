@@ -1,5 +1,0 @@
-{
-    "watch": ["server"],
-    "ext": "js,json,ts",
-    "exec": "bun run server/index"
-}
