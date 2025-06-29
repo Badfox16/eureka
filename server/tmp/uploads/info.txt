@@ -1,0 +1,2 @@
+pasta de uploads temporarios 
+antes de sairem do servidor para o bucket aws

@@ -1,13 +1,13 @@
 import request from 'supertest';
-import { app } from '../../server/index';
-import { Resposta } from '../../server/models/respostas';
-import { Estudante } from '../../server/models/estudante';
-import { Questao } from '../../server/models/questao';
+import { app } from '../../server/src/index';
+import { Resposta } from '../../server/src/models/respostas';
+import { Estudante } from '../../server/src/models/estudante';
+import { Questao } from '../../server/src/models/questao';
 import { createQuestaoFixtures } from '../fixtures/questoes';
 import { createEstudanteFixtures } from '../fixtures/estudantes';
 import { createRespostaFixtures } from '../fixtures/respostas';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
-import { TipoUsuario } from '../../server/models/usuario';
+import { TipoUsuario } from '../../server/src/models/usuario';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 

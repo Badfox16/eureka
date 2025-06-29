@@ -1,11 +1,11 @@
 import request from 'supertest';
-import { app } from '../../server/index';
-import { Disciplina } from '../../server/models/disciplina';
+import { app } from '../../server/src/index';
+import { Disciplina } from '../../server/src/models/disciplina';
 import { createDisciplinaFixtures } from '../fixtures/disciplinas';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { TipoUsuario } from '../../server/models/usuario';
+import { TipoUsuario } from '../../server/src/models/usuario';
 
 describe('API de Disciplinas', () => {
   let authToken: string;

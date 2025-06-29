@@ -1,6 +1,6 @@
-import { Resposta } from '../../server/models/respostas';
-import { Questao } from '../../server/models/questao';
-import { Estudante } from '../../server/models/estudante';
+import { Resposta } from '../../server/src/models/respostas';
+import { Questao } from '../../server/src/models/questao';
+import { Estudante } from '../../server/src/models/estudante';
 import { Types } from 'mongoose';
 
 // Fixture de respostas dependente de questões e estudantes

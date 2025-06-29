@@ -5,14 +5,14 @@
   "private": true,
   "scripts": {
     "dev": "nodemon",
-    "start": "bun run server/index",
+    "start": "bun run server/src/index",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:clear-cache": "jest --clearCache",
     "docs:generate": "node scripts/generate-docs.js",
-    "docs:serve": "bun run dev & sleep 3 && open http://localhost:6199/api-docs",
+    "docs:serve": "bun run dev & sleep 3 && open http://localhost:3001/api-docs",
     "docs:validate": "node scripts/generate-docs.js --validate-only"
   },
   "devDependencies": {

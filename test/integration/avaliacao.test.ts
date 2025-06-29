@@ -1,11 +1,11 @@
 import request from 'supertest';
-import { app } from '../../server/index';
-import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../server/models/avaliacao';
-import { Disciplina } from '../../server/models/disciplina';
+import { app } from '../../server/src/index';
+import { Avaliacao, TipoAvaliacao, Trimestre, Epoca } from '../../server/src/models/avaliacao';
+import { Disciplina } from '../../server/src/models/disciplina';
 import { createAvaliacaoFixtures } from '../fixtures/avaliacoes';
 import { createDisciplinaFixtures } from '../fixtures/disciplinas';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
-import { TipoUsuario } from '../../server/models/usuario';
+import { TipoUsuario } from '../../server/src/models/usuario';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 

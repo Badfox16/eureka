@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { app } from '../../server/index';
-import { Usuario, TipoUsuario } from '../../server/models/usuario';
+import { app } from '../../server/src/index';
+import { Usuario, TipoUsuario } from '../../server/src/models/usuario';
 import { createUsuarioFixtures } from '../fixtures/usuarios';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
