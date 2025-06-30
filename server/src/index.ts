@@ -80,8 +80,8 @@ app.get('/api-docs.json', (req, res) => {
 // Middleware para tratamento de erros (deve vir após as rotas)
 // app.use(errorHandler)
 
-// Prefico da API
-const API_PREFIX = '/api/v1'
+// Prefixo da API
+const API_PREFIX = '/v1'
 
 // Rotas da API
 app.use(`${API_PREFIX}/auth`, authRoutes)

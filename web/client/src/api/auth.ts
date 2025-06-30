@@ -2,7 +2,7 @@ import { AuthResponse, LoginRequest, RegisterRequest, Usuario } from "../types/u
 import { fetchApi, getAuthToken } from "./apiService";
 
 // URL base da API (importada do .env ou usa valor padrão)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.eureka.edu.br';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.eurekamz.tech/v1';
 
 // Funções de autenticação
 export async function login(data: LoginRequest) {

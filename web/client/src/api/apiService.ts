@@ -1,11 +1,8 @@
-import { ApiResponse, PaginationData } from "@/types/api";
-import { ErrorResponse } from "@/types/error";
-
-// URL base da API (pode ser configurada em um arquivo .env)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.eureka.edu.br';
+  // URL base da API (pode ser configurada em um arquivo .env)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.eurekamz.tech';
 
 // Prefixo da API
-const API_PREFIX = '/api/v1';
+const API_PREFIX = '/v1';
 
 // Opções padrão para requisições fetch
 const defaultOptions: RequestInit = {
