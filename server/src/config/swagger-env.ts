@@ -22,11 +22,11 @@ const createSwaggerConfig = (): SwaggerConfig => {
   
   const baseConfig = {
     title: 'Eureka API - Sistema de Preparação para Exames',
-    version: '1.0.0',
-    description: 'API RESTful para o sistema Eureka de preparação para exames educacionais angolanos',
+    version: '1.1.0',
+    description: 'API RESTful para o sistema Eureka de preparação para exames educacionais moçambicanos.',
     contact: {
       name: 'Equipa Eureka',
-      email: 'suporte@eureka.ao'
+      email: 'mutizodejmaita@gmail.com'
     }
   };
 
@@ -36,7 +36,7 @@ const createSwaggerConfig = (): SwaggerConfig => {
         ...baseConfig,
         servers: [
           {
-            url: 'https://api.eureka.ao/api/v1',
+            url: 'https://api.eurekamz.tech/v1',
             description: 'Servidor de Produção'
           }
         ]
@@ -47,7 +47,7 @@ const createSwaggerConfig = (): SwaggerConfig => {
         ...baseConfig,
         servers: [
           {
-            url: 'https://staging-api.eureka.ao/api/v1',
+            url: 'https://staging-api.eurekamz.tech/v1',
             description: 'Servidor de Staging'
           }
         ]

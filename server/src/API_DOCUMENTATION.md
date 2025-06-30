@@ -2,15 +2,17 @@
 
 ## Visão Geral
 
-A API Eureka é uma API RESTful para o sistema de preparação para exames educacionais angolanos. Esta documentação fornece informações detalhadas sobre todos os endpoints disponíveis.
+A API Eureka é uma API RESTful para o sistema de preparação para exames educacionais moçambicanos. Esta documentação fornece informações detalhadas sobre todos os endpoints disponíveis.
 
 ## 🔗 Acesso à Documentação
 
 ### Swagger UI
+
 - **URL**: `http://localhost:6199/api-docs`
 - **Descrição**: Interface interativa para testar a API
 
 ### OpenAPI JSON
+
 - **URL**: `http://localhost:6199/api-docs.json`
 - **Descrição**: Especificação OpenAPI em formato JSON
 
@@ -40,71 +42,71 @@ curl -X GET http://localhost:6199/api/v1/disciplinas \
 
 ### Autenticação (`/auth`)
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| POST | `/auth/login` | Login de usuário | ❌ |
-| POST | `/auth/register` | Registro de usuário | ❌ |
-| POST | `/auth/refresh` | Renovar token | ❌ |
-| POST | `/auth/logout` | Logout | ✅ |
-| GET | `/auth/me` | Perfil do usuário | ✅ |
+| Método | Endpoint           | Descrição          | Autenticação |
+| ------- | ------------------ | -------------------- | -------------- |
+| POST    | `/auth/login`    | Login de usuário    | ❌             |
+| POST    | `/auth/register` | Registro de usuário | ❌             |
+| POST    | `/auth/refresh`  | Renovar token        | ❌             |
+| POST    | `/auth/logout`   | Logout               | ✅             |
+| GET     | `/auth/me`       | Perfil do usuário   | ✅             |
 
 ### Disciplinas (`/disciplinas`)
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/disciplinas` | Listar disciplinas | ❌ |
-| POST | `/disciplinas` | Criar disciplina | ✅ |
-| GET | `/disciplinas/{id}` | Obter disciplina | ❌ |
-| PUT | `/disciplinas/{id}` | Atualizar disciplina | ✅ |
-| DELETE | `/disciplinas/{id}` | Remover disciplina | ✅ |
-| GET | `/disciplinas/search` | Buscar disciplinas | ❌ |
+| Método | Endpoint                | Descrição          | Autenticação |
+| ------- | ----------------------- | -------------------- | -------------- |
+| GET     | `/disciplinas`        | Listar disciplinas   | ❌             |
+| POST    | `/disciplinas`        | Criar disciplina     | ✅             |
+| GET     | `/disciplinas/{id}`   | Obter disciplina     | ❌             |
+| PUT     | `/disciplinas/{id}`   | Atualizar disciplina | ✅             |
+| DELETE  | `/disciplinas/{id}`   | Remover disciplina   | ✅             |
+| GET     | `/disciplinas/search` | Buscar disciplinas   | ❌             |
 
 ### Avaliações (`/avaliacoes`)
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/avaliacoes` | Listar avaliações | ❌ |
-| POST | `/avaliacoes` | Criar avaliação | ✅ |
-| GET | `/avaliacoes/{id}` | Obter avaliação | ❌ |
-| PUT | `/avaliacoes/{id}` | Atualizar avaliação | ✅ |
-| DELETE | `/avaliacoes/{id}` | Remover avaliação | ✅ |
-| GET | `/avaliacoes/search` | Buscar avaliações | ❌ |
-| GET | `/avaliacoes/estatisticas` | Estatísticas | ❌ |
+| Método | Endpoint                     | Descrição           | Autenticação |
+| ------- | ---------------------------- | --------------------- | -------------- |
+| GET     | `/avaliacoes`              | Listar avaliações   | ❌             |
+| POST    | `/avaliacoes`              | Criar avaliação     | ✅             |
+| GET     | `/avaliacoes/{id}`         | Obter avaliação     | ❌             |
+| PUT     | `/avaliacoes/{id}`         | Atualizar avaliação | ✅             |
+| DELETE  | `/avaliacoes/{id}`         | Remover avaliação   | ✅             |
+| GET     | `/avaliacoes/search`       | Buscar avaliações   | ❌             |
+| GET     | `/avaliacoes/estatisticas` | Estatísticas         | ❌             |
 
 ### Questões (`/questoes`)
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/questoes` | Listar questões | ❌ |
-| POST | `/questoes` | Criar questão | ✅ |
-| GET | `/questoes/{id}` | Obter questão | ❌ |
-| PUT | `/questoes/{id}` | Atualizar questão | ✅ |
-| DELETE | `/questoes/{id}` | Remover questão | ✅ |
-| GET | `/questoes/search` | Buscar questões | ❌ |
-| POST | `/questoes/importar/{avaliacaoId}` | Importar questões | ✅ |
+| Método | Endpoint                             | Descrição        | Autenticação |
+| ------- | ------------------------------------ | ------------------ | -------------- |
+| GET     | `/questoes`                        | Listar questões   | ❌             |
+| POST    | `/questoes`                        | Criar questão     | ✅             |
+| GET     | `/questoes/{id}`                   | Obter questão     | ❌             |
+| PUT     | `/questoes/{id}`                   | Atualizar questão | ✅             |
+| DELETE  | `/questoes/{id}`                   | Remover questão   | ✅             |
+| GET     | `/questoes/search`                 | Buscar questões   | ❌             |
+| POST    | `/questoes/importar/{avaliacaoId}` | Importar questões | ✅             |
 
 ### Quizzes (`/quizzes`)
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/quizzes` | Listar quizzes | ❌ |
-| POST | `/quizzes` | Criar quiz | ✅ |
-| GET | `/quizzes/{id}` | Obter quiz | ❌ |
-| PUT | `/quizzes/{id}` | Atualizar quiz | ✅ |
-| DELETE | `/quizzes/{id}` | Remover quiz | ✅ |
-| PATCH | `/quizzes/{id}/toggle-status` | Ativar/desativar | ✅ |
+| Método | Endpoint                        | Descrição      | Autenticação |
+| ------- | ------------------------------- | ---------------- | -------------- |
+| GET     | `/quizzes`                    | Listar quizzes   | ❌             |
+| POST    | `/quizzes`                    | Criar quiz       | ✅             |
+| GET     | `/quizzes/{id}`               | Obter quiz       | ❌             |
+| PUT     | `/quizzes/{id}`               | Atualizar quiz   | ✅             |
+| DELETE  | `/quizzes/{id}`               | Remover quiz     | ✅             |
+| PATCH   | `/quizzes/{id}/toggle-status` | Ativar/desativar | ✅             |
 
 ### Estudantes (`/estudantes`)
 
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| GET | `/estudantes` | Listar estudantes | ❌ |
-| POST | `/estudantes` | Criar estudante | ✅ |
-| GET | `/estudantes/{id}` | Obter estudante | ❌ |
-| PUT | `/estudantes/{id}` | Atualizar estudante | ✅ |
-| DELETE | `/estudantes/{id}` | Remover estudante | ✅ |
-| GET | `/estudantes/{id}/respostas` | Respostas do estudante | ❌ |
-| GET | `/estudantes/{id}/estatisticas` | Estatísticas | ❌ |
+| Método | Endpoint                          | Descrição            | Autenticação |
+| ------- | --------------------------------- | ---------------------- | -------------- |
+| GET     | `/estudantes`                   | Listar estudantes      | ❌             |
+| POST    | `/estudantes`                   | Criar estudante        | ✅             |
+| GET     | `/estudantes/{id}`              | Obter estudante        | ❌             |
+| PUT     | `/estudantes/{id}`              | Atualizar estudante    | ✅             |
+| DELETE  | `/estudantes/{id}`              | Remover estudante      | ✅             |
+| GET     | `/estudantes/{id}/respostas`    | Respostas do estudante | ❌             |
+| GET     | `/estudantes/{id}/estatisticas` | Estatísticas          | ❌             |
 
 ## 🔐 Autenticação e Autorização
 
@@ -199,17 +201,17 @@ curl -X POST http://localhost:6199/api/v1/temp/upload \
 
 ## 🚨 Códigos de Status HTTP
 
-| Código | Descrição |
-|--------|-----------|
-| 200 | Sucesso |
-| 201 | Criado |
-| 400 | Dados inválidos |
-| 401 | Não autorizado |
-| 403 | Proibido |
-| 404 | Não encontrado |
-| 409 | Conflito |
-| 422 | Entidade não processável |
-| 500 | Erro interno do servidor |
+| Código | Descrição                |
+| ------- | -------------------------- |
+| 200     | Sucesso                    |
+| 201     | Criado                     |
+| 400     | Dados inválidos           |
+| 401     | Não autorizado            |
+| 403     | Proibido                   |
+| 404     | Não encontrado            |
+| 409     | Conflito                   |
+| 422     | Entidade não processável |
+| 500     | Erro interno do servidor   |
 
 ## 📝 Exemplos de Uso
 
@@ -306,6 +308,6 @@ Para contribuir com a documentação:
 
 Para dúvidas ou problemas:
 
-- **Email**: suporte@eureka.ao
+- **Email**: mutizodejmaita@gmail.com
 - **Issues**: [GitHub Issues](https://github.com/Badfox16/eureka/issues)
-- **Documentação**: [Swagger UI](http://localhost:6199/api-docs) 
+- **Documentação**: [Swagger UI](http://localhost:6199/api-docs)

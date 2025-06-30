@@ -7,8 +7,8 @@ const swaggerOptions = {
     openapi: '3.0.0',
     info: {
       title: 'Eureka API - Sistema de Preparação para Exames',
-      version: '1.0.0',
-      description: 'API RESTful para o sistema Eureka de preparação para exames educacionais angolanos',
+      version: '1.1.0',
+      description: 'API RESTful para o sistema Eureka de preparação para exames educacionais moçambicanos.',
       contact: {
         name: 'Equipa Eureka',
         email: 'suporte@eureka.ao'

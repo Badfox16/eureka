@@ -17,7 +17,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 
-const SERVER_URL = 'http://localhost:6199';
+const SERVER_URL = 'http://localhost:3001';
 const API_DOCS_URL = `${SERVER_URL}/api-docs.json`;
 const OUTPUT_FILE = path.join(__dirname, '..', 'docs', 'openapi.json');
 

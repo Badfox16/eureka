@@ -2,11 +2,11 @@
     "openapi": "3.0.0",
     "info": {
       "title": "Eureka API - Sistema de Preparação para Exames",
-      "version": "1.0.0",
-      "description": "API RESTful para o sistema Eureka de preparação para exames educacionais angolanos",
+      "version": "1.1.0",
+      "description": "API RESTful para o sistema Eureka de preparação para exames educacionais moçambicanos",
       "contact": {
         "name": "Equipa Eureka",
-        "email": "suporte@eureka.ao"
+        "email": "mutizodejmaita@gmail.com"
       },
       "license": {
         "name": "MIT",
@@ -15,12 +15,12 @@
     },
     "servers": [
       {
-        "url": "http://localhost:6199/api/v1",
-        "description": "Servidor de Desenvolvimento"
+        "url": "http://localhost:6199/v1",
+        "description": "Servidor de Desenvolvimento A"
       },
       {
-        "url": "http://localhost:3001/api/v1",
-        "description": "Servidor Alternativo"
+        "url": "http://localhost:3001/v1",
+        "description": "Servidor Alternativo B"
       }
     ],
     "components": {
